@@ -1,0 +1,29 @@
+[project]
+name = "sdag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Alessandro Rognoni", email = "alessandro.rognoni@domyn.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.11.9",
+    "pydantic-settings>=2.11.0",
+]
+
+[project.scripts]
+sscheduler = "sdag:run_scheduler"
+
+[project.entry-points."uv.run"]
+sscheduler = "sdag:run_scheduler"
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+# "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
+features = ["pyo3/extension-module"]
+python-packages = ["sdag"]
+strip = true
