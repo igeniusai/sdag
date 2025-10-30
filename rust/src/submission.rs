@@ -228,7 +228,7 @@ mod tests {
             behavior: NodeBehavior::RootNode {
                 children: vec!["c".to_string()],
             },
-            status: JobStatus::ReadyForSubmission,
+            status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
         };
 
