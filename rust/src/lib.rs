@@ -66,12 +66,24 @@ fn sscheduler_start(argv: Vec<String>) {
     scheduler.run(dag);
 }
 
-/// A Python module implemented in Rust. The name of this function must match
-/// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
-/// import the module.
+// Function name must match `lib.name` in `Cargo.toml`
 #[pymodule]
 fn sscheduler(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sscheduler_start, m)?)?;
-
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn find_home() {
+        let path = "/a/path";
+        unsafe {
+            env::set_var("SDAG_HOME", path);
+        }
+        let home_dir = find_home_dir().unwrap();
+        assert_eq!(home_dir, PathBuf::from(path));
+    }
 }
