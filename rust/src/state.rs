@@ -28,10 +28,7 @@ impl LocalDirState {
     }
 
     fn delete_dir_if_exist(&self) -> io::Result<()> {
-        if self.pipeline_dir.exists() {
-            fs::remove_dir_all(&self.pipeline_dir)?;
-        }
-        Ok(())
+        return fs::remove_dir_all(&self.pipeline_dir);
     }
 
     fn create_working_dir(&self, dag: &DAG) -> io::Result<()> {
@@ -77,7 +74,7 @@ impl StateManager for LocalDirState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // use crate::model::{JobStatus, Node, NodeBehavior};
+    use crate::model::{JobStatus, Node, NodeBehavior};
     use std::env;
     use uuid::Uuid;
 
@@ -85,63 +82,48 @@ mod tests {
         env::temp_dir().join(Uuid::new_v4().to_string())
     }
 
-    //    #[test]
-    //    fn delete_old_folder() {
-    //        let pipeline_dir = get_tmp_dir().join("pipeline");
-    //        let nested = pipeline_dir.join("0");
-    //        fs::create_dir_all(&nested).unwrap();
-    //
-    //        let manager = LocalDirState::new(pipeline_dir);
-    //        manager.delete_dir_if_exist();
-    //        assert!(!manager.pipeline_dir.is_dir());
-    //    }
-    //
-    //    #[test]
-    //    fn missing_pipeline_dir_is_fine() {
-    //        let pipeline_dir = get_tmp_dir().join("pipe2");
-    //        let manager = LocalDirState::new(pipeline_dir);
-    //        manager.delete_dir_if_exist();
-    //        assert!(!manager.pipeline_dir.is_dir());
-    //    }
+    #[test]
+    fn delete_old_folder() {
+        let pipeline_dir = get_tmp_dir().join("pipeline");
+        let nested = pipeline_dir.join("0");
+        fs::create_dir_all(&nested).unwrap();
 
-    //    #[test]
-    //    fn create_dir_and_save_dag() {
-    //        let pipeline_dir = get_tmp_dir().join("pipeline-name");
-    //        let manager = LocalDirState::new(pipeline_dir);
-    //
-    //        let dag = DAG {
-    //            name: String::from("pipeline-name"),
-    //            creation_dt: String::from("2025-01-01 09:10:10"),
-    //            nodes: Vec::new(),
-    //        };
-    //
-    //        manager.create_dir_and_save_dag(&dag);
-    //        assert!(manager.pipeline_dir.is_dir());
-    //        assert!(manager.pipeline_dir.join("pipeline.json").is_file());
-    //    }
+        let manager = LocalDirState::new(pipeline_dir);
+        let res = manager.delete_dir_if_exist();
+        assert!(matches!(res, Ok(())));
+        assert!(!manager.pipeline_dir.is_dir());
+    }
 
-    //    #[test]
-    //    fn create_entire_structure() {
-    //        let dag = DAG {
-    //            name: String::from("pipeline-name"),
-    //            creation_dt: String::from("2025-01-01 09:10:10"),
-    //            nodes: vec![Node {
-    //                uid: String::from("0"),
-    //                behavior: NodeBehavior::RootNode {
-    //                    children: Vec::new(),
-    //                },
-    //                status: JobStatus::NotSubmitted,
-    //                parents: Vec::new(),
-    //            }],
-    //        };
-    //
-    //        let pipeline_dir = get_tmp_dir().join("pipeline-name");
-    //        let manager = LocalDirState::new(pipeline_dir);
-    //        manager.prepare(&dag);
-    //
-    //        assert!(manager.pipeline_dir.join("pipeline.json").is_file());
-    //        assert!(manager.pipeline_dir.join("0").is_dir());
-    //    }
+    #[test]
+    fn missing_pipeline_dir_is_fine() {
+        let pipeline_dir = get_tmp_dir().join("pipe2");
+        let manager = LocalDirState::new(pipeline_dir);
+        let res = manager.delete_dir_if_exist();
+        assert!(matches!(res, Err(_)));
+        assert!(!manager.pipeline_dir.is_dir());
+    }
+
+    #[test]
+    fn create_entire_structure() {
+        let dag = DAG {
+            name: String::from("pipeline-name"),
+            creation_dt: String::from("2025-01-01 09:10:10"),
+            nodes: vec![Node {
+                uid: String::from("0"),
+                behavior: NodeBehavior::RootNode {
+                    children: Vec::new(),
+                },
+                status: JobStatus::NotSubmitted,
+                parents: Vec::new(),
+            }],
+        };
+
+        let pipeline_dir = get_tmp_dir().join("pipeline-name");
+        let manager = LocalDirState::new(pipeline_dir);
+        let res = manager.prepare(&dag);
+        assert!(matches!(res, Ok(_)));
+        assert!(manager.pipeline_dir.join("0").is_dir());
+    }
 
     #[test]
     fn read_output() {
@@ -169,5 +151,27 @@ mod tests {
         let manager = LocalDirState::new(pipeline_dir);
         manager.copy_output("0", "1").unwrap();
         assert!(dst_path.join("output.json").is_file());
+    }
+
+    #[test]
+    fn get_pipeline_dir() {
+        let pipeline_dir = get_tmp_dir().join("pipeline");
+        let manager = LocalDirState::new(pipeline_dir.clone());
+        assert_eq!(*manager.get_pipeline_dir(), pipeline_dir);
+    }
+
+    #[test]
+    fn copy_dag() {
+        let pipeline_dir = get_tmp_dir().join("pipeline");
+        let src_dir = get_tmp_dir();
+        let src = src_dir.join("src_pipeline.json");
+        fs::create_dir_all(&pipeline_dir).unwrap();
+        fs::create_dir_all(&src_dir).unwrap();
+        fs::write(&src, r#"{"name": "pipeline"}"#).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir.clone());
+        let res = manager.copy_dag_into_working_dir(&src);
+        assert!(matches!(res, Ok(_)));
+        assert!(pipeline_dir.join("pipeline.json").exists());
     }
 }
