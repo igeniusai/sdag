@@ -1,6 +1,6 @@
 use crate::backend::SlurmBackend;
-use crate::model::{DAG, JobStatus, Node};
-use crate::state::{LocalDirState, StateManager};
+use crate::model::{DAG, JobStatus, Node, NodeResult};
+use crate::state::LocalDirState;
 use crate::status_management;
 use crate::submission::Submitter;
 use std::collections::HashMap;
@@ -15,39 +15,42 @@ pub struct Scheduler {
 }
 impl Scheduler {
     pub fn run(&self, dag: DAG) {
-        self.state.prepare(&dag);
-        let (root_id, mut nodemap) = self.build_nodemap(dag);
+        let (root_id, mut nodemap) = self
+            .build_nodemap(dag)
+            .expect("Failed to identify the DAG root node");
+
         let submitter = Submitter {
-            state: self.state.clone(),
-            backend: self.backend.clone(),
+            state: &self.state,
+            backend: &self.backend,
         };
 
         loop {
             status_management::update_status(&root_id, &mut nodemap, &self.backend);
-            submitter.submit(&root_id, &mut nodemap);
+            submitter.submit(&mut nodemap);
             if self.is_simulation_completed(&nodemap) {
                 break;
             }
 
             thread::sleep(self.poll_time);
         }
+        println!("Pipeline completed.")
     }
 
-    fn build_nodemap(&self, dag: DAG) -> (String, HashMap<String, Node>) {
+    fn build_nodemap(&self, dag: DAG) -> Option<(String, HashMap<String, Node>)> {
         let mut nodemap = HashMap::new();
         for node in dag.nodes {
             nodemap.insert(node.uid.clone(), node);
         }
 
         let root_id = self.find_root_id(&nodemap);
-        let root = nodemap.get_mut(&root_id).unwrap();
-        root.status = JobStatus::Completed;
-        (root_id, nodemap)
+        let root = nodemap.get_mut(&root_id)?;
+        root.status = JobStatus::Completed(NodeResult::Node);
+        Some((root_id, nodemap))
     }
 
     fn is_simulation_completed(&self, nodemap: &HashMap<String, Node>) -> bool {
         nodemap.values().all(|n| {
-            matches!(n.status, JobStatus::Completed)
+            matches!(n.status, JobStatus::Completed { .. })
                 | matches!(n.status, JobStatus::Failed)
                 | matches!(n.status, JobStatus::Skipped)
         })

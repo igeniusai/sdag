@@ -1,8 +1,10 @@
-use crate::model::{DAG, JobStatus, Node};
+use crate::model::DAG;
+use crate::state::StateManager;
 use pyo3::prelude::*;
 use serde_json;
+use std::fs::File;
+use std::io::{self, Read};
 use std::path::PathBuf;
-use std::{fs::File, io::Read};
 mod model;
 
 mod backend;
@@ -19,21 +21,20 @@ use state::LocalDirState;
 mod scheduler;
 use scheduler::Scheduler;
 
-fn read_dag(path: &PathBuf) -> DAG {
-    let mut f = File::open(path).unwrap();
+fn read_dag(path: &PathBuf) -> io::Result<DAG> {
+    let mut f = File::open(path)?;
     let mut buf = String::new();
     f.read_to_string(&mut buf).unwrap();
-    let dag: DAG = serde_json::from_str(&buf).unwrap();
-    dag
+    let dag: DAG = serde_json::from_str(&buf)?;
+    Ok(dag)
 }
 
-fn find_home_dir() -> PathBuf {
+fn find_home_dir() -> Result<PathBuf, ()> {
     match env::var("SDAG_HOME") {
-        Ok(val) => PathBuf::from(val),
+        Ok(val) => Ok(PathBuf::from(val)),
         Err(_) => {
-            let err_msg = "SDAG_HOME not set and home directory cannot be identified";
-            let path = env::home_dir().expect(&err_msg);
-            path.join(".sdag")
+            let path = env::home_dir().ok_or(())?;
+            Ok(path.join(".sdag"))
         }
     }
 }
@@ -41,12 +42,21 @@ fn find_home_dir() -> PathBuf {
 #[pyfunction]
 fn sscheduler_start(argv: Vec<String>) {
     let args = parser::CLI::parse_from(argv);
-    let home_dir = find_home_dir();
-    let dag = read_dag(&args.pipeline);
-    let backend = backend::SlurmBackend;
-    let state = LocalDirState::new(home_dir.join(&dag.name));
-    let poll_time = time::Duration::from_secs(args.wait_seconds);
+    let home_dir =
+        find_home_dir().expect("SDAG_HOME env variable not set and home directory not found.");
 
+    let dag = read_dag(&args.pipeline).expect("Failed to parse DAG from JSON file.");
+    let state = LocalDirState::new(home_dir.join(&dag.name));
+    state
+        .prepare(&dag)
+        .expect("Failed to prepare the working directory.");
+
+    state
+        .copy_dag_into_working_dir(&args.pipeline)
+        .expect("Failed to copy the pipeline DAG into the working directory.");
+
+    let backend = backend::SlurmBackend;
+    let poll_time = time::Duration::from_secs(args.wait_seconds);
     let scheduler = Scheduler {
         poll_time,
         state,

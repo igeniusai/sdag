@@ -1,10 +1,19 @@
 use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum NodeResult {
+    Node,
+    Task(String),
+    If(bool),
+    OneOf(String),
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum JobStatus {
     NotSubmitted,
     ReadyForSubmission,
     Running(String),
-    Completed,
+    Completed(NodeResult),
     Skipped,
     Failed,
 }
@@ -13,10 +22,6 @@ impl JobStatus {
     fn initial() -> Self {
         JobStatus::NotSubmitted
     }
-}
-
-fn default_init_branch() -> Option<bool> {
-    None
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -41,8 +46,6 @@ pub enum NodeBehavior {
         children: Vec<String>,
     },
     IfNode {
-        #[serde(default = "default_init_branch")]
-        selected: Option<bool>,
         true_branch: Vec<String>,
         false_branch: Vec<String>,
     },
@@ -63,22 +66,18 @@ pub struct Node {
 impl Node {
     pub fn get_status_for_child(&self, uid: &str) -> JobStatus {
         if let NodeBehavior::IfNode {
-            selected,
             true_branch,
             false_branch,
         } = &self.behavior
-            && let Some(cond) = selected
+            && let JobStatus::Completed(NodeResult::If(cond)) = self.status
         {
-            let branch = if *cond { true_branch } else { false_branch };
+            let branch = if cond { true_branch } else { false_branch };
             let is_selected = branch.iter().any(|x| x == uid);
-            if is_selected {
-                JobStatus::Completed
-            } else {
-                JobStatus::Skipped
+            if !is_selected {
+                return JobStatus::Skipped;
             }
-        } else {
-            self.status.clone()
         }
+        self.status.clone()
     }
 
     pub fn get_all_children(&self) -> Vec<String> {
