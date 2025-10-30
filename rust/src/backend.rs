@@ -196,155 +196,157 @@ mod tests {
         slurm.get_job_id_if_running(&node).unwrap();
     }
 
-    //    #[test]
-    //    fn get_running_jobs() {
-    //        let slurm = SlurmBackend;
-    //        let mut nodemap = HashMap::new();
-    //        nodemap.insert(
-    //            String::from("1"),
-    //            Node {
-    //                uid: String::from("1"),
-    //                behavior: NodeBehavior::RootNode {
-    //                    children: Vec::new(),
-    //                },
-    //                status: JobStatus::Running(String::from("job1")),
-    //                parents: Vec::new(),
-    //            },
-    //        );
-    //        nodemap.insert(
-    //            String::from("2"),
-    //            Node {
-    //                uid: String::from("2"),
-    //                behavior: NodeBehavior::RootNode {
-    //                    children: Vec::new(),
-    //                },
-    //                status: JobStatus::Running(String::from("job2")),
-    //                parents: Vec::new(),
-    //            },
-    //        );
-    //
-    //        let running_jobs = slurm.get_running_jobs(&nodemap);
-    //        assert_eq!(
-    //            HashMap::from([
-    //                (String::from("1"), String::from("job1")),
-    //                (String::from("2"), String::from("job2"))
-    //            ]),
-    //            running_jobs
-    //        );
-    //    }
-    //
-    //    #[test]
-    //    fn get_no_running_jobs() {
-    //        let slurm = SlurmBackend;
-    //        let mut nodemap = HashMap::new();
-    //        nodemap.insert(
-    //            String::from("1"),
-    //            Node {
-    //                uid: String::from("1"),
-    //                behavior: NodeBehavior::RootNode {
-    //                    children: Vec::new(),
-    //                },
-    //                status: JobStatus::NotSubmitted,
-    //                parents: Vec::new(),
-    //            },
-    //        );
-    //
-    //        let empty: HashMap<String, String> = HashMap::new();
-    //        assert_eq!(empty, slurm.get_running_jobs(&nodemap));
-    //    }
-    //
-    //    #[test]
-    //    fn slurm_status_parsed_correctly() {
-    //        let backend = SlurmBackend;
-    //        let slurm_status = "
-    //    JobID             State
-    //    ------------ ----------
-    //    20836188      COMPLETED
-    //    20836188.ba+  COMPLETED
-    //    20836188.ex+  COMPLETED
-    //    ";
-    //        let output = backend
-    //            .parse_slurm_status("20836188", slurm_status)
-    //            .unwrap();
-    //        assert_eq!(output, String::from("COMPLETED"));
-    //    }
-    //
-    //    #[test]
-    //    #[should_panic]
-    //    fn slurm_status_not_found() {
-    //        let backend = SlurmBackend;
-    //        let slurm_status = "
-    //    JobID             State
-    //    ------------ ----------
-    //    20836188.ba+  COMPLETED
-    //    20836188.ex+  COMPLETED
-    //    ";
-    //        backend
-    //            .parse_slurm_status("20836188", slurm_status)
-    //            .unwrap();
-    //    }
-    //
-    //    #[test]
-    //    fn get_failed_slurm_status() {
-    //        let backend = SlurmBackend;
-    //        let slurm_status = "
-    //        JobID             State
-    //        ------------ ----------
-    //        20836188      FAILED
-    //        20836188.ba+  COMPLETED
-    //        20836188.ex+  COMPLETED
-    //        ";
-    //        let output = backend.get_status_from_slurm_output("20836188", slurm_status);
-    //        assert!(matches!(output, JobStatus::Failed));
-    //    }
-    //
-    //    #[test]
-    //    fn get_unknown_slurm_status() {
-    //        let backend = SlurmBackend;
-    //        let slurm_status = "
-    //        JobID             State
-    //        ------------ ----------
-    //        20836188.ba+  COMPLETED
-    //        20836188.ex+  COMPLETED
-    //        ";
-    //        let output = backend.get_status_from_slurm_output("20836188", slurm_status);
-    //        assert!(matches!(output, JobStatus::Failed));
-    //    }
-    //
-    //    #[test]
-    //    fn running_slurm_status() {
-    //        let backend = SlurmBackend;
-    //        let slurm_status = "
-    //        JobID             State
-    //        ------------ ----------
-    //        20836188      COMPLETING
-    //        20836188.ba+  COMPLETED
-    //        20836188.ex+  COMPLETED
-    //        ";
-    //        let output = backend.get_status_from_slurm_output("20836188", slurm_status);
-    //        if let JobStatus::Running(job_id) = output {
-    //            assert_eq!(job_id, String::from("20836188"));
-    //        } else {
-    //            panic!("Job should be running");
-    //        };
-    //    }
-    //    #[test]
-    //    fn test_empty_job_status() {
-    //        let backend = SlurmBackend;
-    //        let job_ids: Vec<String> = Vec::new();
-    //        assert_eq!(String::new(), backend.check_job_status(&job_ids));
-    //    }
-    //
-    //    #[test]
-    //    fn parse_job_output() {
-    //        let backend = SlurmBackend;
-    //        let output = String::from("Submitted batch job 1234");
-    //        assert_eq!(backend.find_submitted_job_id(&output), "1234");
-    //    }
-    //
-    //    #[test]
-    //    fn submit() {
-    //        let backend = SlurmBackend;
-    //        backend.submit("submit.sh", "1", "./sdag");
-    //    }
+    #[test]
+    fn get_running_jobs() {
+        let slurm = SlurmBackend;
+        let mut nodemap = HashMap::new();
+        nodemap.insert(
+            String::from("1"),
+            Node {
+                uid: String::from("1"),
+                behavior: NodeBehavior::RootNode {
+                    children: Vec::new(),
+                },
+                status: JobStatus::Running(String::from("job1")),
+                parents: Vec::new(),
+            },
+        );
+        nodemap.insert(
+            String::from("2"),
+            Node {
+                uid: String::from("2"),
+                behavior: NodeBehavior::RootNode {
+                    children: Vec::new(),
+                },
+                status: JobStatus::Running(String::from("job2")),
+                parents: Vec::new(),
+            },
+        );
+
+        let running_jobs = slurm.get_running_job_ids(&nodemap);
+        assert_eq!(
+            HashMap::from([
+                (String::from("1"), String::from("job1")),
+                (String::from("2"), String::from("job2"))
+            ]),
+            running_jobs
+        );
+    }
+
+    #[test]
+    fn get_no_running_jobs() {
+        let slurm = SlurmBackend;
+        let mut nodemap = HashMap::new();
+        nodemap.insert(
+            String::from("1"),
+            Node {
+                uid: String::from("1"),
+                behavior: NodeBehavior::RootNode {
+                    children: Vec::new(),
+                },
+                status: JobStatus::NotSubmitted,
+                parents: Vec::new(),
+            },
+        );
+
+        assert!(slurm.get_running_job_ids(&nodemap).is_empty());
+    }
+
+    #[test]
+    fn slurm_status_parsed_correctly() {
+        let backend = SlurmBackend;
+        let slurm_status = "
+        JobID             State
+        ------------ ----------
+        20836188      COMPLETED
+        20836188.ba+  COMPLETED
+        20836188.ex+  COMPLETED
+        ";
+        let output = backend
+            .parse_slurm_status("20836188", slurm_status)
+            .unwrap();
+        assert_eq!(output, String::from("COMPLETED"));
+    }
+
+    #[test]
+    fn slurm_status_not_found() {
+        let backend = SlurmBackend;
+        let slurm_status = "
+        JobID             State
+        ------------ ----------
+        20836188.ba+  COMPLETED
+        20836188.ex+  COMPLETED
+        ";
+        let job_id = backend.parse_slurm_status("20836188", slurm_status);
+        assert!(matches!(job_id, None));
+    }
+
+    #[test]
+    fn get_failed_slurm_status() {
+        let backend = SlurmBackend;
+        let slurm_status = "
+            JobID             State
+            ------------ ----------
+            20836188      FAILED
+            20836188.ba+  COMPLETED
+            20836188.ex+  COMPLETED
+            ";
+        let output = backend.extract_status("20836188", slurm_status);
+        assert!(matches!(output, JobStatus::Failed));
+    }
+
+    #[test]
+    fn get_unknown_slurm_status() {
+        let backend = SlurmBackend;
+        let slurm_status = "
+            JobID             State
+            ------------ ----------
+            20836188.ba+  COMPLETED
+            20836188.ex+  COMPLETED
+            ";
+        let output = backend.extract_status("20836188", slurm_status);
+        assert!(matches!(output, JobStatus::Failed));
+    }
+
+    #[test]
+    fn running_slurm_status() {
+        let backend = SlurmBackend;
+        let slurm_status = "
+            JobID             State
+            ------------ ----------
+            20836188      COMPLETING
+            20836188.ba+  COMPLETED
+            20836188.ex+  COMPLETED
+            ";
+        let output = backend.extract_status("20836188", slurm_status);
+        if let JobStatus::Running(job_id) = output {
+            assert_eq!(job_id, String::from("20836188"));
+        } else {
+            panic!("Job should be running");
+        };
+    }
+
+    #[test]
+    fn test_empty_job_status() {
+        let backend = SlurmBackend;
+        let job_map: HashMap<String, String> = HashMap::new();
+        let statuses = backend.check_job_status(&job_map).unwrap();
+        assert!(statuses.is_empty());
+    }
+
+    #[test]
+    fn parse_job_output() {
+        let backend = SlurmBackend;
+        let output = String::from("Submitted batch job 1234");
+        let job_id = backend.find_submitted_job_id(&output).unwrap();
+        assert_eq!(job_id, "1234");
+    }
+
+    #[test]
+    #[should_panic]
+    fn submit_wrong_file() {
+        let backend = SlurmBackend;
+        let pipeline_dir = PathBuf::from("./sdag");
+        backend.submit("_wrong_", "1", &pipeline_dir).unwrap();
+    }
 }
