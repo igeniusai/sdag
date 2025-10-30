@@ -1,7 +1,8 @@
+import json
 from pathlib import Path
-from typing import Callable, Self, get_type_hints
+from typing import Any, Callable, Self, get_type_hints
 
-from sdag.models import Graph, IfNode, Node, TaskNode
+from sdag.models import Graph, IfNode, InputKwarg, Node, TaskNode
 
 
 class Task:
@@ -17,7 +18,7 @@ class Task:
         self._register = register
         self._get_uid = get_uid
 
-    def __call__(self, **kwargs: Node):
+    def __call__(self, *args: Node, **kwargs: Any):
         uid = self._get_uid()
         return_type = self._get_return_type()
 
@@ -31,8 +32,16 @@ class Task:
             ),
         )
 
-        for name, parent in kwargs.items():
-            parent.add_edge(node, name)
+        for parent in args:
+            parent.add_edge(node)
+
+        for name, value in kwargs.items():
+            if isinstance(value, Node):
+                value.add_edge(node, name)
+            else:
+                serialized_value = json.dumps(value)
+                input_kwarg = InputKwarg(name=name, value=serialized_value)
+                node.behavior.input_kwargs.append(input_kwarg)
 
         self._register(node)
         return node

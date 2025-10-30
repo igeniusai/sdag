@@ -16,11 +16,17 @@ class BaseNodeType(ABC, BaseModel):
     def is_leaf(self) -> bool: ...
 
 
+class InputKwarg(BaseModel):
+    key: str
+    value: str
+
+
 class TaskNode(BaseNodeType):
     type: Literal["TaskNode"]
     fname: str
     launch_script: Path
     return_type: None | str = None
+    input_kwargs: list[InputKwarg] = Field(default_factory=list)
     children: list[str] = Field(default_factory=list)
 
     def add_child(self, uid: str) -> None:

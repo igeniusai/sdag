@@ -27,6 +27,10 @@ class IOManager:
                 parent_output = self._read_parent_output(parent)
                 input_kwargs[parent.name] = parent_output
 
+        for kwarg in node.behavior.input_kwargs:
+            value = json.loads(kwarg.value)
+            input_kwargs[kwarg.key] = value
+
         return input_kwargs
 
     def serialize_output(self, output: Any, uid: str) -> None:
