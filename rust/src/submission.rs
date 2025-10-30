@@ -23,7 +23,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
         nodemap
             .iter()
             .filter(|(_, node)| matches!(node.status, JobStatus::ReadyForSubmission))
-            .map(|(k, node)| (k.clone(), self.submit_node(node, nodemap)))
+            .map(|(k, _)| (k.clone(), self.submit_node(k, nodemap)))
             .collect()
     }
 
@@ -38,7 +38,8 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
         }
     }
 
-    fn submit_node(&self, node: &Node, nodemap: &HashMap<String, Node>) -> JobStatus {
+    fn submit_node(&self, uid: &str, nodemap: &HashMap<String, Node>) -> JobStatus {
+        let node = nodemap.get(uid).unwrap();
         match &node.behavior {
             NodeBehavior::RootNode { .. } | NodeBehavior::EndNode { .. } => {
                 JobStatus::Completed(NodeResult::Node)
@@ -178,8 +179,8 @@ mod tests {
             state: &MockState::new(),
         };
 
-        let nodemap = HashMap::from([("c".to_string(), node.clone())]);
-        let new_status = submitter.submit_node(&node, &nodemap);
+        let nodemap = HashMap::from([("c".to_string(), node)]);
+        let new_status = submitter.submit_node("c", &nodemap);
         assert!(matches!(new_status, JobStatus::Completed(NodeResult::Node)))
     }
 
@@ -203,8 +204,7 @@ mod tests {
         };
 
         let nodemap = HashMap::from([("c".to_string(), node)]);
-        let node = nodemap.get("c").unwrap();
-        let new_status = submitter.submit_node(node, &nodemap);
+        let new_status = submitter.submit_node("c", &nodemap);
         assert!(matches!(new_status, JobStatus::Completed(NodeResult::Node)))
     }
 
@@ -238,8 +238,7 @@ mod tests {
         };
 
         let nodemap = HashMap::from([("c".to_string(), node), ("p".to_string(), parent)]);
-        let node = nodemap.get("c").unwrap();
-        let new_status = submitter.submit_node(node, &nodemap);
+        let new_status = submitter.submit_node("c", &nodemap);
         assert!(matches!(
             new_status,
             JobStatus::Completed(NodeResult::If(true))
@@ -278,8 +277,7 @@ mod tests {
         };
 
         let nodemap = HashMap::from([("c".to_string(), node), ("p".to_string(), parent)]);
-        let node = nodemap.get("c").unwrap();
-        let new_status = submitter.submit_node(node, &nodemap);
+        let new_status = submitter.submit_node("c", &nodemap);
         assert!(matches!(new_status, JobStatus::Running(_)))
     }
 
@@ -331,8 +329,7 @@ mod tests {
             ("p1".to_string(), p1),
             ("p2".to_string(), p2),
         ]);
-        let node = nodemap.get("c").unwrap();
-        let new_status = submitter.submit_node(node, &nodemap);
+        let new_status = submitter.submit_node("c", &nodemap);
         assert!(matches!(new_status, JobStatus::Completed(_)))
     }
 
