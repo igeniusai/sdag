@@ -19,8 +19,8 @@ fn recoursively_update_status(
 ) -> Option<()> {
     let node = nodemap.get(uid)?;
     if let JobStatus::NotSubmitted = node.status {
-        let manager = StatusSelector::new(uid, nodemap, updated_statuses);
-        let updated_status = manager.get_updated_status(&node.behavior);
+        let selector = StatusSelector::new(uid, nodemap, updated_statuses);
+        let updated_status = selector.get_updated_status(&node.behavior);
         updated_statuses.insert(node.uid.clone(), updated_status);
     }
 
@@ -131,170 +131,318 @@ impl StatusSelector {
     }
 }
 
-//#[cfg(test)]
-//mod tests {
-//
-//    use super::*;
-//    use crate::model::Parent;
-//
-//    macro_rules! oneof_tests {
-//        ($($name:ident: $value:expr,)*) => {
-//            $(
-//                #[test]
-//                fn $name() {
-//                    let (parent_statuses, _expected) = $value;
-//                    let manager = StatusSelector {
-//                        parent_statuses,
-//                    };
-//                    assert!(matches!(manager.get_oneof_status(), _expected));
-//                }
-//            )*
-//        }
-//    }
-//
-//    oneof_tests! {
-//        oneof_test_0: (vec![JobStatus::Completed, JobStatus::Completed], JobStatus::ReadyForSubmission),
-//        oneof_test_1: (vec![JobStatus::Failed, JobStatus::Completed], JobStatus::ReadyForSubmission),
-//        oneof_test_2: (vec![JobStatus::Skipped, JobStatus::Completed], JobStatus::ReadyForSubmission),
-//        oneof_test_3: (vec![JobStatus::Running(String::from("..")), JobStatus::Completed], JobStatus::ReadyForSubmission),
-//        oneof_test_4: (vec![JobStatus::Failed, JobStatus::Failed], JobStatus::Failed),
-//        oneof_test_5: (vec![JobStatus::Running(String::from("..")), JobStatus::NotSubmitted], JobStatus::NotSubmitted),
-//        oneof_test_6: (vec![JobStatus::Skipped, JobStatus::Failed], JobStatus::Failed),
-//        oneof_test_7: (vec![JobStatus::Skipped, JobStatus::Skipped], JobStatus::Skipped),
-//    }
-//
-//    macro_rules! default_tests {
-//        ($($name:ident: $value:expr,)*) => {
-//            $(
-//                #[test]
-//                fn $name() {
-//                    let (parent_statuses, _expected) = $value;
-//                    let manager = StatusSelector {
-//                        parent_statuses,
-//                    };
-//                    assert!(matches!(manager.get_default_status(), _expected));
-//                }
-//            )*
-//        }
-//    }
-//
-//    default_tests! {
-//        node_test_0: (vec![JobStatus::Completed, JobStatus::Completed], JobStatus::ReadyForSubmission),
-//        node_test_1: (vec![JobStatus::Failed, JobStatus::Completed], JobStatus::Failed),
-//        node_test_2: (vec![JobStatus::Skipped, JobStatus::Completed], JobStatus::Failed),
-//        node_test_3: (vec![JobStatus::Running(String::from("..")), JobStatus::Completed], JobStatus::NotSubmitted),
-//        node_test_4: (vec![JobStatus::Failed, JobStatus::Failed], JobStatus::Failed),
-//        node_test_5: (vec![JobStatus::Running(String::from("..")), JobStatus::NotSubmitted], JobStatus::NotSubmitted),
-//        node_test_6: (vec![JobStatus::Skipped, JobStatus::Failed], JobStatus::Failed),
-//        node_test_7: (vec![JobStatus::Skipped, JobStatus::Skipped], JobStatus::Skipped),
-//    }
+#[cfg(test)]
+mod tests {
 
-//    #[test]
-//    fn get_oneof_status_from_parents() {
-//        let manager = StatusSelector {
-//            parent_statuses: vec![JobStatus::Failed, JobStatus::Completed],
-//        };
-//        let node_behavior = NodeBehavior::OneOfNode {
-//            children: Vec::new(),
-//        };
-//        matches!(
-//            manager.get_status_from_parents(&node_behavior),
-//            JobStatus::ReadyForSubmission
-//        );
-//    }
-//
-//    #[test]
-//    fn get_default_status_from_parents() {
-//        let manager = StatusSelector {
-//            parent_statuses: vec![JobStatus::Failed, JobStatus::Completed],
-//        };
-//        let node_behavior = NodeBehavior::RootNode {
-//            children: Vec::new(),
-//        };
-//        matches!(
-//            manager.get_status_from_parents(&node_behavior),
-//            JobStatus::Failed
-//        );
-//    }
+    use super::*;
+    use crate::model::{NodeResult, Parent};
 
-//    #[test]
-//    fn manager_creation() {
-//        let mut nodemap = HashMap::new();
-//        nodemap.insert(
-//            String::from("p1"),
-//            Node {
-//                uid: String::from("p1"),
-//                behavior: NodeBehavior::RootNode {
-//                    children: Vec::new(),
-//                },
-//                status: JobStatus::NotSubmitted,
-//                parents: Vec::new(),
-//            },
-//        );
-//        nodemap.insert(
-//            String::from("p2"),
-//            Node {
-//                uid: String::from("p2"),
-//                behavior: NodeBehavior::RootNode {
-//                    children: Vec::new(),
-//                },
-//                status: JobStatus::Completed,
-//                parents: Vec::new(),
-//            },
-//        );
-//
-//        nodemap.insert(
-//            String::from("c"),
-//            Node {
-//                uid: String::from("c"),
-//                behavior: NodeBehavior::RootNode {
-//                    children: Vec::new(),
-//                },
-//                status: JobStatus::NotSubmitted,
-//                parents: vec![Parent {
-//                    name: String::from("p2"),
-//                    uid: String::from("p2"),
-//                }],
-//            },
-//        );
-//
-//        let manager = StatusSelector::new("c", &nodemap);
-//        assert_eq!(manager.parent_statuses.len(), 1);
-//        assert!(matches!(manager.parent_statuses[0], JobStatus::Completed));
-//    }
-//
-//    #[test]
-//    fn check_recoursive_update() {
-//        let mut nodemap = HashMap::new();
-//        nodemap.insert(
-//            String::from("p"),
-//            Node {
-//                uid: String::from("p"),
-//                behavior: NodeBehavior::RootNode {
-//                    children: vec![String::from("c")],
-//                },
-//                status: JobStatus::Completed,
-//                parents: Vec::new(),
-//            },
-//        );
-//
-//        nodemap.insert(
-//            String::from("c"),
-//            Node {
-//                uid: String::from("c"),
-//                behavior: NodeBehavior::RootNode {
-//                    children: Vec::new(),
-//                },
-//                status: JobStatus::NotSubmitted,
-//                parents: vec![Parent {
-//                    name: String::from("p"),
-//                    uid: String::from("p"),
-//                }],
-//            },
-//        );
-//
-//        recoursively_update_status("p", &mut nodemap);
-//        let child = nodemap.get("c").unwrap();
-//        assert!(matches!(child.status, JobStatus::ReadyForSubmission))
-//    }
-//}
+    macro_rules! oneof_tests {
+            ($($name:ident: $value:expr,)*) => {
+                $(
+                    #[test]
+                    fn $name() {
+                        let (parent_statuses, _expected) = $value;
+                        let selector = StatusSelector {
+                            parent_statuses,
+                        };
+                        assert!(matches!(selector.get_oneof_status(), _expected));
+                    }
+                )*
+            }
+        }
+
+    oneof_tests! {
+        oneof_test_0: (
+            vec![
+                JobStatus::Completed(NodeResult::Node),
+                JobStatus::Completed(NodeResult::Node),
+            ],
+            JobStatus::ReadyForSubmission
+        ),
+        oneof_test_1: (
+            vec![
+                JobStatus::Failed,
+                JobStatus::Completed(NodeResult::Node),
+            ],
+            JobStatus::ReadyForSubmission
+        ),
+        oneof_test_2: (
+            vec![
+                JobStatus::Skipped,
+                JobStatus::Completed(NodeResult::OneOf("0".to_string())),
+            ],
+            JobStatus::ReadyForSubmission
+        ),
+        oneof_test_3: (
+            vec![
+                JobStatus::Running("..".to_string()),
+                JobStatus::Completed(NodeResult::If(true)),
+            ],
+            JobStatus::ReadyForSubmission
+        ),
+        oneof_test_4: (
+            vec![
+                JobStatus::Failed,
+                JobStatus::Failed
+            ],
+            JobStatus::Failed
+        ),
+        oneof_test_5: (
+            vec![
+                JobStatus::Running(String::from("..")),
+                JobStatus::NotSubmitted
+            ],
+            JobStatus::NotSubmitted
+        ),
+        oneof_test_6: (
+            vec![
+                JobStatus::Skipped,
+                JobStatus::Failed
+            ],
+            JobStatus::Failed
+        ),
+        oneof_test_7: (
+            vec![
+                JobStatus::Skipped,
+                JobStatus::Skipped
+            ],
+            JobStatus::Skipped
+        ),
+    }
+
+    macro_rules! default_tests {
+            ($($name:ident: $value:expr,)*) => {
+                $(
+                    #[test]
+                    fn $name() {
+                        let (parent_statuses, _expected) = $value;
+                        let selector = StatusSelector {
+                            parent_statuses,
+                        };
+                        assert!(matches!(selector.get_default_status(), _expected));
+                    }
+                )*
+            }
+        }
+
+    default_tests! {
+        node_test_0: (
+            vec![
+                JobStatus::Completed(NodeResult::Node),
+                JobStatus::Completed(NodeResult::Node),
+            ],
+            JobStatus::ReadyForSubmission),
+        node_test_1: (
+            vec![
+                JobStatus::Failed,
+                JobStatus::Completed(NodeResult::OneOf("0".to_string())),
+            ],
+            JobStatus::Failed,
+        ),
+        node_test_2: (
+            vec![
+                JobStatus::Skipped,
+                JobStatus::Completed(NodeResult::Node),
+            ],
+            JobStatus::Failed),
+        node_test_3: (
+            vec![
+                JobStatus::Running(String::from("..")),
+                JobStatus::Completed(NodeResult::If(false)),
+            ],
+            JobStatus::NotSubmitted,
+        ),
+        node_test_4: (
+            vec![
+                JobStatus::Failed,
+                JobStatus::Failed,
+            ],
+            JobStatus::Failed
+        ),
+        node_test_5: (
+            vec![
+                JobStatus::Running(String::from("..")),
+                JobStatus::NotSubmitted,
+            ],
+            JobStatus::NotSubmitted
+        ),
+        node_test_6: (
+            vec![
+                JobStatus::Skipped,
+                JobStatus::Failed
+            ],
+            JobStatus::Failed
+        ),
+        node_test_7: (
+            vec![
+                JobStatus::Skipped,
+                JobStatus::Skipped
+            ],
+            JobStatus::Skipped
+        ),
+    }
+
+    #[test]
+    fn get_oneof_updated_status() {
+        let selector = StatusSelector {
+            parent_statuses: vec![JobStatus::Failed, JobStatus::Completed(NodeResult::Node)],
+        };
+        let node_behavior = NodeBehavior::OneOfNode {
+            children: Vec::new(),
+        };
+        matches!(
+            selector.get_updated_status(&node_behavior),
+            JobStatus::ReadyForSubmission
+        );
+    }
+
+    #[test]
+    fn get_default_updated_status() {
+        let selector = StatusSelector {
+            parent_statuses: vec![
+                JobStatus::Failed,
+                JobStatus::Completed(NodeResult::If(true)),
+            ],
+        };
+        let node_behavior = NodeBehavior::RootNode {
+            children: Vec::new(),
+        };
+        matches!(
+            selector.get_updated_status(&node_behavior),
+            JobStatus::Failed
+        );
+    }
+
+    fn get_test_nodemap() -> HashMap<String, Node> {
+        let mut nodemap = HashMap::new();
+        nodemap.insert(
+            String::from("p1"),
+            Node {
+                uid: String::from("p1"),
+                behavior: NodeBehavior::RootNode {
+                    children: Vec::new(),
+                },
+                status: JobStatus::NotSubmitted,
+                parents: Vec::new(),
+            },
+        );
+        nodemap.insert(
+            String::from("p2"),
+            Node {
+                uid: String::from("p2"),
+                behavior: NodeBehavior::RootNode {
+                    children: Vec::new(),
+                },
+                status: JobStatus::NotSubmitted,
+                parents: Vec::new(),
+            },
+        );
+        nodemap.insert(
+            String::from("c"),
+            Node {
+                uid: String::from("c"),
+                behavior: NodeBehavior::RootNode {
+                    children: Vec::new(),
+                },
+                status: JobStatus::NotSubmitted,
+                parents: vec![Parent {
+                    name: String::from("p2"),
+                    uid: String::from("p2"),
+                }],
+            },
+        );
+        nodemap
+    }
+
+    #[test]
+    fn get_parent_statuses() {
+        let nodemap = get_test_nodemap();
+        let parent_statuses = StatusSelector::get_parent_statuses("c", &nodemap);
+        assert_eq!(
+            parent_statuses,
+            HashMap::from([("p2".to_string(), JobStatus::NotSubmitted)])
+        );
+    }
+
+    #[test]
+    fn get_selector_creation() {
+        let nodemap = get_test_nodemap();
+        let updated_statuses = HashMap::from([("p2".to_string(), JobStatus::Failed)]);
+        let selector = StatusSelector::new("c", &nodemap, &updated_statuses);
+        assert_eq!(selector.parent_statuses, vec![JobStatus::Failed]);
+    }
+
+    #[test]
+    fn check_recoursive_update() {
+        let mut nodemap = HashMap::new();
+        nodemap.insert(
+            String::from("p"),
+            Node {
+                uid: String::from("p"),
+                behavior: NodeBehavior::RootNode {
+                    children: vec![String::from("c")],
+                },
+                status: JobStatus::Completed(NodeResult::Node),
+                parents: Vec::new(),
+            },
+        );
+
+        nodemap.insert(
+            String::from("c"),
+            Node {
+                uid: String::from("c"),
+                behavior: NodeBehavior::RootNode {
+                    children: Vec::new(),
+                },
+                status: JobStatus::NotSubmitted,
+                parents: vec![Parent {
+                    name: String::from("p"),
+                    uid: String::from("p"),
+                }],
+            },
+        );
+
+        let mut updated_statuses = HashMap::new();
+        recoursively_update_status("p", &nodemap, &mut updated_statuses);
+        let child_status = updated_statuses.get("c").unwrap();
+        assert!(matches!(child_status, JobStatus::ReadyForSubmission))
+    }
+
+    #[test]
+    fn e2e() {
+        let mut nodemap = HashMap::new();
+        nodemap.insert(
+            String::from("p"),
+            Node {
+                uid: String::from("p"),
+                behavior: NodeBehavior::RootNode {
+                    children: vec![String::from("c")],
+                },
+                status: JobStatus::Completed(NodeResult::Node),
+                parents: Vec::new(),
+            },
+        );
+
+        nodemap.insert(
+            String::from("c"),
+            Node {
+                uid: String::from("c"),
+                behavior: NodeBehavior::RootNode {
+                    children: Vec::new(),
+                },
+                status: JobStatus::NotSubmitted,
+                parents: vec![Parent {
+                    name: String::from("p"),
+                    uid: String::from("p"),
+                }],
+            },
+        );
+
+        let backend = SlurmBackend;
+        update_status("p", &mut nodemap, &backend);
+
+        let child = nodemap.get("c").unwrap();
+        assert!(matches!(child.status, JobStatus::ReadyForSubmission))
+    }
+}
