@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum NodeResult {
     Node,
     Task(String),
@@ -8,7 +8,7 @@ pub enum NodeResult {
     OneOf(String),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum JobStatus {
     NotSubmitted,
     ReadyForSubmission,
