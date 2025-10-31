@@ -102,7 +102,7 @@ class SDAG:
         self.current = DAG(uid=self.get_uid(), name=name)
 
     def task(
-        self, launch_script: str | Path, caching: bool = False
+        self, launch_script: str | Path, caching: bool = False, retries: int = 0
     ) -> Callable[[Callable], Task]:
         def return_task(fn: Callable) -> Task:
             if fn.__name__ in self.taskdict:
@@ -112,6 +112,7 @@ class SDAG:
             return Task(
                 fn=fn,
                 caching=caching,
+                retries=retries,
                 launch_script=Path(launch_script).resolve(),
                 register=self.register,
                 get_uid=self.get_uid,

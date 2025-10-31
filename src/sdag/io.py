@@ -11,6 +11,7 @@ from sdag.models import Graph, Node, Parent, TaskNode
 class Settings(BaseSettings):
     sdag_pipeline: Path
     sdag_uid: str
+    sdag_try_num: int
 
 
 class IOManager:
