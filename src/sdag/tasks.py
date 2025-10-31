@@ -40,7 +40,7 @@ class Task:
                 value.add_edge(node, name)
             else:
                 serialized_value = json.dumps(value)
-                input_kwarg = InputKwarg(name=name, value=serialized_value)
+                input_kwarg = InputKwarg(key=name, value=serialized_value)
                 node.behavior.input_kwargs.append(input_kwarg)
 
         self._register(node)
