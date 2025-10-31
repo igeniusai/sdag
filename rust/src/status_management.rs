@@ -2,14 +2,48 @@ use crate::backend::{Backend, SlurmBackend};
 use crate::model::{JobStatus, Node, NodeBehavior};
 use std::collections::HashMap;
 
+fn set_retry_if_possible(node: &mut Node) {
+    if let NodeBehavior::TaskNode {
+        try_num, retries, ..
+    } = &mut node.behavior
+    {
+        if *try_num > 0 && try_num <= retries {
+            println!("Node {} scheduled for resubmission", node.uid);
+            node.status = JobStatus::ReadyForSubmission;
+        }
+    }
+}
+
+fn schedule_retries(nodemap: &mut HashMap<String, Node>) {
+    for node in nodemap.values_mut() {
+        if let JobStatus::Failed = node.status {
+            set_retry_if_possible(node);
+        }
+    }
+}
+
+fn update_try_count(nodemap: &mut HashMap<String, Node>) {
+    for node in nodemap.values_mut() {
+        if let JobStatus::ReadyForSubmission = node.status {
+            if let NodeBehavior::TaskNode { try_num, .. } = &mut node.behavior {
+                *try_num += 1;
+            }
+        }
+    }
+}
+
 pub fn update_status(uid: &str, nodemap: &mut HashMap<String, Node>, backend: &SlurmBackend) {
     backend.update_status(nodemap);
+    schedule_retries(nodemap);
+
     let mut updated_statuses: HashMap<String, JobStatus> = HashMap::new();
     recoursively_update_status(uid, nodemap, &mut updated_statuses);
     for (k, v) in updated_statuses.into_iter() {
         let updated_node = nodemap.get_mut(&k).unwrap();
         updated_node.status = v;
     }
+
+    update_try_count(nodemap);
 }
 
 fn recoursively_update_status(

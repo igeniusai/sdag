@@ -202,6 +202,8 @@ mod tests {
                     behavior: NodeBehavior::TaskNode {
                         fname: String::from("fname"),
                         caching: true,
+                        retries: 0,
+                        try_num: 0,
                         launch_script: String::from("script"),
                         return_type: None,
                         children: Vec::new(),

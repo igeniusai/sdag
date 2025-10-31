@@ -24,6 +24,10 @@ impl JobStatus {
     }
 }
 
+fn initial_try_num() -> u32 {
+    0
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Parent {
     pub name: String,
@@ -42,6 +46,9 @@ pub enum NodeBehavior {
     TaskNode {
         fname: String,
         caching: bool,
+        #[serde(default = "initial_try_num")]
+        try_num: u32,
+        retries: u32,
         launch_script: String,
         return_type: Option<String>,
         children: Vec<String>,

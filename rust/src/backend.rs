@@ -13,6 +13,7 @@ pub trait Backend {
         launch_script: &str,
         uid: &str,
         pipeline_dir: &PathBuf,
+        try_num: &u32,
     ) -> Result<String, Box<dyn Error>>;
 
     fn get_running_job_ids(&self, nodemap: &HashMap<String, Node>) -> HashMap<String, String> {
@@ -137,8 +138,11 @@ impl Backend for SlurmBackend {
         launch_script: &str,
         uid: &str,
         pipeline_dir: &PathBuf,
+        try_num: &u32,
     ) -> Result<String, Box<dyn Error>> {
+        let try_num_str = try_num.to_string();
         let output = Command::new("sbatch")
+            .env("SDAG_TRY_NUM", &try_num_str)
             .env("SDAG_PIPELINE", pipeline_dir)
             .env("SDAG_UID", uid)
             .arg(&launch_script)
@@ -347,6 +351,9 @@ mod tests {
     fn submit_wrong_file() {
         let backend = SlurmBackend;
         let pipeline_dir = PathBuf::from("./sdag");
-        backend.submit("_wrong_", "1", &pipeline_dir).unwrap();
+        let try_num = 1;
+        backend
+            .submit("_wrong_", "1", &pipeline_dir, &try_num)
+            .unwrap();
     }
 }

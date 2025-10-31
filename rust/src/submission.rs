@@ -47,8 +47,9 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
             NodeBehavior::TaskNode {
                 launch_script,
                 caching,
+                try_num,
                 ..
-            } => self.submit_tasknode(&node.uid, launch_script, caching),
+            } => self.submit_tasknode(&node.uid, launch_script, caching, try_num),
             NodeBehavior::OneOfNode { .. } => match self.submit_oneofnode(&node.uid, &nodemap) {
                 Ok(uid) => JobStatus::Completed(NodeResult::OneOf(uid)),
                 Err(_) => JobStatus::Failed,
@@ -60,14 +61,22 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
         }
     }
 
-    fn submit_tasknode(&self, uid: &str, launch_script: &str, caching: &bool) -> JobStatus {
+    fn submit_tasknode(
+        &self,
+        uid: &str,
+        launch_script: &str,
+        caching: &bool,
+        try_num: &u32,
+    ) -> JobStatus {
         if *caching && self.state.is_task_cached(uid) {
             println!("Task {uid} is cached");
             return JobStatus::Completed(NodeResult::Node);
         }
 
         let pipeline_dir = self.state.get_pipeline_dir();
-        let res = self.backend.submit(launch_script, uid, pipeline_dir);
+        let res = self
+            .backend
+            .submit(launch_script, uid, pipeline_dir, try_num);
         match res {
             Ok(job_id) => JobStatus::Running(job_id),
             Err(_) => JobStatus::Failed,
@@ -118,6 +127,7 @@ mod tests {
             _launch_script: &str,
             _uid: &str,
             _pipeline_dir: &PathBuf,
+            _try_num: &u32,
         ) -> Result<String, Box<dyn Error>> {
             Ok(String::from("1234"))
         }
@@ -266,6 +276,8 @@ mod tests {
                 launch_script: String::from("script"),
                 return_type: None,
                 caching: false,
+                retries: 0,
+                try_num: 0,
                 children: Vec::new(),
             },
             status: JobStatus::ReadyForSubmission,
@@ -303,6 +315,8 @@ mod tests {
                 launch_script: String::from("script"),
                 return_type: None,
                 caching: true,
+                retries: 0,
+                try_num: 0,
                 children: Vec::new(),
             },
             status: JobStatus::ReadyForSubmission,
