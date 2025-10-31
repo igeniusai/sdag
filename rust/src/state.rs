@@ -7,6 +7,7 @@ pub trait StateManager {
     fn prepare(&self, dag: &DAG) -> io::Result<()>;
     fn copy_dag_into_working_dir(&self, path: &PathBuf) -> io::Result<u64>;
     fn get_pipeline_dir(&self) -> &PathBuf;
+    fn is_task_cached(&self, uid: &str) -> bool;
     fn copy_output(&self, src_uid: &str, dst_uid: &str) -> io::Result<u64>;
     fn read_output(&self, uid: &str) -> io::Result<String>;
 }
@@ -27,15 +28,19 @@ impl LocalDirState {
         }
     }
 
-    fn delete_dir_if_exist(&self) -> io::Result<()> {
-        return fs::remove_dir_all(&self.pipeline_dir);
-    }
-
     fn create_working_dir(&self, dag: &DAG) -> io::Result<()> {
-        fs::create_dir_all(&self.pipeline_dir)?;
+        let res = fs::create_dir_all(&self.pipeline_dir);
+        if let Err(_) = res {
+            println!("Did not create pipeline directory, maybe it already exists")
+        }
+
         for node in &dag.nodes {
             let path = self.pipeline_dir.join(&node.uid);
-            fs::create_dir(path)?;
+            let res = fs::create_dir(path);
+            if let Err(_) = res {
+                let uid = &node.uid;
+                println!("Did not create uid {uid} directory")
+            }
         }
         Ok(())
     }
@@ -43,10 +48,7 @@ impl LocalDirState {
 
 impl StateManager for LocalDirState {
     fn prepare(&self, dag: &DAG) -> io::Result<()> {
-        let res = self.delete_dir_if_exist();
-        if let Err(_) = res {
-            println!("Failed to delete pipeline folder, it didn't exist")
-        }
+        // let res = self.delete_dir_if_exist();
         self.create_working_dir(dag)
     }
 
@@ -69,6 +71,11 @@ impl StateManager for LocalDirState {
     fn get_pipeline_dir(&self) -> &PathBuf {
         &self.pipeline_dir
     }
+
+    fn is_task_cached(&self, uid: &str) -> bool {
+        let path = self.pipeline_dir.join(uid).join(&self.output_fname);
+        path.is_file()
+    }
 }
 
 #[cfg(test)]
@@ -80,27 +87,6 @@ mod tests {
 
     fn get_tmp_dir() -> PathBuf {
         env::temp_dir().join(Uuid::new_v4().to_string())
-    }
-
-    #[test]
-    fn delete_old_folder() {
-        let pipeline_dir = get_tmp_dir().join("pipeline");
-        let nested = pipeline_dir.join("0");
-        fs::create_dir_all(&nested).unwrap();
-
-        let manager = LocalDirState::new(pipeline_dir);
-        let res = manager.delete_dir_if_exist();
-        assert!(matches!(res, Ok(())));
-        assert!(!manager.pipeline_dir.is_dir());
-    }
-
-    #[test]
-    fn missing_pipeline_dir_is_fine() {
-        let pipeline_dir = get_tmp_dir().join("pipe2");
-        let manager = LocalDirState::new(pipeline_dir);
-        let res = manager.delete_dir_if_exist();
-        assert!(matches!(res, Err(_)));
-        assert!(!manager.pipeline_dir.is_dir());
     }
 
     #[test]
@@ -173,5 +159,69 @@ mod tests {
         let res = manager.copy_dag_into_working_dir(&src);
         assert!(matches!(res, Ok(_)));
         assert!(pipeline_dir.join("pipeline.json").exists());
+    }
+
+    #[test]
+    fn task_is_cached() {
+        let pipeline_dir = get_tmp_dir().join("pipeline");
+        let path = pipeline_dir.join("0");
+        let content = r#"{"output": true}"#;
+        fs::create_dir_all(&path).unwrap();
+        fs::write(path.join("output.json"), content).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir);
+        assert!(manager.is_task_cached("0"));
+    }
+
+    #[test]
+    fn task_is_not_cached() {
+        let pipeline_dir = get_tmp_dir().join("pipeline");
+        let path = pipeline_dir.join("0");
+        fs::create_dir_all(&path).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir);
+        assert!(!manager.is_task_cached("0"));
+    }
+
+    #[test]
+    fn create_entire_structure_with_caching() {
+        let dag = DAG {
+            name: String::from("pipeline-name"),
+            creation_dt: String::from("2025-01-01 09:10:10"),
+            nodes: vec![
+                Node {
+                    uid: String::from("0"),
+                    behavior: NodeBehavior::RootNode {
+                        children: Vec::new(),
+                    },
+                    status: JobStatus::NotSubmitted,
+                    parents: Vec::new(),
+                },
+                Node {
+                    uid: String::from("1"),
+                    behavior: NodeBehavior::TaskNode {
+                        fname: String::from("fname"),
+                        caching: true,
+                        launch_script: String::from("script"),
+                        return_type: None,
+                        children: Vec::new(),
+                    },
+                    status: JobStatus::NotSubmitted,
+                    parents: Vec::new(),
+                },
+            ],
+        };
+
+        let pipeline_dir = get_tmp_dir().join("pipeline");
+        let path = pipeline_dir.join("1");
+        let content = r#"{"output": true}"#;
+        fs::create_dir_all(&path).unwrap();
+        fs::write(path.join("output.json"), content).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir);
+        let res = manager.prepare(&dag);
+        assert!(matches!(res, Ok(_)));
+        assert!(manager.pipeline_dir.join("0").is_dir());
+        assert!(manager.pipeline_dir.join("1").join("output.json").is_file());
     }
 }

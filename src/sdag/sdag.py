@@ -101,7 +101,9 @@ class SDAG:
             self.dagstack.append(self.current)
         self.current = DAG(uid=self.get_uid(), name=name)
 
-    def task(self, launch_script: str | Path) -> Callable[[Callable], Task]:
+    def task(
+        self, launch_script: str | Path, caching: bool = False
+    ) -> Callable[[Callable], Task]:
         def return_task(fn: Callable) -> Task:
             if fn.__name__ in self.taskdict:
                 raise ValueError("Task names must be unique.")
@@ -109,6 +111,7 @@ class SDAG:
             self.taskdict[fn.__name__] = fn
             return Task(
                 fn=fn,
+                caching=caching,
                 launch_script=Path(launch_script).resolve(),
                 register=self.register,
                 get_uid=self.get_uid,

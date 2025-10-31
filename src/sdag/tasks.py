@@ -9,11 +9,13 @@ class Task:
     def __init__(
         self,
         fn: Callable,
+        caching: bool,
         launch_script: Path,
         register: Callable[[Self], None],
         get_uid: Callable[[], str],
     ):
         self.fn = fn
+        self.caching = caching
         self.launch_script = launch_script
         self._register = register
         self._get_uid = get_uid
@@ -27,6 +29,7 @@ class Task:
             behavior=TaskNode(
                 type="TaskNode",
                 fname=self.fn.__name__,
+                caching=self.caching,
                 launch_script=self.launch_script,
                 return_type=return_type,
             ),

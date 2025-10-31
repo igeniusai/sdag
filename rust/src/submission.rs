@@ -44,12 +44,11 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
             NodeBehavior::RootNode { .. } | NodeBehavior::EndNode { .. } => {
                 JobStatus::Completed(NodeResult::Node)
             }
-            NodeBehavior::TaskNode { launch_script, .. } => {
-                match self.submit_tasknode(&node.uid, launch_script) {
-                    Ok(job_id) => JobStatus::Running(job_id),
-                    Err(_) => JobStatus::Failed,
-                }
-            }
+            NodeBehavior::TaskNode {
+                launch_script,
+                caching,
+                ..
+            } => self.submit_tasknode(&node.uid, launch_script, caching),
             NodeBehavior::OneOfNode { .. } => match self.submit_oneofnode(&node.uid, &nodemap) {
                 Ok(uid) => JobStatus::Completed(NodeResult::OneOf(uid)),
                 Err(_) => JobStatus::Failed,
@@ -61,9 +60,18 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
         }
     }
 
-    fn submit_tasknode(&self, uid: &str, launch_script: &str) -> Result<String, Box<dyn Error>> {
+    fn submit_tasknode(&self, uid: &str, launch_script: &str, caching: &bool) -> JobStatus {
+        if *caching && self.state.is_task_cached(uid) {
+            println!("Task {uid} is cached");
+            return JobStatus::Completed(NodeResult::Node);
+        }
+
         let pipeline_dir = self.state.get_pipeline_dir();
-        self.backend.submit(launch_script, uid, pipeline_dir)
+        let res = self.backend.submit(launch_script, uid, pipeline_dir);
+        match res {
+            Ok(job_id) => JobStatus::Running(job_id),
+            Err(_) => JobStatus::Failed,
+        }
     }
 
     fn submit_ifnode(
@@ -141,6 +149,10 @@ mod tests {
         }
         fn copy_dag_into_working_dir(&self, _path: &PathBuf) -> io::Result<u64> {
             Ok(1)
+        }
+
+        fn is_task_cached(&self, uid: &str) -> bool {
+            uid == "_cached_"
         }
     }
 
@@ -253,6 +265,7 @@ mod tests {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
                 return_type: None,
+                caching: false,
                 children: Vec::new(),
             },
             status: JobStatus::ReadyForSubmission,
@@ -279,6 +292,43 @@ mod tests {
         let nodemap = HashMap::from([("c".to_string(), node), ("p".to_string(), parent)]);
         let new_status = submitter.submit_node("c", &nodemap);
         assert!(matches!(new_status, JobStatus::Running(_)))
+    }
+
+    #[test]
+    fn submit_cached_task() {
+        let node = Node {
+            uid: String::from("_cached_"),
+            behavior: NodeBehavior::TaskNode {
+                fname: String::from("function"),
+                launch_script: String::from("script"),
+                return_type: None,
+                caching: true,
+                children: Vec::new(),
+            },
+            status: JobStatus::ReadyForSubmission,
+            parents: vec![Parent {
+                name: String::from("p"),
+                uid: String::from("p"),
+            }],
+        };
+
+        let parent = Node {
+            uid: String::from("p"),
+            behavior: NodeBehavior::RootNode {
+                children: vec!["c".to_string()],
+            },
+            status: JobStatus::Completed(NodeResult::Node),
+            parents: Vec::new(),
+        };
+
+        let submitter = Submitter {
+            backend: &MockBackend,
+            state: &MockState::new(),
+        };
+
+        let nodemap = HashMap::from([("_cached_".to_string(), node), ("p".to_string(), parent)]);
+        let new_status = submitter.submit_node("_cached_", &nodemap);
+        assert!(matches!(new_status, JobStatus::Completed(NodeResult::Node)))
     }
 
     #[test]

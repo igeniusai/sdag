@@ -25,6 +25,7 @@ class TaskNode(BaseNodeType):
     type: Literal["TaskNode"]
     fname: str
     launch_script: Path
+    caching: bool
     return_type: None | str = None
     input_kwargs: list[InputKwarg] = Field(default_factory=list)
     children: list[str] = Field(default_factory=list)

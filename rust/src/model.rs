@@ -41,6 +41,7 @@ pub enum NodeBehavior {
     },
     TaskNode {
         fname: String,
+        caching: bool,
         launch_script: String,
         return_type: Option<String>,
         children: Vec<String>,
