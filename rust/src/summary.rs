@@ -2,7 +2,6 @@ use crate::model::{Node, NodeBehavior};
 use std::collections::HashMap;
 use tabled::{
     Table, Tabled,
-    assert::assert_table,
     settings::{Alignment, Style, object::Columns},
 };
 
@@ -34,4 +33,60 @@ pub fn get_summary_table<'a>(nodemap: &'a HashMap<String, Node>) -> Table {
     table.with(Style::modern());
     table.modify(Columns::first(), Alignment::right());
     table
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tabled::assert::assert_table;
+
+    #[test]
+    fn check_table() {
+        let nodemap = HashMap::from([
+            (
+                String::from("n1"),
+                Node {
+                    uid: String::from("n1"),
+                    behavior: NodeBehavior::TaskNode {
+                        fname: String::from("stage1"),
+                        caching: false,
+                        try_num: 1,
+                        retries: 2,
+                        launch_script: String::from("script"),
+                        return_type: None,
+                        children: Vec::new(),
+                    },
+                    status: JobStatus::Failed,
+                    parents: Vec::new(),
+                },
+            ),
+            (
+                String::from("n2"),
+                Node {
+                    uid: String::from("n2"),
+                    behavior: NodeBehavior::TaskNode {
+                        fname: String::from("stage2"),
+                        caching: false,
+                        try_num: 2,
+                        retries: 2,
+                        launch_script: String::from("script"),
+                        return_type: None,
+                        children: Vec::new(),
+                    },
+                    status: JobStatus::Skipped,
+                    parents: Vec::new(),
+                },
+            ),
+        ]);
+        let table = get_summary_table(&nodemap);
+        assert_table!(table,
+        "┌─────┬────────┬─────────┬───────────┐"
+        "│ uid │ stage  │ status  │ num_tries │"
+        "├─────┼────────┼─────────┼───────────┤"
+        "│  n1 │ stage1 │ Failed  │ 1         │"
+        "├─────┼────────┼─────────┼───────────┤"
+        "│  n2 │ stage2 │ Skipped │ 2         │"
+        "└─────┴────────┴─────────┴───────────┘"
+        );
+    }
 }
