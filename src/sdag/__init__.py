@@ -2,9 +2,10 @@ import sys
 
 import sscheduler
 
+from sdag._version import __version__
 from sdag.sdag import SDAG
 
-__all__ = ["SDAG"]
+__all__ = ["__version__", "SDAG"]
 
 
 def run_scheduler():
