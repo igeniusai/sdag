@@ -110,3 +110,105 @@ pub struct DAG {
 pub struct BooleanOutput {
     pub output: bool,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn get_status_for_child() {
+        let n = Node {
+            uid: String::from("p"),
+            behavior: NodeBehavior::RootNode {
+                children: vec![String::from("c")],
+            },
+            status: JobStatus::Completed(NodeResult::Node),
+            parents: Vec::new(),
+        };
+
+        assert!(matches!(
+            n.get_status_for_child("c"),
+            JobStatus::Completed(NodeResult::Node)
+        ))
+    }
+
+    #[test]
+    fn get_if_true_status_for_child() {
+        let n = Node {
+            uid: String::from("p"),
+            behavior: NodeBehavior::IfNode {
+                true_branch: vec![String::from("c1")],
+                false_branch: vec![String::from("c2")],
+            },
+            status: JobStatus::Completed(NodeResult::If(true)),
+            parents: Vec::new(),
+        };
+
+        assert!(matches!(
+            n.get_status_for_child("c1"),
+            JobStatus::Completed(NodeResult::If(true))
+        ))
+    }
+
+    #[test]
+    fn get_if_false_status_for_child() {
+        let n = Node {
+            uid: String::from("p"),
+            behavior: NodeBehavior::IfNode {
+                true_branch: vec![String::from("c1")],
+                false_branch: vec![String::from("c2")],
+            },
+            status: JobStatus::Completed(NodeResult::If(true)),
+            parents: Vec::new(),
+        };
+
+        assert!(matches!(n.get_status_for_child("c2"), JobStatus::Skipped))
+    }
+
+    #[test]
+    fn get_if_failed_status_for_child() {
+        let n = Node {
+            uid: String::from("p"),
+            behavior: NodeBehavior::IfNode {
+                true_branch: vec![String::from("c1")],
+                false_branch: vec![String::from("c2")],
+            },
+            status: JobStatus::Failed,
+            parents: Vec::new(),
+        };
+
+        assert!(matches!(n.get_status_for_child("c1"), JobStatus::Failed))
+    }
+
+    #[test]
+    fn if_get_all_children() {
+        let n = Node {
+            uid: String::from("p"),
+            behavior: NodeBehavior::IfNode {
+                true_branch: vec![String::from("c1")],
+                false_branch: vec![String::from("c2")],
+            },
+            status: JobStatus::Failed,
+            parents: Vec::new(),
+        };
+
+        let mut children = n.get_all_children();
+        children.sort();
+        assert_eq!(children, vec![String::from("c1"), String::from("c2")])
+    }
+
+    #[test]
+    fn node_get_all_children() {
+        let n = Node {
+            uid: String::from("p"),
+            behavior: NodeBehavior::RootNode {
+                children: vec![String::from("c1"), String::from("c2")],
+            },
+            status: JobStatus::Failed,
+            parents: Vec::new(),
+        };
+
+        let mut children = n.get_all_children();
+        children.sort();
+        assert_eq!(children, vec![String::from("c1"), String::from("c2")])
+    }
+}
