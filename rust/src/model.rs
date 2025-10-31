@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum NodeResult {
@@ -17,7 +18,19 @@ pub enum JobStatus {
     Skipped,
     Failed,
 }
-
+impl fmt::Display for JobStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let repr = match self {
+            Self::NotSubmitted => String::from("Not Submitted"),
+            Self::ReadyForSubmission => String::from("Ready for Submission"),
+            Self::Running(job_id) => format!("Running ({job_id})"),
+            Self::Completed(_) => String::from("Completed"),
+            Self::Skipped => String::from("Skipped"),
+            Self::Failed => String::from("Failed"),
+        };
+        write!(f, "{repr}")
+    }
+}
 impl JobStatus {
     fn initial() -> Self {
         JobStatus::NotSubmitted

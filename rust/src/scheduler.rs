@@ -3,6 +3,7 @@ use crate::model::{DAG, JobStatus, Node, NodeResult};
 use crate::state::LocalDirState;
 use crate::status_management;
 use crate::submission::Submitter;
+use crate::summary;
 use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
@@ -27,6 +28,10 @@ impl Scheduler {
         loop {
             status_management::update_status(&root_id, &mut nodemap, &self.backend);
             submitter.submit(&mut nodemap);
+
+            let table = summary::get_summary_table(&nodemap);
+            println!("{table}");
+
             if self.is_simulation_completed(&nodemap) {
                 break;
             }
