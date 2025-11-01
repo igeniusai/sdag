@@ -1,4 +1,5 @@
 use crate::model::{JobStatus, Node, NodeResult};
+use log;
 use regex::Regex;
 use std::collections::HashMap;
 use std::error::Error;
@@ -48,17 +49,18 @@ impl SlurmBackend {
         let stderr = String::from_utf8(output.stderr);
         if let Ok(msg) = stderr {
             if msg.len() > 0 {
-                eprintln!("Slurm returned the following error: {msg}")
+                log::error!("Slurm stderr: {msg}")
             }
         };
 
         let stdout = String::from_utf8(output.stdout)?;
+        log::debug!("Slurm stdout: {stdout}");
         Ok(stdout)
     }
 
     fn extract_status(&self, job_id: &str, slurm_status: &str) -> JobStatus {
         if let Some(status) = self.parse_slurm_status(&job_id, &slurm_status) {
-            println!("Job ID '{job_id}': status '{status}'");
+            log::info!("Job ID '{job_id}': status '{status}'");
             return match status.as_str() {
                 "COMPLETED" => {
                     let completed = NodeResult::Task(String::from(job_id));
@@ -114,7 +116,7 @@ impl SlurmBackend {
                 .map(|(uid, job_id)| (uid, self.extract_status(job_id, &output)))
                 .collect(),
             Err(_) => {
-                eprintln!("Failed to contact slurm, marking all running jobs as failed");
+                log::error!("Failed to contact Slurm, marking all running jobs as failed");
                 job_map.keys().map(|uid| (uid, JobStatus::Failed)).collect()
             }
         }
@@ -150,12 +152,12 @@ impl Backend for SlurmBackend {
 
         if let Ok(stderr) = String::from_utf8(output.stderr) {
             if stderr.len() > 0 {
-                eprintln!("Task {uid} submission: {stderr}");
+                log::error!("Task {uid} submission: {stderr}");
             }
         }
 
         let stdout = String::from_utf8(output.stdout)?;
-        println!("Task {uid}: {stdout}");
+        log::info!("Task {uid}: {stdout}");
         let job_id = self
             .find_submitted_job_id(&stdout)
             .ok_or("Job id not found")?;

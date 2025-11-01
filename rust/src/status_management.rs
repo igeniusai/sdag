@@ -1,5 +1,6 @@
 use crate::backend::{Backend, SlurmBackend};
 use crate::model::{JobStatus, Node, NodeBehavior};
+use log;
 use std::collections::HashMap;
 
 fn set_retry_if_possible(node: &mut Node) {
@@ -8,7 +9,7 @@ fn set_retry_if_possible(node: &mut Node) {
     } = &mut node.behavior
     {
         if *try_num > 0 && try_num <= retries {
-            println!("Node {} scheduled for resubmission", node.uid);
+            log::info!("Node {} scheduled for resubmission", node.uid);
             node.status = JobStatus::ReadyForSubmission;
         }
     }

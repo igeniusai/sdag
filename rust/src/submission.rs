@@ -69,7 +69,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
         try_num: &u32,
     ) -> JobStatus {
         if *caching && self.state.is_task_cached(uid) {
-            println!("Task {uid} is cached");
+            log::info!("Task {uid} is cached");
             return JobStatus::Completed(NodeResult::Node);
         }
 
@@ -79,7 +79,10 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
             .submit(launch_script, uid, pipeline_dir, try_num);
         match res {
             Ok(job_id) => JobStatus::Running(job_id),
-            Err(_) => JobStatus::Failed,
+            Err(e) => {
+                log::error!("Failed task {uid} submission: {e}");
+                JobStatus::Failed
+            }
         }
     }
 

@@ -2,8 +2,8 @@ use crate::model::DAG;
 use crate::state::StateManager;
 use pyo3::prelude::*;
 use serde_json;
-use std::fs::File;
-use std::io::{self, Read};
+use std::fs;
+use std::io;
 use std::path::PathBuf;
 mod model;
 mod summary;
@@ -20,41 +20,62 @@ use std::env;
 mod state;
 use state::LocalDirState;
 mod scheduler;
+use env_logger::Env;
+use log;
 use scheduler::Scheduler;
 
 fn read_dag(path: &PathBuf) -> io::Result<DAG> {
-    let mut f = File::open(path)?;
-    let mut buf = String::new();
-    f.read_to_string(&mut buf).unwrap();
+    let buf = fs::read_to_string(path)?;
     let dag: DAG = serde_json::from_str(&buf)?;
     Ok(dag)
 }
 
-fn find_home_dir() -> Result<PathBuf, ()> {
+fn find_home_dir() -> Result<PathBuf, String> {
     match env::var("SDAG_HOME") {
         Ok(val) => Ok(PathBuf::from(val)),
         Err(_) => {
-            let path = env::home_dir().ok_or(())?;
+            let path = env::home_dir().ok_or(String::from(
+                "Failed to identify a home directory. Please Set the \
+            'SDAG_HOME' environment variable.",
+            ))?;
             Ok(path.join(".sdag"))
         }
     }
 }
 
+fn configure_logging(log_level: &str) {
+    let env = Env::default()
+        .filter_or("SDAG_LOG_LEVEL", log_level)
+        .write_style_or("SDAG_LOG_STYLE", "always");
+
+    env_logger::init_from_env(env);
+    log::debug!("Logging configured")
+}
+
 #[pyfunction]
 fn sscheduler_start(argv: Vec<String>) {
     let args = parser::CLI::parse_from(argv);
-    let home_dir =
-        find_home_dir().expect("SDAG_HOME env variable not set and home directory not found.");
+    configure_logging(&args.log_level);
 
-    let dag = read_dag(&args.pipeline).expect("Failed to parse DAG from JSON file.");
+    let home_dir = find_home_dir().map_err(|e| log::error!("{e}")).unwrap();
+    log::debug!("SDAG home directory: {home_dir:?}");
+
+    let dag = read_dag(&args.pipeline)
+        .map_err(|e| log::error!("{e}"))
+        .unwrap();
+
     let state = LocalDirState::new(home_dir.join(&dag.name));
+    log::info!("Working directory: '{:?}'", state.get_pipeline_dir());
+
     state
         .prepare(&dag)
-        .expect("Failed to prepare the working directory.");
+        .map_err(|e| log::error!("Working directory creation failed: {e}."))
+        .unwrap();
 
     state
         .copy_dag_into_working_dir(&args.pipeline)
-        .expect("Failed to copy the pipeline DAG into the working directory.");
+        .map_err(|e| log::error!("Failed to copy DAG file: {e}"))
+        .unwrap();
 
     let backend = backend::SlurmBackend;
     let poll_time = time::Duration::from_secs(args.wait_seconds);
@@ -64,6 +85,7 @@ fn sscheduler_start(argv: Vec<String>) {
         backend,
     };
 
+    log::info!("Running pipeline '{}'", dag.name);
     scheduler.run(dag);
 }
 

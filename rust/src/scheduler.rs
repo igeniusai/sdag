@@ -4,6 +4,7 @@ use crate::state::LocalDirState;
 use crate::status_management;
 use crate::submission::Submitter;
 use crate::summary;
+use log;
 use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
@@ -18,27 +19,29 @@ impl Scheduler {
     pub fn run(&self, dag: DAG) {
         let (root_id, mut nodemap) = self
             .build_nodemap(dag)
-            .expect("Failed to identify the DAG root node");
+            .ok_or_else(|| log::error!("Failed to identify the root node"))
+            .unwrap();
 
         let submitter = Submitter {
             state: &self.state,
             backend: &self.backend,
         };
 
+        log::debug!("Starting scheduling loop");
         loop {
             status_management::update_status(&root_id, &mut nodemap, &self.backend);
             submitter.submit(&mut nodemap);
 
             let table = summary::get_summary_table(&nodemap);
-            println!("{table}");
+            log::info!("Summary:\n{table}");
 
             if self.is_simulation_completed(&nodemap) {
+                log::info!("Simulation completed, exiting...");
                 break;
             }
 
             thread::sleep(self.poll_time);
         }
-        println!("Pipeline completed.")
     }
 
     fn build_nodemap(&self, dag: DAG) -> Option<(String, HashMap<String, Node>)> {
@@ -47,7 +50,7 @@ impl Scheduler {
             nodemap.insert(node.uid.clone(), node);
         }
 
-        let root_id = self.find_root_id(&nodemap);
+        let root_id = self.find_root_id(&nodemap)?;
         let root = nodemap.get_mut(&root_id)?;
         root.status = JobStatus::Completed(NodeResult::Node);
         Some((root_id, nodemap))
@@ -61,13 +64,12 @@ impl Scheduler {
         })
     }
 
-    fn find_root_id(&self, nodemap: &HashMap<String, Node>) -> String {
+    fn find_root_id(&self, nodemap: &HashMap<String, Node>) -> Option<String> {
         nodemap
             .values()
             .filter(|node| node.parents.len() == 0)
             .map(|node| &node.uid)
+            .map(|uid| uid.to_string())
             .next()
-            .expect("Pipeline has no root!")
-            .to_string()
     }
 }

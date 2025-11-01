@@ -1,4 +1,5 @@
 use crate::model::DAG;
+use log;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -31,7 +32,7 @@ impl LocalDirState {
     fn create_working_dir(&self, dag: &DAG) -> io::Result<()> {
         let res = fs::create_dir_all(&self.pipeline_dir);
         if let Err(_) = res {
-            println!("Did not create pipeline directory, maybe it already exists")
+            log::debug!("pipeline dir creation failed, it likely already exists.")
         }
 
         for node in &dag.nodes {
@@ -39,7 +40,10 @@ impl LocalDirState {
             let res = fs::create_dir(path);
             if let Err(_) = res {
                 let uid = &node.uid;
-                println!("Did not create uid {uid} directory")
+                log::debug!(
+                    "Failed to create stage '{uid}' \
+                    directory, it likely already exists."
+                )
             }
         }
         Ok(())
@@ -48,7 +52,6 @@ impl LocalDirState {
 
 impl StateManager for LocalDirState {
     fn prepare(&self, dag: &DAG) -> io::Result<()> {
-        // let res = self.delete_dir_if_exist();
         self.create_working_dir(dag)
     }
 

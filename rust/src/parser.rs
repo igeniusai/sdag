@@ -15,6 +15,13 @@ pub struct CLI {
         help = "Time between successive Slurm polls"
     )]
     pub wait_seconds: u64,
+    #[arg(
+        short,
+        long,
+        default_value_t = String::from("info"),
+        help = "Logging level (debug, info, error, or tracing)"
+    )]
+    pub log_level: String,
 }
 
 #[cfg(test)]
@@ -34,5 +41,17 @@ mod tests {
     fn pipeline_is_missing() {
         let iter = ["sscheduler", "--wait-seconds=2"].iter();
         CLI::try_parse_from(iter).unwrap();
+    }
+
+    #[test]
+    fn parse_log_level() {
+        let iter = [
+            "sscheduler",
+            "--pipeline=pipeline.json",
+            "--log-level=debug",
+        ]
+        .iter();
+        let cli = CLI::try_parse_from(iter).unwrap();
+        assert_eq!(cli.log_level, String::from("debug"));
     }
 }
