@@ -27,3 +27,76 @@ build-backend = "maturin"
 features = ["pyo3/extension-module"]
 python-packages = ["sdag"]
 strip = true
+
+[tool.ruff]
+line-length = 79
+extend-exclude = [".ipynb_checkpoints", "docs"]
+
+[tool.ruff.lint]
+select = [
+    "F",
+    "E",
+    "W",
+    "C90",
+    "I",
+    "N",
+    "D",
+    "UP",
+    "YTT",
+    "BLE",
+    "FBT",
+    "B",
+    "B9",
+    "A",
+    "C4",
+    "T10",
+    "EM",
+    "ISC",
+    "ICN",
+    "LOG",
+    "G",
+    "PT",
+    "RSE",
+    "RET",
+    "SLF",
+    "SIM",
+    "ARG",
+    "PTH",
+    "TRY",
+    "NPY",
+    "PERF",
+    "RUF",
+]
+ignore = [
+    # Missing docstring in public package
+    "D100",
+    # Missing docstring in public module
+    "D104",
+    # Not supported by Pydantic
+    "UP046",
+    # Caching default value is set in the decorator
+    "FBT001",
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+# ignore unused imports
+"__init__.py" = ["F401"]
+# ignore pydocstyle rules for tests and tasks
+# Tests can access private functions
+"tests/*" = ["D", "SLF001"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pyright]
+include = ["src"]
+exclude = [
+    "**/__pycache__",
+]
+defineConstant = { DEBUG = true }
+reportMissingImports = "error"
+reportMissingTypeStubs = false
+
+pythonPlatform = "Linux"
+venvPath = "."
+venv = ".venv"
