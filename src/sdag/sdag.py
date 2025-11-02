@@ -18,8 +18,7 @@ class DAG:
     unique end. Both are added at the end of the compilation step.
 
     Attributes:
-        root (Node[RootNode]): Pipeline root.
-        end (Node[EndNode]): Pipeline end.
+        prefix (str): Prefix used for root and end nodes.
         graph (Graph): DAG graph.
         branchstack (List[Node[IfNode]]): Stack to store outer
             if blocks.
@@ -35,28 +34,28 @@ class DAG:
             uid (str): uid used to initialize root and end nodes.
             name (str, optional): DAG name. Defaults to "".
         """
-        root_uid = f"_{name}_root_{uid}"
-        end_uid = f"_{name}_end_{uid}"
-
-        self.root = Node(uid=root_uid, behavior=RootNode(type="RootNode"))
-        self.end = Node(uid=end_uid, behavior=EndNode(type="EndNode"))
+        self.prefix = f"_{name}_{uid}"
         self.graph = Graph()
         self.branchstack: list[Node[IfNode]] = []
         self.last_branch: Node[IfNode] | None = None
 
     def add_root(self) -> None:
         """Add root Node to the graph."""
+        uid = f"{self.prefix}_root_"
+        root = Node(uid=uid, behavior=RootNode(type="RootNode"))
         for node in self.graph.nodes:
             if not node.parents:
-                self.root.add_edge(node)
-        self.graph.nodes.append(self.root)
+                root.add_edge(node)
+        self.graph.nodes.append(root)
 
     def add_end(self) -> None:
         """Add end node."""
+        uid = f"{self.prefix}_end_"
+        end = Node(uid=uid, behavior=EndNode(type="EndNode"))
         for node in self.graph.nodes:
             if node.is_leaf():
-                node.add_edge(self.end)
-        self.graph.nodes.append(self.end)
+                node.add_edge(end)
+        self.graph.nodes.append(end)
 
     def register(self, node: Node) -> None:
         """Register a node to the DAG.
@@ -305,6 +304,10 @@ class SDAG:
         Returns:
             Graph: Compiled pipeline graph.
         """
+        if self.current is None:
+            msg = "Target DAG not set."
+            raise RuntimeError(msg)
+
         graph = self.current.get_graph()
         self.current = None if not self.dagstack else self.dagstack.pop()
         if self.current is not None:
@@ -323,6 +326,10 @@ class SDAG:
         Returns:
             IfTask: If task.
         """
+        if self.current is None:
+            msg = "Target DAG not set."
+            raise RuntimeError(msg)
+
         node = Node(uid=self.get_uid(), behavior=IfNode(type="IfNode"))
         self.current.register(node)
         expr.add_edge(node)
@@ -340,6 +347,14 @@ class SDAG:
         Returns:
             IfTask: Else task.
         """
+        if self.current is None:
+            msg = "Target DAG not set."
+            raise RuntimeError(msg)
+
+        if self.current.last_branch is None:
+            msg = "No current active branch."
+            raise RuntimeError(msg)
+
         self.current.validate_else()
         ifnode = self.current.last_branch
         ifnode.behavior.branch = False
@@ -358,6 +373,10 @@ class SDAG:
         Returns:
             IfTask: Task.
         """
+        if self.current is None:
+            msg = "Target DAG not set."
+            raise RuntimeError(msg)
+
         self.current.validate_elif()
         self.current.register_elif_expression(expr)
         return self.If(expr)
@@ -373,6 +392,10 @@ class SDAG:
         Returns:
             Node[OneOfNode]: OneOf node.
         """
+        if self.current is None:
+            msg = "Target DAG not set."
+            raise RuntimeError(msg)
+
         node = Node(uid=self.get_uid(), behavior=OneOfNode(type="OneOfNode"))
         self.current.register(node)
         for parent in args:
@@ -385,6 +408,10 @@ class SDAG:
         Args:
             node (Node): Node to be registered.
         """
+        if self.current is None:
+            msg = "Target DAG not set."
+            raise RuntimeError(msg)
+
         self.current.register(node)
 
     def push_branchstack(self, node: Node[IfNode]) -> None:
@@ -393,8 +420,16 @@ class SDAG:
         Args:
             node (Node[IfNode]): If node to be pushed.
         """
+        if self.current is None:
+            msg = "Target DAG not set."
+            raise RuntimeError(msg)
+
         self.current.push_stack(node)
 
     def pop_branchstack(self) -> None:
         """Pop an If node from the stack."""
+        if self.current is None:
+            msg = "Target DAG not set."
+            raise RuntimeError(msg)
+
         self.current.pop_stack()

@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Generic, Literal, Self, TypeVar
+from typing import Annotated, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -224,6 +224,9 @@ class RootNode(BaseNodeType):
 T = TypeVar("T", bound=BaseNodeType)
 """Node type."""
 
+U = TypeVar("U", bound=BaseNodeType)
+"""Node type."""
+
 
 class Parent(BaseModel):
     """Node parent.
@@ -263,7 +266,7 @@ class Node(BaseModel, Generic[T]):
         """
         return self.behavior.is_leaf()
 
-    def add_edge(self, child: Self, name: str = "") -> None:
+    def add_edge(self, child: "Node[U]", name: str = "") -> None:
         """Add an edge to the graph.
 
         Both parent-child and child-parent relationships are
@@ -277,7 +280,7 @@ class Node(BaseModel, Generic[T]):
         child.add_parent(name, self)
         self._add_child(child)
 
-    def add_parent(self, name: str, node: Self) -> None:
+    def add_parent(self, name: str, node: "Node[U]") -> None:
         """Add a parent to the current node.
 
         Args:
@@ -287,7 +290,7 @@ class Node(BaseModel, Generic[T]):
         parent = Parent(uid=node.uid, name=name)
         self.parents.append(parent)
 
-    def _add_child(self, node: Self) -> None:
+    def _add_child(self, node: "Node[U]") -> None:
         """Add a child to the current node.
 
         Args:
