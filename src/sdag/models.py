@@ -7,6 +7,8 @@ from typing import Annotated, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field
 
+from sdag.exceptions import EndNotFoundError, RootNotFoundError
+
 StrPath = str | Path
 
 
@@ -274,8 +276,8 @@ class Node(BaseModel, Generic[T]):
 
         Args:
             child (Self): Child of this node.
-            name (str, optional): Child name. It is used to identify input
-                kwargs. Defaults to ''.
+            name (str, optional): Child name. It is used to identify
+                input kwargs. Defaults to ''.
         """
         child.add_parent(name, self)
         self._add_child(child)
@@ -328,7 +330,7 @@ class Graph(BaseModel):
         """Get the root node.
 
         Raises:
-            ValueError: The root node is not found.
+            RootNotFoundError: The root node is not found.
 
         Returns:
             Node: Root node.
@@ -337,14 +339,13 @@ class Graph(BaseModel):
             if not node.parents:
                 return node
 
-        msg = "Root node not found"
-        raise ValueError(msg)
+        raise RootNotFoundError
 
     def get_end(self) -> Node:
         """Get the terminal node.
 
         Raises:
-            ValueError: The end node is not found.
+            EndNotFoundError: The end node is not found.
 
         Returns:
             Node: End node.
@@ -353,5 +354,4 @@ class Graph(BaseModel):
             if node.is_leaf():
                 return node
 
-        msg = "End node not found"
-        raise ValueError(msg)
+        raise EndNotFoundError

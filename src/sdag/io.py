@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic_settings import BaseSettings
 
+from sdag.exceptions import NodeNotFoundError, NotATaskError
 from sdag.models import Graph, Node, Parent, TaskNode
 
 
@@ -81,7 +82,7 @@ class IOManager:
         """Find the task node in the DAG JSON file.
 
         Raises:
-            TypeError: The node is not a task.
+            NotATaskError: The node is not a task.
 
         Returns:
             Node[TaskNode]: Node that is going to be executed.
@@ -89,8 +90,8 @@ class IOManager:
         dag = self._read_dag()
         node = self._find_this_node(dag)
         if not isinstance(node.behavior, TaskNode):
-            msg = f"Node {node.uid} is not a task!"
-            raise TypeError(msg)
+            raise NotATaskError(uid=node.uid)
+
         return node
 
     def _read_dag(self) -> Graph:
@@ -125,7 +126,7 @@ class IOManager:
             dag (Graph): Parsed DAG.
 
         Raises:
-            ValueError: The node is not found in the DAG.
+            NodeNotFoundError: The node is not found in the DAG.
 
         Returns:
             Node: Node to be executed.
@@ -133,5 +134,5 @@ class IOManager:
         for node in dag.nodes:
             if self.settings.sdag_uid == node.uid:
                 return node
-        msg = f"Node {self.settings.sdag_uid} not found"
-        raise ValueError(msg)
+
+        raise NodeNotFoundError(uid=self.settings.sdag_uid)

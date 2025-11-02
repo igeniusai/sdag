@@ -4,6 +4,13 @@ from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
+from sdag.exceptions import (
+    DAGNotSetError,
+    IncorrectElifError,
+    IncorrectElseError,
+    MissingActiveBranchError,
+    TaskNotUniqueError,
+)
 from sdag.io import IOManager
 from sdag.models import EndNode, Graph, IfNode, Node, OneOfNode, RootNode
 from sdag.tasks import IfTask, Pipeline, Task
@@ -78,18 +85,24 @@ class DAG:
 
         Args:
             expr (Node): Elif condition.
+
+        Raises:
+            MissingActiveBranchError: Active branch is missing.
+            IncorrectElifError: Branch is active.
+            IncorrectElifError: Not exited from the context manager.
+            IncorrectElifError: Selected branch is not False.
         """
-        if self.last_branch is None or self.last_branch.behavior.active:
-            msg = "Calling Elif before If"
-            raise ValueError(msg)
+        if self.last_branch is None:
+            raise MissingActiveBranchError
+
+        if self.last_branch.behavior.active:
+            raise IncorrectElifError
 
         if not self.last_branch.behavior.to_be_dropped:
-            msg = "Conditional statement must be a task"
-            raise ValueError(msg)
+            raise IncorrectElifError
 
         if not self.last_branch.behavior.branch:
-            msg = "Calling Elif after Else"
-            raise ValueError(msg)
+            raise IncorrectElifError
 
         self.last_branch.behavior.branch = False
         self.last_branch.add_edge(expr)
@@ -201,14 +214,13 @@ class SDAG:
                 fn (Callable): User-defined task function.
 
             Raises:
-                ValueError: The task name is not unique.
+                TaskNotUniqueError: The task name is not unique.
 
             Returns:
                 Task: Task.
             """
             if fn.__name__ in self.taskdict:
-                msg = "Task names must be unique."
-                raise ValueError(msg)
+                raise TaskNotUniqueError(name=fn.__name__)
 
             self.taskdict[fn.__name__] = fn
             return Task(
@@ -275,12 +287,14 @@ class SDAG:
     def get_graph(self) -> Graph:
         """Get the compiled pipeline graph.
 
+        Raises:
+            DAGNotSetError: DAG is not set.
+
         Returns:
             Graph: Compiled pipeline graph.
         """
         if self.current is None:
-            msg = "Target DAG not set."
-            raise RuntimeError(msg)
+            raise DAGNotSetError
 
         graph = self.current.get_graph()
         self.current = None if not self.dagstack else self.dagstack.pop()
@@ -301,8 +315,7 @@ class SDAG:
             IfTask: If task.
         """
         if self.current is None:
-            msg = "Target DAG not set."
-            raise RuntimeError(msg)
+            raise DAGNotSetError
 
         node = Node(uid=self.get_uid(), behavior=IfNode(type="IfNode"))
         self.current.register(node)
@@ -318,24 +331,26 @@ class SDAG:
 
         Must be used after an If branch.
 
+        Raises:
+            DAGNotSetError: DAG is not set.
+            MissingActiveBranchError: Last branch is not set.
+            IncorrectElseError: Last branch must be dropped.
+            IncorrectElseError: Last branch is still active.
+
         Returns:
             IfTask: Else task.
         """
         if self.current is None:
-            msg = "Target DAG not set."
-            raise RuntimeError(msg)
+            raise DAGNotSetError
 
         if self.current.last_branch is None:
-            msg = "No current active branch."
-            raise RuntimeError(msg)
+            raise MissingActiveBranchError
 
         if self.current.last_branch.behavior.to_be_dropped:
-            msg = "Calling else before if"
-            raise ValueError(msg)
+            raise IncorrectElseError
 
         if self.current.last_branch.behavior.active:
-            msg = "Calling else within another branch"
-            raise ValueError(msg)
+            raise IncorrectElseError
 
         ifnode = self.current.last_branch
         ifnode.behavior.branch = False
@@ -351,12 +366,14 @@ class SDAG:
         Args:
             expr (Node): Task node. It's output must be Boolean.
 
+        Raises:
+            DAGNotSetError: DAG is not set.
+
         Returns:
             IfTask: Task.
         """
         if self.current is None:
-            msg = "Target DAG not set."
-            raise RuntimeError(msg)
+            raise DAGNotSetError
 
         self.current.register_elif_expression(expr)
         return self.If(expr)
@@ -368,13 +385,14 @@ class SDAG:
         1. Selecting nodes from mutually excluded branches.
         2. Selecting The first successfully completed parent.
 
+        Raises:
+            DAGNotSetError: DAG is not set.
 
         Returns:
             Node[OneOfNode]: OneOf node.
         """
         if self.current is None:
-            msg = "Target DAG not set."
-            raise RuntimeError(msg)
+            raise DAGNotSetError
 
         node = Node(uid=self.get_uid(), behavior=OneOfNode(type="OneOfNode"))
         self.current.register(node)
@@ -387,10 +405,12 @@ class SDAG:
 
         Args:
             node (Node): Node to be registered.
+
+        Raises:
+            DAGNotSetError: DAG is not set.
         """
         if self.current is None:
-            msg = "Target DAG not set."
-            raise RuntimeError(msg)
+            raise DAGNotSetError
 
         self.current.register(node)
 
@@ -399,17 +419,22 @@ class SDAG:
 
         Args:
             node (Node[IfNode]): If node to be pushed.
+
+        Raises:
+            DAGNotSetError: DAG is not set.
         """
         if self.current is None:
-            msg = "Target DAG not set."
-            raise RuntimeError(msg)
+            raise DAGNotSetError
 
         self.current.push_stack(node)
 
     def pop_branchstack(self) -> None:
-        """Pop an If node from the stack."""
+        """Pop an If node from the stack.
+
+        Raises:
+            DAGNotSetError: DAG is not set.
+        """
         if self.current is None:
-            msg = "Target DAG not set."
-            raise RuntimeError(msg)
+            raise DAGNotSetError
 
         self.current.pop_stack()
