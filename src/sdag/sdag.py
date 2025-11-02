@@ -79,6 +79,18 @@ class DAG:
         Args:
             expr (Node): Elif condition.
         """
+        if self.last_branch is None or self.last_branch.behavior.active:
+            msg = "Calling Elif before If"
+            raise ValueError(msg)
+
+        if not self.last_branch.behavior.to_be_dropped:
+            msg = "Conditional statement must be a task"
+            raise ValueError(msg)
+
+        if not self.last_branch.behavior.branch:
+            msg = "Calling Elif after Else"
+            raise ValueError(msg)
+
         self.last_branch.behavior.branch = False
         self.last_branch.add_edge(expr)
 
@@ -94,44 +106,6 @@ class DAG:
         """
         self.last_branch = node
         self.branchstack.append(node)
-
-    def validate_elif(self) -> None:
-        """Validate Elif node.
-
-        Raises:
-            ValueError: Elif called before If.
-            ValueError: The condition is not a task.
-            ValueError: Elif called after Else.
-        """
-        if (
-            not isinstance(self.last_branch.behavior, IfNode)
-            or self.last_branch.behavior.active
-        ):
-            msg = "Calling Elif before if"
-            raise ValueError(msg)
-        if not self.last_branch.behavior.to_be_dropped:
-            msg = "Conditional statement must be a task"
-            raise ValueError(msg)
-        if not self.last_branch.behavior.branch:
-            msg = "Calling Elif after Else"
-            raise ValueError(msg)
-
-    def validate_else(self) -> None:
-        """Validate an Else node.
-
-        Raises:
-            ValueError: Else called Before If.
-            ValueError: Else called within another If branch.
-        """
-        if (
-            not isinstance(self.last_branch.behavior, IfNode)
-            or self.last_branch.behavior.to_be_dropped
-        ):
-            msg = "Calling else before if"
-            raise ValueError(msg)
-        if self.last_branch.behavior.active:
-            msg = "Calling else within another branch"
-            raise ValueError(msg)
 
     def get_graph(self) -> Graph:
         """Get graph.
@@ -355,7 +329,14 @@ class SDAG:
             msg = "No current active branch."
             raise RuntimeError(msg)
 
-        self.current.validate_else()
+        if self.current.last_branch.behavior.to_be_dropped:
+            msg = "Calling else before if"
+            raise ValueError(msg)
+
+        if self.current.last_branch.behavior.active:
+            msg = "Calling else within another branch"
+            raise ValueError(msg)
+
         ifnode = self.current.last_branch
         ifnode.behavior.branch = False
         return IfTask(
@@ -377,7 +358,6 @@ class SDAG:
             msg = "Target DAG not set."
             raise RuntimeError(msg)
 
-        self.current.validate_elif()
         self.current.register_elif_expression(expr)
         return self.If(expr)
 

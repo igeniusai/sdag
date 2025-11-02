@@ -221,7 +221,7 @@ class RootNode(BaseNodeType):
         return not self.children
 
 
-T = TypeVar("T", bound=BaseNodeType)
+T = TypeVar("T", bound=BaseNodeType, covariant=True)
 """Node type."""
 
 U = TypeVar("U", bound=BaseNodeType)
