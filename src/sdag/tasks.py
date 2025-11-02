@@ -60,7 +60,6 @@ class Task:
         node = Node(
             uid=uid,
             behavior=TaskNode(
-                type="TaskNode",
                 fname=self.fn.__name__,
                 caching=self.caching,
                 retries=self.retries,

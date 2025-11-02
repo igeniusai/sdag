@@ -63,7 +63,7 @@ class TaskNode(BaseNodeType):
         children (list[str]): Children uids.
     """
 
-    type: Literal["TaskNode"]
+    type: Literal["TaskNode"] = "TaskNode"
     fname: str
     launch_script: Path
     caching: bool
@@ -105,7 +105,7 @@ class IfNode(BaseNodeType):
             nested if/elif/else.
     """
 
-    type: Literal["IfNode"]
+    type: Literal["IfNode"] = "IfNode"
     branch: bool = True
     true_branch: list[str] = Field(default_factory=list)
     false_branch: list[str] = Field(default_factory=list)
@@ -144,7 +144,7 @@ class OneOfNode(BaseNodeType):
         children (list[str]): Children uids.
     """
 
-    type: Literal["OneOfNode"]
+    type: Literal["OneOfNode"] = "OneOfNode"
     children: list[str] = Field(default_factory=list)
 
     def add_child(self, uid: str) -> None:
@@ -172,7 +172,7 @@ class EndNode(BaseNodeType):
         children (list[str]): Children uids.
     """
 
-    type: Literal["EndNode"]
+    type: Literal["EndNode"] = "EndNode"
     children: list[str] = Field(default_factory=list)
 
     def add_child(self, uid: str) -> None:
@@ -203,7 +203,7 @@ class RootNode(BaseNodeType):
         children (list[str]): Children uids.
     """
 
-    type: Literal["RootNode"]
+    type: Literal["RootNode"] = "RootNode"
     children: list[str] = Field(default_factory=list)
 
     def add_child(self, uid: str) -> None:

@@ -49,7 +49,7 @@ class DAG:
     def add_root(self) -> None:
         """Add root Node to the graph."""
         uid = f"{self.prefix}_root_"
-        root = Node(uid=uid, behavior=RootNode(type="RootNode"))
+        root = Node(uid=uid, behavior=RootNode())
         for node in self.graph.nodes:
             if not node.parents:
                 root.add_edge(node)
@@ -58,7 +58,7 @@ class DAG:
     def add_end(self) -> None:
         """Add end node."""
         uid = f"{self.prefix}_end_"
-        end = Node(uid=uid, behavior=EndNode(type="EndNode"))
+        end = Node(uid=uid, behavior=EndNode())
         for node in self.graph.nodes:
             if node.is_leaf():
                 node.add_edge(end)
@@ -317,7 +317,7 @@ class SDAG:
         if self.current is None:
             raise DAGNotSetError
 
-        node = Node(uid=self.get_uid(), behavior=IfNode(type="IfNode"))
+        node = Node(uid=self.get_uid(), behavior=IfNode())
         self.current.register(node)
         expr.add_edge(node)
         return IfTask(
@@ -394,7 +394,7 @@ class SDAG:
         if self.current is None:
             raise DAGNotSetError
 
-        node = Node(uid=self.get_uid(), behavior=OneOfNode(type="OneOfNode"))
+        node = Node(uid=self.get_uid(), behavior=OneOfNode())
         self.current.register(node)
         for parent in args:
             parent.add_edge(node)
