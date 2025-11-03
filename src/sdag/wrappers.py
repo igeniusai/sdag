@@ -101,8 +101,8 @@ class Task:
         return return_type
 
 
-class IfTask:
-    """Task associated with If/Elif branches.
+class IfWrapper:
+    """If node wrapper.
 
     Attributes:
         node (Node[IfNode]): Node returning the Boolean value.

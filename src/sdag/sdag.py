@@ -13,7 +13,7 @@ from sdag.exceptions import (
 )
 from sdag.io import IOManager
 from sdag.models import EndNode, Graph, IfNode, Node, OneOfNode, RootNode
-from sdag.tasks import IfTask, Pipeline, Task
+from sdag.wrappers import IfWrapper, Pipeline, Task
 
 
 class DAG:
@@ -311,7 +311,7 @@ class SDAG:
             self.current.join(graph)
         return graph
 
-    def If(self, expr: Node) -> IfTask:  # noqa: N802
+    def If(self, expr: Node) -> IfWrapper:  # noqa: N802
         """If node.
 
         If the task passed evaluates to True, than the branch within
@@ -321,7 +321,7 @@ class SDAG:
             expr (Node): Task node. It's output must be a Boolean.
 
         Returns:
-            IfTask: If task.
+            IfWrapper: If task.
         """
         if self.current is None:
             raise DAGNotSetError
@@ -329,9 +329,9 @@ class SDAG:
         node = Node(uid=self.get_uid(), behavior=IfNode())
         self.current.register(node)
         expr.add_edge(node)
-        return IfTask(node=node, push_branch=self.push_branch)
+        return IfWrapper(node=node, push_branch=self.push_branch)
 
-    def Else(self) -> IfTask:  # noqa: N802
+    def Else(self) -> IfWrapper:  # noqa: N802
         """Else branch.
 
         Must be used after an If branch.
@@ -343,7 +343,7 @@ class SDAG:
             IncorrectElseError: Last branch is still active.
 
         Returns:
-            IfTask: Else task.
+            IfWrapper: Else task.
         """
         if self.current is None:
             raise DAGNotSetError
@@ -351,7 +351,8 @@ class SDAG:
         if not self.current.branchstack:
             raise MissingActiveBranchError
 
-        last_branch = self.current.branchstack[-1]
+        # The context manager repushes it
+        last_branch = self.current.branchstack.pop()
 
         if last_branch.behavior.to_be_dropped:
             raise IncorrectElseError
@@ -361,9 +362,9 @@ class SDAG:
 
         last_branch.behavior.branch = False
         last_branch.behavior.to_be_dropped = True
-        return IfTask(node=last_branch, push_branch=self.push_branch)
+        return IfWrapper(node=last_branch, push_branch=self.push_branch)
 
-    def Elif(self, expr: Node) -> IfTask:  # noqa: N802
+    def Elif(self, expr: Node) -> IfWrapper:  # noqa: N802
         """Elif node.
 
         Args:
@@ -373,7 +374,7 @@ class SDAG:
             DAGNotSetError: DAG is not set.
 
         Returns:
-            IfTask: Task.
+            IfWrapper: Task.
         """
         if self.current is None:
             raise DAGNotSetError
