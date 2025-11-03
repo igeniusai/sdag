@@ -106,30 +106,20 @@ class IfTask:
 
     Attributes:
         node (Node[IfNode]): Node returning the Boolean value.
-        pop_stack (Callable[..., None]): Hook to pop a branch
-            from the stack. Used for nested if/elif.
-        push_stack (Callable[..., None]): Hook to push a branch
-            to the stack. Used for nested if/elif.
+        push_branch (Callable[..., None]): Hook to push a branch
+            to the stack.
     """
 
-    def __init__(
-        self,
-        node: Node[IfNode],
-        pop_stack: Callable[..., None],
-        push_stack: Callable[..., None],
-    ):
+    def __init__(self, node: Node[IfNode], push_branch: Callable[..., None]):
         """Initialize the task.
 
         Args:
             node (Node[IfNode]): Condition node.
-            pop_stack (Callable[..., None]): Hook to pop a branch
-                from the stack. Used for nested if/elif.
-            push_stack (Callable[..., None]): Hook to push a branch
-                to the stack. Used for nested if/elif.
+            push_branch (Callable[..., None]): Hook to push a branch
+                to the stack to mark it as active.
         """
         self.node = node
-        self.pop_stack = pop_stack
-        self.push_stack = push_stack
+        self.push_branch = push_branch
 
     def __enter__(self) -> Self:
         """Enter the positive branch.
@@ -137,14 +127,13 @@ class IfTask:
         Returns:
             Self: This task.
         """
-        self.node.behavior.active = True
-        self.push_stack(self.node)
+        self.node.behavior.in_context = True
+        self.push_branch(self.node)
         return self
 
     def __exit__(self, type, value, traceback) -> None:  # noqa: A002
         """Exit the positive branch."""
-        self.node.behavior.active = False
-        self.pop_stack()
+        self.node.behavior.in_context = False
 
 
 class Pipeline:

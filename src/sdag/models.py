@@ -98,18 +98,19 @@ class IfNode(BaseNodeType):
         true_branch (str): Uids of the child nodes in the
             True branch.
         false_branch (str): Uids of the child nodes in the
-            False branch.
-        active (bool): Internal variable to manage nested
-            if/elif/else.
+            false branch.
+        in_context (bool): True if the context manager is
+            active (so we are within the branch). Defaults
+            to True.
         to_be_dropped (bool): Internal variable to manage
-            nested if/elif/else.
+            nested if/elif/else. Defaults to False.
     """
 
     type: Literal["IfNode"] = "IfNode"
     branch: bool = True
     true_branch: list[str] = Field(default_factory=list)
     false_branch: list[str] = Field(default_factory=list)
-    active: bool = False
+    in_context: bool = False
     to_be_dropped: bool = False
 
     def add_child(self, uid: str) -> None:

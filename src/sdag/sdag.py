@@ -29,9 +29,6 @@ class DAG:
         graph (Graph): DAG graph.
         branchstack (List[Node[IfNode]]): Stack to store outer
             if blocks.
-        last_branch (Node[IfNode] | None): Temporary reference to
-            the last branch used. It is required internally to
-            handle Elifs.
     """
 
     def __init__(self, uid: str, name: str = ""):
@@ -44,7 +41,6 @@ class DAG:
         self.prefix = f"_{name}_{uid}"
         self.graph = Graph()
         self.branchstack: list[Node[IfNode]] = []
-        self.last_branch: Node[IfNode] | None = None
 
     def add_root(self) -> None:
         """Add root Node to the graph."""
@@ -70,15 +66,26 @@ class DAG:
         Args:
             node (Node): Node to be registered.
         """
-        if self.last_branch is not None:
-            if self.last_branch.behavior.active:
-                self.last_branch.add_edge(node)
-            elif self.last_branch.behavior.to_be_dropped:
-                self.last_branch = None
-            else:
-                self.last_branch.behavior.to_be_dropped = True
-
         self.graph.nodes.append(node)
+        self._manage_if_branches(node)
+
+    def _manage_if_branches(self, node: Node) -> None:
+        if not self.branchstack:
+            return
+
+        last_branch = self.branchstack[-1]
+
+        # We are within a branch
+        if last_branch.behavior.in_context:
+            last_branch.add_edge(node)
+
+        # Fully exited, the branch must be dropped
+        elif last_branch.behavior.to_be_dropped:
+            self.branchstack.pop()
+
+        # Next time it will be dropped. We keep it for elif/else
+        else:
+            last_branch.behavior.to_be_dropped = True
 
     def register_elif_expression(self, expr: Node) -> None:
         """Register an Elif expression.
@@ -92,20 +99,22 @@ class DAG:
             IncorrectElifError: Not exited from the context manager.
             IncorrectElifError: Selected branch is not False.
         """
-        if self.last_branch is None:
+        # Elif without If
+        if not self.branchstack:
             raise MissingActiveBranchError
 
-        if self.last_branch.behavior.active:
+        last_branch = self.branchstack.pop()
+
+        # Elif without If (within a branch)
+        if last_branch.behavior.in_context:
             raise IncorrectElifError
 
-        if not self.last_branch.behavior.to_be_dropped:
+        # If/Elif not closed yet
+        if not last_branch.behavior.to_be_dropped:
             raise IncorrectElifError
 
-        if not self.last_branch.behavior.branch:
-            raise IncorrectElifError
-
-        self.last_branch.behavior.branch = False
-        self.last_branch.add_edge(expr)
+        last_branch.behavior.branch = False
+        last_branch.add_edge(expr)
 
     def pop_stack(self) -> None:
         """Remove an IfNode from the stack."""
@@ -320,11 +329,7 @@ class SDAG:
         node = Node(uid=self.get_uid(), behavior=IfNode())
         self.current.register(node)
         expr.add_edge(node)
-        return IfTask(
-            node=node,
-            pop_stack=self.pop_branchstack,
-            push_stack=self.push_branchstack,
-        )
+        return IfTask(node=node, push_branch=self.push_branch)
 
     def Else(self) -> IfTask:  # noqa: N802
         """Else branch.
@@ -343,22 +348,20 @@ class SDAG:
         if self.current is None:
             raise DAGNotSetError
 
-        if self.current.last_branch is None:
+        if not self.current.branchstack:
             raise MissingActiveBranchError
 
-        if self.current.last_branch.behavior.to_be_dropped:
+        last_branch = self.current.branchstack[-1]
+
+        if last_branch.behavior.to_be_dropped:
             raise IncorrectElseError
 
-        if self.current.last_branch.behavior.active:
+        if last_branch.behavior.in_context:
             raise IncorrectElseError
 
-        ifnode = self.current.last_branch
-        ifnode.behavior.branch = False
-        return IfTask(
-            node=ifnode,
-            pop_stack=self.pop_branchstack,
-            push_stack=self.push_branchstack,
-        )
+        last_branch.behavior.branch = False
+        last_branch.behavior.to_be_dropped = True
+        return IfTask(node=last_branch, push_branch=self.push_branch)
 
     def Elif(self, expr: Node) -> IfTask:  # noqa: N802
         """Elif node.
@@ -414,7 +417,7 @@ class SDAG:
 
         self.current.register(node)
 
-    def push_branchstack(self, node: Node[IfNode]) -> None:
+    def push_branch(self, node: Node[IfNode]) -> None:
         """Push a branch to the stack.
 
         Args:
@@ -427,14 +430,3 @@ class SDAG:
             raise DAGNotSetError
 
         self.current.push_stack(node)
-
-    def pop_branchstack(self) -> None:
-        """Pop an If node from the stack.
-
-        Raises:
-            DAGNotSetError: DAG is not set.
-        """
-        if self.current is None:
-            raise DAGNotSetError
-
-        self.current.pop_stack()
