@@ -9,8 +9,6 @@ from pydantic import BaseModel, Field
 
 from sdag.exceptions import EndNotFoundError, RootNotFoundError
 
-StrPath = str | Path
-
 
 class BaseNodeType(ABC, BaseModel):
     """Base class for all nodes."""

@@ -1,4 +1,4 @@
-"""Tasks and pipeline."""
+"""Wrappers."""
 
 import json
 from collections.abc import Callable
@@ -138,8 +138,6 @@ class IfWrapper:
 
 class Pipeline:
     """Object returned by the pipeline decorator.
-
-    Not properly a task but it has the same function.
 
     Attributes:
         fn (Callable[[], None]): Decorated pipeline function.
