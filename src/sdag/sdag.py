@@ -180,7 +180,7 @@ class SDAG:
         fn = self.taskdict[node.behavior.fname]
         input_kwargs = manager.get_input(node, fn)
         output = fn(**input_kwargs)
-        manager.serialize_output(output, node.uid)
+        manager.serialize_output(output)
 
     def set_current_dag(self, name: str) -> None:
         """Mark a new DAG as the current under compilation.

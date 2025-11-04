@@ -66,7 +66,7 @@ class IOManager:
 
         return input_kwargs
 
-    def serialize_output(self, output: Any, uid: str) -> None:
+    def serialize_output(self, output: Any) -> None:
         """Serialize the output as JSON.
 
         Args:
@@ -74,6 +74,7 @@ class IOManager:
             uid (str): Node unique id.
         """
         data = {"output": output}
+        uid = self.settings.sdag_uid
         p = self.settings.sdag_pipeline / uid / self._output_fname
         with p.open("w") as f:
             json.dump(data, f)
