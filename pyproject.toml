@@ -100,3 +100,8 @@ reportMissingTypeStubs = false
 pythonPlatform = "Linux"
 venvPath = "."
 venv = ".venv"
+
+[dependency-groups]
+test = [
+    "pytest>=8.4.2",
+]
