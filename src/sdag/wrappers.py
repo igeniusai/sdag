@@ -3,7 +3,7 @@
 import json
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Self, get_type_hints
+from typing import Any, Self
 
 from sdag.models import Graph, IfNode, InputKwarg, Node, TaskNode
 
@@ -55,7 +55,6 @@ class Task:
             Node[TaskNode]: Node associated to the task.
         """
         uid = self._get_uid()
-        return_type = self._get_return_type()
 
         node = Node(
             uid=uid,
@@ -64,7 +63,6 @@ class Task:
                 caching=self.caching,
                 retries=self.retries,
                 launch_script=self.launch_script,
-                return_type=return_type,
             ),
         )
 
@@ -83,22 +81,6 @@ class Task:
 
         self._register(node)
         return node
-
-    def _get_return_type(self) -> str | None:
-        """Get the return type of the task.
-
-        Not used at the moment.
-
-        Returns:
-            str | None: Return type.
-        """
-        hints = get_type_hints(self.fn)
-        return_type = None
-        return_hint = hints.get("return")
-        if return_hint is not None and return_hint is not type(None):
-            return_type = str(return_hint)
-
-        return return_type
 
 
 class IfWrapper:

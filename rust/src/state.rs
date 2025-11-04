@@ -208,7 +208,6 @@ mod tests {
                         retries: 0,
                         try_num: 0,
                         launch_script: String::from("script"),
-                        return_type: None,
                         children: Vec::new(),
                     },
                     status: JobStatus::NotSubmitted,

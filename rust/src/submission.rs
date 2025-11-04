@@ -277,7 +277,6 @@ mod tests {
             behavior: NodeBehavior::TaskNode {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
-                return_type: None,
                 caching: false,
                 retries: 0,
                 try_num: 0,
@@ -316,7 +315,6 @@ mod tests {
             behavior: NodeBehavior::TaskNode {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
-                return_type: None,
                 caching: true,
                 retries: 0,
                 try_num: 0,

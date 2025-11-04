@@ -63,7 +63,6 @@ pub enum NodeBehavior {
         try_num: u32,
         retries: u32,
         launch_script: String,
-        return_type: Option<String>,
         children: Vec<String>,
     },
     IfNode {

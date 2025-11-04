@@ -56,7 +56,6 @@ class TaskNode(BaseNodeType):
         launch_script (Path): Lauch script path.
         caching (bool): Set to True to enable output caching.
         retries (int): Number of retries.
-        return_type (str): Return type (not used at the moment).
         input_kwargs (list[InputKwarg]): Static input kwargs.
         children (list[str]): Children uids.
     """
@@ -66,7 +65,6 @@ class TaskNode(BaseNodeType):
     launch_script: Path
     caching: bool
     retries: int
-    return_type: None | str = None
     input_kwargs: list[InputKwarg] = Field(default_factory=list)
     children: list[str] = Field(default_factory=list)
 
