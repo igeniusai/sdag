@@ -13,10 +13,10 @@ dependencies = [
 ]
 
 [project.scripts]
-sscheduler = "sdag:run_scheduler"
+sdag = "sdag:run_scheduler"
 
 [project.entry-points."uv.run"]
-sscheduler = "sdag:run_scheduler"
+sdag = "sdag:run_scheduler"
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
