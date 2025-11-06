@@ -26,6 +26,8 @@ jobs:
         run: uv sync --group test
       - name: Run Python tests
         run: uv run pytest -v
+      - name: Run rust tests
+        run: cd rust && cargo test
       - name: Run hooks
         uses: pre-commit/action@v3.0.1
         with:
