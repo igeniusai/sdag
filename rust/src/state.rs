@@ -1,5 +1,7 @@
-use crate::model::DAG;
+use crate::model::{DAG, TaskOutput};
 use log;
+use serde_json;
+use std::error::Error;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -48,6 +50,21 @@ impl LocalDirState {
         }
         Ok(())
     }
+
+    fn check_if_output_and_artifacts_exist(&self, uid: &str) -> Result<(), Box<dyn Error>> {
+        let output = self.read_output(uid)?;
+        let task_output: TaskOutput = serde_json::from_str(&output)?;
+        for artifact in &task_output.artifacts {
+            if !artifact.path.exists() {
+                return Err(io::Error::new(
+                    io::ErrorKind::NotFound,
+                    format!("Artifact '{:?}' not found", artifact.path),
+                )
+                .into());
+            }
+        }
+        Ok(())
+    }
 }
 
 impl StateManager for LocalDirState {
@@ -76,15 +93,17 @@ impl StateManager for LocalDirState {
     }
 
     fn is_task_cached(&self, uid: &str) -> bool {
-        let path = self.pipeline_dir.join(uid).join(&self.output_fname);
-        path.is_file()
+        match self.check_if_output_and_artifacts_exist(uid) {
+            Ok(_) => true,
+            Err(_) => false,
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{JobStatus, Node, NodeBehavior};
+    use crate::model::{Artifact, JobStatus, Node, NodeBehavior};
     use std::env;
     use uuid::Uuid;
 
@@ -168,9 +187,53 @@ mod tests {
     fn task_is_cached() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
         let path = pipeline_dir.join("0");
-        let content = r#"{"output": true}"#;
+        let content = r#"{"output": true, "artifacts":[]}"#;
         fs::create_dir_all(&path).unwrap();
         fs::write(path.join("output.json"), content).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir);
+        assert!(manager.is_task_cached("0"));
+    }
+
+    #[test]
+    fn task_is_not_cached_because_of_artifact() {
+        let tmp_dir = get_tmp_dir();
+        let pipeline_dir = tmp_dir.join("pipeline");
+        let path = pipeline_dir.join("0");
+        let output_file = path.join("output.json");
+
+        let task_output = TaskOutput {
+            artifacts: vec![Artifact {
+                name: String::from("name"),
+                path: tmp_dir.join("artifact.txt"),
+            }],
+        };
+        let content = serde_json::to_string(&task_output).unwrap();
+        fs::create_dir_all(&path).unwrap();
+        fs::write(&output_file, &content).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir);
+        assert!(!manager.is_task_cached("0"));
+    }
+
+    #[test]
+    fn task_is_cached_because_of_artifact() {
+        let tmp_dir = get_tmp_dir();
+        let artifact_path = tmp_dir.join("artifact.txt");
+        let pipeline_dir = tmp_dir.join("pipeline");
+        let path = pipeline_dir.join("0");
+        let output_file = path.join("output.json");
+
+        let task_output = TaskOutput {
+            artifacts: vec![Artifact {
+                name: String::from("name"),
+                path: artifact_path.clone(),
+            }],
+        };
+        let content = serde_json::to_string(&task_output).unwrap();
+        fs::create_dir_all(&path).unwrap();
+        fs::write(&output_file, &content).unwrap();
+        fs::write(&artifact_path, "artifact").unwrap();
 
         let manager = LocalDirState::new(pipeline_dir);
         assert!(manager.is_task_cached("0"));

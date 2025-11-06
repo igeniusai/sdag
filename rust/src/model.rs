@@ -1,5 +1,16 @@
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{fmt, path::PathBuf};
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Artifact {
+    pub name: String,
+    pub path: PathBuf,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct TaskOutput {
+    pub artifacts: Vec<Artifact>,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum NodeResult {
@@ -42,9 +53,17 @@ fn initial_try_num() -> u32 {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(tag = "type")]
+pub enum ParentType {
+    Logical,
+    Artifact { key: String, name: String },
+    Output { key: String },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Parent {
-    pub name: String,
     pub uid: String,
+    pub parent_type: ParentType,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

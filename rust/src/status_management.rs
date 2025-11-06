@@ -170,7 +170,7 @@ impl StatusSelector {
 mod tests {
 
     use super::*;
-    use crate::model::{NodeResult, Parent};
+    use crate::model::{NodeResult, Parent, ParentType};
 
     macro_rules! oneof_tests {
             ($($name:ident: $value:expr,)*) => {
@@ -382,7 +382,9 @@ mod tests {
                 },
                 status: JobStatus::NotSubmitted,
                 parents: vec![Parent {
-                    name: String::from("p2"),
+                    parent_type: ParentType::Output {
+                        key: String::from("p2"),
+                    },
                     uid: String::from("p2"),
                 }],
             },
@@ -432,7 +434,9 @@ mod tests {
                 },
                 status: JobStatus::NotSubmitted,
                 parents: vec![Parent {
-                    name: String::from("p"),
+                    parent_type: ParentType::Output {
+                        key: String::from("p"),
+                    },
                     uid: String::from("p"),
                 }],
             },
@@ -468,7 +472,9 @@ mod tests {
                 },
                 status: JobStatus::NotSubmitted,
                 parents: vec![Parent {
-                    name: String::from("p"),
+                    parent_type: ParentType::Output {
+                        key: String::from("p"),
+                    },
                     uid: String::from("p"),
                 }],
             },

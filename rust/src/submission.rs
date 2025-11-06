@@ -68,6 +68,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
         caching: &bool,
         try_num: &u32,
     ) -> JobStatus {
+        log::debug!("Submitting Task {uid}");
         if *caching && self.state.is_task_cached(uid) {
             log::info!("Task {uid} is cached");
             return JobStatus::Completed(NodeResult::Node);
@@ -117,7 +118,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
 
 #[cfg(test)]
 mod tests {
-    use crate::model::{DAG, Parent};
+    use crate::model::{DAG, Parent, ParentType};
 
     use super::*;
     use std::path::PathBuf;
@@ -194,7 +195,9 @@ mod tests {
             },
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
-                name: String::from("p"),
+                parent_type: ParentType::Output {
+                    key: String::from("p"),
+                },
                 uid: String::from("p"),
             }],
         };
@@ -218,7 +221,9 @@ mod tests {
             },
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
-                name: String::from("p"),
+                parent_type: ParentType::Output {
+                    key: String::from("p"),
+                },
                 uid: String::from("p"),
             }],
         };
@@ -243,7 +248,9 @@ mod tests {
             },
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
-                name: String::from("p"),
+                parent_type: ParentType::Output {
+                    key: String::from("p"),
+                },
                 uid: String::from("p"),
             }],
         };
@@ -284,7 +291,9 @@ mod tests {
             },
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
-                name: String::from("p"),
+                parent_type: ParentType::Output {
+                    key: String::from("p"),
+                },
                 uid: String::from("p"),
             }],
         };
@@ -322,7 +331,9 @@ mod tests {
             },
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
-                name: String::from("p"),
+                parent_type: ParentType::Output {
+                    key: String::from("p"),
+                },
                 uid: String::from("p"),
             }],
         };
@@ -356,11 +367,15 @@ mod tests {
             status: JobStatus::ReadyForSubmission,
             parents: vec![
                 Parent {
-                    name: String::from("p1"),
+                    parent_type: ParentType::Output {
+                        key: String::from("p2"),
+                    },
                     uid: String::from("p1"),
                 },
                 Parent {
-                    name: String::from("p2"),
+                    parent_type: ParentType::Output {
+                        key: String::from("p2"),
+                    },
                     uid: String::from("p2"),
                 },
             ],
