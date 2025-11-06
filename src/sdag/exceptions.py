@@ -99,3 +99,18 @@ class IncorrectElifError(SDAGError):
         """Raise the exception."""
         msg = "Elif statement incorrectly used."
         super().__init__(msg)
+
+
+class ArtifactNotFoundError(SDAGError):
+    """Input artifact not found."""
+
+    def __init__(self, parent_uid: str, artifact_name: str):
+        """Raise the exeption.
+
+        Args:
+            parent_uid (str): uid of the parent that produced the
+                artifact.
+            artifact_name (str): Artifact name.
+        """
+        msg = f"Parent '{parent_uid}': Artifact '{artifact_name}' not found"
+        super().__init__(msg)

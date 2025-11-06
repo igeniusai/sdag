@@ -3,11 +3,35 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Generic, Literal, TypeVar
+from typing import Annotated, Any, Generic, Literal, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 from sdag.exceptions import EndNotFoundError, RootNotFoundError
+
+
+class Artifact(BaseModel):
+    """Artifact.
+
+    Attributes:
+        name (str): Artifact name.
+        path (Path | str): Artifact path.
+    """
+
+    name: str
+    path: Path | str = Field(default_factory=Path)
+
+
+class TaskOutput(BaseModel):
+    """Output of a task.
+
+    Attributes:
+        output (Any): Task output.
+        artifacts (list[Artifact]): Output artifacts.
+    """
+
+    output: Any
+    artifacts: list[Artifact]
 
 
 class BaseNodeType(ABC, BaseModel):
@@ -227,17 +251,98 @@ U = TypeVar("U", bound=BaseNodeType)
 """Node type."""
 
 
-class Parent(BaseModel):
+class ParentType(BaseModel):
+    """Base class for all parent types."""
+
+
+class LogicalType(ParentType):
+    """Node logical parent.
+
+    The dependence is logical, there is no I/O exchange.
+
+    Attributes:
+        type (Literal['Logical']): Parent type.
+    """
+
+    type: Literal["Logical"] = "Logical"
+
+
+class ArtifactType(ParentType):
+    """Artifact relashionship.
+
+    The node depends on the parent via an artifact.
+
+    Attributes:
+        type (Literal['Artifact']): Parent type.
+        key (str): Artifact key in the node input kwargs.
+        name (str): Artifact name.
+    """
+
+    type: Literal["Artifact"] = "Artifact"
+    key: str
+    name: str
+
+
+class OutputType(ParentType):
+    """Output relationship.
+
+    Node depends on the parent output.
+
+    Attributes:
+        type (Literal['Output']): Parent type.
+        key (str): Key in the node input kwargs.
+    """
+
+    type: Literal["Output"] = "Output"
+    key: str
+
+
+V = TypeVar("V", bound=ParentType, covariant=True)
+"""Node type."""
+
+
+class Parent(BaseModel, Generic[V]):
     """Node parent.
 
     Attributes:
+        parent_type (V): Relationship type.
         uid (str): Parent uid.
-        name (str): Parent name. It is the task input key
-            for parent kwargs.
     """
 
+    parent_type: V
     uid: str
-    name: str
+
+
+class ArtifactContainer:
+    """Artifact wrapper.
+
+    Hack to pass the node to the child alongside
+    artifacts.
+
+    Attributes:
+        key (str): Artifact key.
+        node (Node): Parent node.
+    """
+
+    def __init__(self, key: str, node: "Node"):
+        """Initialize the artifact container.
+
+        Args:
+            key (str): Artifact key.
+            node (Node): Parent node.
+        """
+        self.key = key
+        self.node = node
+
+
+ParentTypeUnion = Annotated[
+    LogicalType | ArtifactType | OutputType,
+    Field(discriminator="type"),
+]
+"""Node type discriminated union."""
+
+ParentUnion = Parent[ParentTypeUnion]
+"""Node of all possible types."""
 
 
 class Node(BaseModel, Generic[T]):
@@ -251,11 +356,33 @@ class Node(BaseModel, Generic[T]):
         uid (str): Node unique id.
         parents (list[Parent]): Node parents.
         behavior (BaseNodeType): Node type.
+        _artifacts (dict[str, ArtifactContainer]): Artifact
+            keys and wrappers.
     """
 
     uid: str
-    parents: list[Parent] = Field(default_factory=list)
+    parents: list[ParentUnion] = Field(default_factory=list)
     behavior: T
+    _artifacts: dict[str, ArtifactContainer] = PrivateAttr(
+        default_factory=dict
+    )
+
+    @property
+    def artifacts(self) -> dict[str, ArtifactContainer]:
+        """Get the artifacts.
+
+        Returns:
+            dict[str, ArtifactContainer]: Artifacts.
+        """
+        return self._artifacts
+
+    def register_artifact(self, key: str) -> None:
+        """Register an artifact.
+
+        Args:
+            key (str): Artifact key.
+        """
+        self._artifacts[key] = ArtifactContainer(key, self)
 
     def is_leaf(self) -> bool:
         """Check if the node is a leaf.
@@ -265,29 +392,46 @@ class Node(BaseModel, Generic[T]):
         """
         return self.behavior.is_leaf()
 
-    def add_edge(self, child: "Node[U]", name: str = "") -> None:
-        """Add an edge to the graph.
+    def add_logical_edge(self, child: "Node[U]") -> None:
+        """Add a logical edge.
 
-        Both parent-child and child-parent relationships are
-        tracked.
+        It is a logical dependence, no data exchange.
 
         Args:
-            child (Self): Child of this node.
-            name (str, optional): Child name. It is used to identify
-                input kwargs. Defaults to ''.
+            child (Node[U]): Child node.
         """
-        child.add_parent(name, self)
+        parent = Parent(uid=self.uid, parent_type=LogicalType())
+        child.parents.append(parent)
         self._add_child(child)
 
-    def add_parent(self, name: str, node: "Node[U]") -> None:
-        """Add a parent to the current node.
+    def add_output_edge(self, child: "Node[U]", key: str) -> None:
+        """Add output edge.
+
+        Child will read the parent output.
 
         Args:
-            name (str): Parent name. Used to track the input kwargs.
-            node (Self): Parent node.
+            child (Node[U]): Child node.
+            key (str): parent output key in the child input kwargs.
         """
-        parent = Parent(uid=node.uid, name=name)
-        self.parents.append(parent)
+        parent = Parent(uid=self.uid, parent_type=OutputType(key=key))
+        child.parents.append(parent)
+        self._add_child(child)
+
+    def add_artifact_edge(self, child: "Node[U]", key: str, name: str) -> None:
+        """Add an artifact edge.
+
+        The child will use an artifact produced by the parent.
+
+        Args:
+            child (Node[U]): Child node.
+            key (str): Artifact key in the child input kwargs.
+            name (str): Artifact name.
+        """
+        parent = Parent(
+            uid=self.uid, parent_type=ArtifactType(key=key, name=name)
+        )
+        child.parents.append(parent)
+        self._add_child(child)
 
     def _add_child(self, node: "Node[U]") -> None:
         """Add a child to the current node.

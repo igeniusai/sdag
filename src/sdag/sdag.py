@@ -48,7 +48,7 @@ class DAG:
         root = Node(uid=uid, behavior=RootNode())
         for node in self.graph.nodes:
             if not node.parents:
-                root.add_edge(node)
+                root.add_logical_edge(node)
         self.graph.nodes.append(root)
 
     def add_end(self) -> None:
@@ -57,7 +57,7 @@ class DAG:
         end = Node(uid=uid, behavior=EndNode())
         for node in self.graph.nodes:
             if node.is_leaf():
-                node.add_edge(end)
+                node.add_logical_edge(end)
         self.graph.nodes.append(end)
 
     def register(self, node: Node) -> None:
@@ -77,7 +77,7 @@ class DAG:
 
         # We are within a branch
         if last_branch.behavior.in_context:
-            last_branch.add_edge(node)
+            last_branch.add_logical_edge(node)
 
         # Fully exited, the branch must be dropped
         elif last_branch.behavior.to_be_dropped:
@@ -114,7 +114,7 @@ class DAG:
             raise IncorrectElifError
 
         last_branch.behavior.branch = False
-        last_branch.add_edge(expr)
+        last_branch.add_logical_edge(expr)
 
     def pop_stack(self) -> None:
         """Remove an IfNode from the stack."""
@@ -171,16 +171,17 @@ class SDAG:
     def run(self) -> None:
         """Stage entry point.
 
-        All launch scripts must have this function as
-        entry point. This object will then dispatch
-        the call to the correct task.
+        All launch scripts must have this function as entry point.
+        This object will then dispatch the call to the correct task.
         """
         manager = IOManager()
         node = manager.find_node_to_be_executed()
         fn = self.taskdict[node.behavior.fname]
         input_kwargs = manager.get_input(node, fn)
+        artifacts = manager.get_artifacts(fn, input_kwargs)
+        input_kwargs |= artifacts
         output = fn(**input_kwargs)
-        manager.serialize_output(output)
+        manager.serialize_output(output, artifacts)
 
     def set_current_dag(self, name: str) -> None:
         """Mark a new DAG as the current under compilation.
@@ -280,6 +281,7 @@ class SDAG:
                 If none, it will be equal to `./<pipeline-name>.json`.
                 Defaults to None.
         """
+        self._reset_uid()
         graph = pipeline.compile()
         graph.name = pipeline.fn.__name__
         graph.creation_dt = datetime.now()
@@ -328,7 +330,7 @@ class SDAG:
 
         node = Node(uid=self.get_uid(), behavior=IfNode())
         self.current.register(node)
-        expr.add_edge(node)
+        expr.add_logical_edge(node)
         return IfWrapper(node=node, push_branch=self.push_branch)
 
     def Else(self) -> IfWrapper:  # noqa: N802
@@ -401,7 +403,7 @@ class SDAG:
         node = Node(uid=self.get_uid(), behavior=OneOfNode())
         self.current.register(node)
         for parent in args:
-            parent.add_edge(node)
+            parent.add_logical_edge(node)
         return node
 
     def register(self, node: Node) -> None:
@@ -431,3 +433,7 @@ class SDAG:
             raise DAGNotSetError
 
         self.current.push_stack(node)
+
+    def _reset_uid(self) -> None:
+        """Rest sdag starting uid to get deterministic uids."""
+        self.uid = 0

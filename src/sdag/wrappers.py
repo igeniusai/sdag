@@ -5,7 +5,15 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Self
 
-from sdag.models import Graph, IfNode, InputKwarg, Node, TaskNode
+from sdag.models import (
+    Artifact,
+    ArtifactContainer,
+    Graph,
+    IfNode,
+    InputKwarg,
+    Node,
+    TaskNode,
+)
 
 
 class Task:
@@ -66,17 +74,25 @@ class Task:
             ),
         )
 
-        for parent in args:
-            parent.add_edge(node)
+        for k, v in self.fn.__annotations__.items():
+            if v == Artifact:
+                node.register_artifact(k)
 
-        for name, value in kwargs.items():
+        for parent in args:
+            parent.add_logical_edge(node)
+
+        for key, value in kwargs.items():
             # Parent node output
             if isinstance(value, Node):
-                value.add_edge(node, name)
+                value.add_output_edge(node, key)
+
+            elif isinstance(value, ArtifactContainer):
+                value.node.add_artifact_edge(node, key, name=value.key)
+
             else:
                 # Static input kwargs
                 serialized_value = json.dumps(value)
-                input_kwarg = InputKwarg(key=name, value=serialized_value)
+                input_kwarg = InputKwarg(key=key, value=serialized_value)
                 node.behavior.input_kwargs.append(input_kwarg)
 
         self._register(node)
@@ -159,7 +175,7 @@ class Pipeline:
         graph = self.compile()
         root = graph.get_root()
         for parent in args:
-            parent.add_edge(root)
+            parent.add_logical_edge(root)
 
         return graph.get_end()
 
