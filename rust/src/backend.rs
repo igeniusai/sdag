@@ -54,7 +54,7 @@ impl SlurmBackend {
         };
 
         let stdout = String::from_utf8(output.stdout)?;
-        log::debug!("Slurm stdout: {stdout}");
+        log::debug!("Slurm stdout:\n {stdout}");
         Ok(stdout)
     }
 
