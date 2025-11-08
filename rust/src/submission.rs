@@ -1,5 +1,6 @@
 use crate::backend::Backend;
-use crate::model::{BooleanOutput, JobStatus, Node, NodeBehavior, NodeResult};
+use crate::input_data::InputDataHandler;
+use crate::model::{BooleanOutput, InputKwarg, JobStatus, Node, NodeBehavior, NodeResult};
 use crate::state::StateManager;
 use crate::status_management::StatusSelector;
 use serde_json;
@@ -48,8 +49,16 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
                 launch_script,
                 caching,
                 try_num,
+                input_kwargs,
                 ..
-            } => self.submit_tasknode(&node.uid, launch_script, caching, try_num),
+            } => self.submit_tasknode(
+                &node.uid,
+                nodemap,
+                input_kwargs,
+                launch_script,
+                caching,
+                try_num,
+            ),
             NodeBehavior::OneOfNode { .. } => match self.submit_oneofnode(&node.uid, &nodemap) {
                 Ok(uid) => JobStatus::Completed(NodeResult::OneOf(uid)),
                 Err(_) => JobStatus::Failed,
@@ -64,14 +73,34 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     fn submit_tasknode(
         &self,
         uid: &str,
+        nodemap: &HashMap<String, Node>,
+        input_kwargs: &Vec<InputKwarg>,
         launch_script: &str,
         caching: &bool,
         try_num: &u32,
     ) -> JobStatus {
         log::debug!("Submitting Task {uid}");
-        if *caching && self.state.is_task_cached(uid) {
-            log::info!("Task {uid} is cached");
-            return JobStatus::Completed(NodeResult::Node);
+        let handler = InputDataHandler {
+            uid,
+            state: self.state,
+        };
+
+        match handler.read_input_data(nodemap, input_kwargs) {
+            Err(e) => {
+                log::error!("Failed to read {uid} input data: {e}");
+                return JobStatus::Failed;
+            }
+            Ok(input) => {
+                if *caching && handler.is_cached(&input) {
+                    log::info!("Task {uid} is cached");
+                    return JobStatus::Completed(NodeResult::Node);
+                }
+
+                if let Err(_) = handler.save_input(&input) {
+                    log::error!("Task {uid}: Failed to save input data");
+                    return JobStatus::Failed;
+                }
+            }
         }
 
         let pipeline_dir = self.state.get_pipeline_dir();
@@ -164,9 +193,11 @@ mod tests {
         fn copy_dag_into_working_dir(&self, _path: &PathBuf) -> io::Result<u64> {
             Ok(1)
         }
-
-        fn is_task_cached(&self, uid: &str) -> bool {
-            uid == "_cached_"
+        fn save_input(&self, _uid: &str, _input: &str) -> io::Result<()> {
+            Ok(())
+        }
+        fn read_cached_input(&self, _uid: &str) -> io::Result<String> {
+            Ok(String::from(r#"{}"#))
         }
     }
 
@@ -287,6 +318,7 @@ mod tests {
                 caching: false,
                 retries: 0,
                 try_num: 0,
+                input_kwargs: Vec::new(),
                 children: Vec::new(),
             },
             status: JobStatus::ReadyForSubmission,
@@ -327,23 +359,10 @@ mod tests {
                 caching: true,
                 retries: 0,
                 try_num: 0,
+                input_kwargs: Vec::new(),
                 children: Vec::new(),
             },
             status: JobStatus::ReadyForSubmission,
-            parents: vec![Parent {
-                parent_type: ParentType::Output {
-                    key: String::from("p"),
-                },
-                uid: String::from("p"),
-            }],
-        };
-
-        let parent = Node {
-            uid: String::from("p"),
-            behavior: NodeBehavior::RootNode {
-                children: vec!["c".to_string()],
-            },
-            status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
         };
 
@@ -352,7 +371,7 @@ mod tests {
             state: &MockState::new(),
         };
 
-        let nodemap = HashMap::from([("_cached_".to_string(), node), ("p".to_string(), parent)]);
+        let nodemap = HashMap::from([("_cached_".to_string(), node)]);
         let new_status = submitter.submit_node("_cached_", &nodemap);
         assert!(matches!(new_status, JobStatus::Completed(NodeResult::Node)))
     }

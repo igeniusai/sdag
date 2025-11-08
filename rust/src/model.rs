@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::{fmt, path::PathBuf};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -9,6 +10,8 @@ pub struct Artifact {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct TaskOutput {
+    pub output: Value,
+    #[serde(default = "Vec::new")]
     pub artifacts: Vec<Artifact>,
 }
 
@@ -67,6 +70,12 @@ pub struct Parent {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct InputKwarg {
+    pub key: String,
+    pub value: Value,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(tag = "type")]
 pub enum NodeBehavior {
     RootNode {
@@ -82,6 +91,8 @@ pub enum NodeBehavior {
         try_num: u32,
         retries: u32,
         launch_script: String,
+        #[serde(default = "Vec::new")]
+        input_kwargs: Vec<InputKwarg>,
         children: Vec<String>,
     },
     IfNode {

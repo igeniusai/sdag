@@ -16,6 +16,7 @@ use state::LocalDirState;
 mod scheduler;
 use log;
 use scheduler::Scheduler;
+mod input_data;
 mod startup;
 
 #[pyfunction]
