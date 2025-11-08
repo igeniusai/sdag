@@ -7,17 +7,9 @@ from typing import Any
 
 import pytest
 
-from sdag.exceptions import NodeNotFoundError, NotATaskError
+from sdag.exceptions import BadInputError, NodeNotFoundError, NotATaskError
 from sdag.io import IOManager
-from sdag.models import (
-    Graph,
-    InputKwarg,
-    LogicalType,
-    Node,
-    OutputType,
-    Parent,
-    TaskNode,
-)
+from sdag.models import Graph
 
 
 class TestIOManager:
@@ -118,30 +110,6 @@ class TestIOManager:
         graph = io_manager._read_dag()
         assert isinstance(graph, Graph)
 
-    @pytest.mark.parametrize(
-        argnames="output_data",
-        argvalues=[None, True, "test", 1, [1, 2, 3], {"a": 1}],
-    )
-    def test_read_parent_output(
-        self, output_data: Any, io_manager: IOManager
-    ) -> None:
-        """Read the parent output.
-
-        Args:
-            output_data (Any): Parent output data.
-            io_manager (IOManager): I/O manager.
-        """
-        parent = Parent(uid="0", parent_type=OutputType(key="input_data"))
-        output = {"output": output_data, "artifacts": []}
-
-        settings = io_manager.settings
-        path = settings.sdag_pipeline / parent.uid
-        path.mkdir(parents=True, exist_ok=True)
-        with (path / io_manager._output_fname).open("w") as f:
-            json.dump(output, f)
-
-        assert io_manager._read_parent_output(parent) == output_data
-
     def test_find_this_node(
         self, io_manager: IOManager, graph_dict: dict[str, Any]
     ) -> None:
@@ -209,75 +177,42 @@ class TestIOManager:
         with pytest.raises(NotATaskError):
             io_manager.find_node_to_be_executed()
 
-    def test_get_input_no_parents(self, io_manager: IOManager) -> None:
-        """Test the input retrieval with no parents.
+    def test_get_input(self, io_manager: IOManager) -> None:
+        """Test the input value retrieval.
 
         Args:
             io_manager (IOManager): I/O manager.
         """
 
-        def task(): ...
+        def foo(a: Any) -> None: ...
 
-        node = Node(
-            uid="0",
-            behavior=TaskNode(
-                fname="task", launch_script=Path(), caching=False, retries=0
-            ),
-        )
-        assert io_manager.get_input(node, fn=task) == {}
+        pipeline_dir = io_manager.settings.sdag_pipeline
+        uid = io_manager.settings.sdag_uid
+        path = pipeline_dir / uid
+        path.mkdir(parents=True, exist_ok=True)
+        input_data = {"a": True}
+        with (path / io_manager._input_fname).open("w") as f:
+            json.dump(input_data, f)
 
-    def test_get_input_parents_no_input(self, io_manager: IOManager) -> None:
-        """Test the parent input retrieval without input.
+        input_retrieved = io_manager.get_input(fn=foo)
+        assert input_data == input_retrieved
 
-        Args:
-            io_manager (IOManager): I/O manager.
-        """
-
-        def task(): ...
-
-        node = Node(
-            uid="0",
-            parents=[Parent(uid="1", parent_type=LogicalType())],
-            behavior=TaskNode(
-                fname="task", launch_script=Path(), caching=False, retries=0
-            ),
-        )
-        assert io_manager.get_input(node, fn=task) == {}
-
-    def test_get_input_complete(self, io_manager: IOManager) -> None:
-        """Test a full input retrieval without artifacts.
+    def test_input_not_in_signature(self, io_manager: IOManager) -> None:
+        """The input key is not in the function signature.
 
         Args:
             io_manager (IOManager): I/O manager.
         """
 
-        def task(static_input: dict[str, str], parent_output: str): ...
+        def foo() -> None: ...
 
-        parent_path = io_manager.settings.sdag_pipeline / "1"
-        parent_path.mkdir(parents=True, exist_ok=True)
-        parent_output = "parent_output"
+        pipeline_dir = io_manager.settings.sdag_pipeline
+        uid = io_manager.settings.sdag_uid
+        path = pipeline_dir / uid
+        path.mkdir(parents=True, exist_ok=True)
+        input_data = {"a": True}
+        with (path / io_manager._input_fname).open("w") as f:
+            json.dump(input_data, f)
 
-        with Path(parent_path / io_manager._output_fname).open("w") as f:
-            json.dump({"output": parent_output, "artifacts": []}, f)
-
-        node = Node(
-            uid="0",
-            parents=[
-                Parent(uid="1", parent_type=OutputType(key="parent_output")),
-                Parent(uid="2", parent_type=LogicalType()),
-            ],
-            behavior=TaskNode(
-                fname="task",
-                launch_script=Path(),
-                caching=False,
-                retries=0,
-                input_kwargs=[
-                    InputKwarg(key="static_input", value=r'{"a":1}'),
-                ],
-            ),
-        )
-
-        assert io_manager.get_input(node, fn=task) == {
-            "static_input": {"a": 1},
-            "parent_output": parent_output,
-        }
+        with pytest.raises(BadInputError):
+            io_manager.get_input(fn=foo)

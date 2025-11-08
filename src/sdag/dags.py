@@ -177,7 +177,7 @@ class SDAG:
         manager = IOManager()
         node = manager.find_node_to_be_executed()
         fn = self.taskdict[node.behavior.fname]
-        input_kwargs = manager.get_input(node, fn)
+        input_kwargs = manager.get_input(fn)
         artifacts = manager.get_artifacts(fn, input_kwargs)
         input_kwargs |= artifacts
         output = fn(**input_kwargs)

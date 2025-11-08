@@ -3,22 +3,15 @@
 import json
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from pydantic_settings import BaseSettings
 
-from sdag.exceptions import (
-    ArtifactNotFoundError,
-    NodeNotFoundError,
-    NotATaskError,
-)
+from sdag.exceptions import BadInputError, NodeNotFoundError, NotATaskError
 from sdag.models import (
     Artifact,
-    ArtifactType,
     Graph,
     Node,
-    OutputType,
-    Parent,
     TaskNode,
     TaskOutput,
 )
@@ -44,7 +37,10 @@ class IOManager:
     Attributes:
         settings (Settings): Scheduler environment variables.
         _pipeline_fname: DAG filename.
-        output.json: Node output filename.
+        _output_fname: Node output filename as specified in the
+            scheduler.
+        _input_fname: Node output filename as specified in the
+            scheduler.
     """
 
     def __init__(self):
@@ -52,40 +48,27 @@ class IOManager:
         self.settings = Settings()  # type: ignore
         self._pipeline_fname = "pipeline.json"
         self._output_fname = "output.json"
+        self._input_fname = "input.json"
 
-    def get_input(self, node: Node[TaskNode], fn: Callable) -> dict[str, Any]:
-        """Get the task input values.
+    def get_input(self, fn: Callable) -> dict[str, Any]:
+        """Read the input data.
 
-        Parent args are read from their output file. Static input
-        kwargs are taken from the DAG file.
+        It's written by the scheduler in the node directory.
 
         Args:
-            node (Node[TaskNode]): Node to be executed.
-            fn (Callable): Task function.
+            fn (Callable): Task function. Use to verify the
+                input data.
 
         Returns:
             dict[str, Any]: Node input kwargs.
         """
-        input_kwargs: dict[str, Any] = {}
-        argnames = fn.__code__.co_varnames
-        for parent in node.parents:
-            if parent.parent_type.type == "Output":
-                parent = cast(Parent[OutputType], parent)
-                key = parent.parent_type.key
-                if key in argnames:
-                    parent_output = self._read_parent_output(parent)
-                    input_kwargs[key] = parent_output
+        uid = self.settings.sdag_uid
+        p = self.settings.sdag_pipeline / uid / self._input_fname
+        with p.open() as f:
+            input_data: dict[str, Any] = json.load(f)
 
-            if parent.parent_type.type == "Artifact":
-                parent = cast(Parent[ArtifactType], parent)
-                parent_artifact = self._read_parent_artifact(parent)
-                input_kwargs[parent.parent_type.key] = parent_artifact
-
-        for kwarg in node.behavior.input_kwargs:
-            value = json.loads(kwarg.value)
-            input_kwargs[kwarg.key] = value
-
-        return input_kwargs
+        self._validate_input_data(input_data, fn)
+        return input_data
 
     def get_artifacts(
         self, fn: Callable, input_kwargs: dict[str, Any]
@@ -143,6 +126,26 @@ class IOManager:
 
         return node
 
+    def _validate_input_data(
+        self, input_data: dict[str, Any], fn: Callable
+    ) -> None:
+        """Validate the input data.
+
+        Args:
+            input_data (dict[str, Any]): Input data.
+            fn (Callable): Task function associated to the data.
+
+        Raises:
+            BadInputError: One or more input values not found in
+                the function signature.
+        """
+        argnames = fn.__code__.co_varnames
+        for key in input_data:
+            if key not in argnames:
+                raise BadInputError(
+                    uid=self.settings.sdag_uid, key=key, fname=fn.__name__
+                )
+
     def _read_dag(self) -> Graph:
         """Parse the compiled pipeline.
 
@@ -153,48 +156,6 @@ class IOManager:
         with (p / self._pipeline_fname).open() as f:
             data = json.load(f)
         return Graph.model_validate(data)
-
-    def _read_parent_output(self, parent: Parent[OutputType]) -> Any:
-        """Read the input kwargs coming from parents.
-
-        Args:
-            parent (Parent[OutputType]): Parent of the node to
-                be executed.
-
-        Returns:
-            Any: Parent output.
-        """
-        p = self.settings.sdag_pipeline / parent.uid
-        with (p / self._output_fname).open() as f:
-            data = f.read()
-
-        output = TaskOutput.model_validate_json(data)
-        return output.output
-
-    def _read_parent_artifact(self, parent: Parent[ArtifactType]) -> Path:
-        """Read parent artifact.
-
-        Args:
-            parent (Parent[ArtifactType]): Parent.
-
-        Raises:
-            ArtifactNotFoundError: The artifact is not found.
-
-        Returns:
-            Path: Artifact path.
-        """
-        p = self.settings.sdag_pipeline / parent.uid
-        with (p / self._output_fname).open() as f:
-            data = f.read()
-
-        output = TaskOutput.model_validate_json(data)
-        for artifact in output.artifacts:
-            if artifact.name == parent.parent_type.name:
-                return Path(artifact.path)
-
-        raise ArtifactNotFoundError(
-            parent_uid=parent.uid, artifact_name=parent.parent_type.name
-        )
 
     def _find_this_node(self, dag: Graph) -> Node:
         """Find the node to be executed within the DAG.

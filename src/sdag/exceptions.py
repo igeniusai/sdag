@@ -101,16 +101,20 @@ class IncorrectElifError(SDAGError):
         super().__init__(msg)
 
 
-class ArtifactNotFoundError(SDAGError):
-    """Input artifact not found."""
+class BadInputError(SDAGError):
+    """Input data does not match the task signature."""
 
-    def __init__(self, parent_uid: str, artifact_name: str):
+    def __init__(self, uid: str, key: str, fname: str):
         """Raise the exeption.
 
         Args:
-            parent_uid (str): uid of the parent that produced the
-                artifact.
-            artifact_name (str): Artifact name.
+            uid (str): Node uid.
+            key (str): Key not found in the function signature.
+            fname (str): Function name.
         """
-        msg = f"Parent '{parent_uid}': Artifact '{artifact_name}' not found"
+        msg = (
+            f"Task '{uid}': Input value '{key}' not"
+            f" found in function {fname} signature"
+        )
+
         super().__init__(msg)
