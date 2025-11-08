@@ -98,7 +98,8 @@ class TaskNode(BaseNodeType):
         Args:
             uid (str): Child uid.
         """
-        self.children.append(uid)
+        if uid not in self.children:
+            self.children.append(uid)
 
     def is_leaf(self) -> bool:
         """Check if the task is a leaf or not.
@@ -174,7 +175,8 @@ class OneOfNode(BaseNodeType):
         Args:
             uid (str): Child uid.
         """
-        self.children.append(uid)
+        if uid not in self.children:
+            self.children.append(uid)
 
     def is_leaf(self) -> bool:
         """Check if the node is a leaf.
@@ -202,7 +204,8 @@ class EndNode(BaseNodeType):
         Args:
             uid (str): Child uid.
         """
-        self.children.append(uid)
+        if uid not in self.children:
+            self.children.append(uid)
 
     def is_leaf(self) -> bool:
         """Check if the node is a leaf.
@@ -233,7 +236,8 @@ class RootNode(BaseNodeType):
         Args:
             uid (str): Child uid.
         """
-        self.children.append(uid)
+        if uid not in self.children:
+            self.children.append(uid)
 
     def is_leaf(self) -> bool:
         """Check if the node is a leaf.
