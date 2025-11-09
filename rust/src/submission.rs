@@ -221,9 +221,7 @@ mod tests {
     fn submit_root() {
         let node = Node {
             uid: String::from("c"),
-            behavior: NodeBehavior::RootNode {
-                children: Vec::new(),
-            },
+            behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
                 parent_type: ParentType::Output {
@@ -248,9 +246,7 @@ mod tests {
     fn submit_end() {
         let node = Node {
             uid: String::from("c"),
-            behavior: NodeBehavior::EndNode {
-                children: Vec::new(),
-            },
+            behavior: NodeBehavior::EndNode,
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
                 parent_type: ParentType::Output {
@@ -275,10 +271,7 @@ mod tests {
     fn submit_if() {
         let node = Node {
             uid: String::from("c"),
-            behavior: NodeBehavior::IfNode {
-                true_branch: Vec::new(),
-                false_branch: Vec::new(),
-            },
+            behavior: NodeBehavior::IfNode,
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
                 parent_type: ParentType::Output {
@@ -291,12 +284,10 @@ mod tests {
 
         let parent = Node {
             uid: String::from("p"),
-            behavior: NodeBehavior::RootNode {
-                children: vec!["c".to_string()],
-            },
+            behavior: NodeBehavior::RootNode,
             status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
-            children: Vec::new(),
+            children: vec!["c".to_string()],
         };
 
         let submitter = Submitter {
@@ -323,7 +314,6 @@ mod tests {
                 retries: 0,
                 try_num: 0,
                 input_kwargs: Vec::new(),
-                children: Vec::new(),
             },
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
@@ -337,12 +327,10 @@ mod tests {
 
         let parent = Node {
             uid: String::from("p"),
-            behavior: NodeBehavior::RootNode {
-                children: vec!["c".to_string()],
-            },
+            behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
-            children: Vec::new(),
+            children: vec!["c".to_string()],
         };
 
         let submitter = Submitter {
@@ -366,7 +354,6 @@ mod tests {
                 retries: 0,
                 try_num: 0,
                 input_kwargs: Vec::new(),
-                children: Vec::new(),
             },
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
@@ -387,9 +374,7 @@ mod tests {
     fn submit_oneof() {
         let node = Node {
             uid: String::from("c"),
-            behavior: NodeBehavior::OneOfNode {
-                children: Vec::new(),
-            },
+            behavior: NodeBehavior::OneOfNode,
             status: JobStatus::ReadyForSubmission,
             parents: vec![
                 Parent {
@@ -410,22 +395,18 @@ mod tests {
 
         let p1 = Node {
             uid: String::from("p1"),
-            behavior: NodeBehavior::RootNode {
-                children: vec!["c".to_string()],
-            },
+            behavior: NodeBehavior::RootNode,
             status: JobStatus::Failed,
             parents: Vec::new(),
-            children: Vec::new(),
+            children: vec!["c".to_string()],
         };
 
         let p2 = Node {
             uid: String::from("p2"),
-            behavior: NodeBehavior::RootNode {
-                children: vec!["c".to_string()],
-            },
+            behavior: NodeBehavior::RootNode,
             status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
-            children: Vec::new(),
+            children: vec!["c".to_string()],
         };
 
         let submitter = Submitter {
@@ -446,9 +427,7 @@ mod tests {
     fn find_updated_statuses() {
         let node = Node {
             uid: String::from("c"),
-            behavior: NodeBehavior::RootNode {
-                children: Vec::new(),
-            },
+            behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
             children: Vec::new(),
@@ -471,9 +450,7 @@ mod tests {
     fn update_status() {
         let node = Node {
             uid: String::from("c"),
-            behavior: NodeBehavior::RootNode {
-                children: Vec::new(),
-            },
+            behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
             children: Vec::new(),
@@ -496,9 +473,7 @@ mod tests {
     fn e2e() {
         let node = Node {
             uid: String::from("c"),
-            behavior: NodeBehavior::RootNode {
-                children: Vec::new(),
-            },
+            behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
             children: Vec::new(),

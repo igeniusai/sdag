@@ -107,9 +107,7 @@ pub mod tests {
             creation_dt: String::from("2025-01-01 09:10:10"),
             nodes: vec![Node {
                 uid: String::from("0"),
-                behavior: NodeBehavior::RootNode {
-                    children: Vec::new(),
-                },
+                behavior: NodeBehavior::RootNode,
                 status: JobStatus::NotSubmitted,
                 parents: Vec::new(),
                 children: Vec::new(),
@@ -181,9 +179,7 @@ pub mod tests {
             nodes: vec![
                 Node {
                     uid: String::from("0"),
-                    behavior: NodeBehavior::RootNode {
-                        children: Vec::new(),
-                    },
+                    behavior: NodeBehavior::RootNode,
                     status: JobStatus::NotSubmitted,
                     parents: Vec::new(),
                     children: Vec::new(),
@@ -197,7 +193,6 @@ pub mod tests {
                         try_num: 0,
                         launch_script: String::from("script"),
                         input_kwargs: Vec::new(),
-                        children: Vec::new(),
                     },
                     status: JobStatus::NotSubmitted,
                     parents: Vec::new(),

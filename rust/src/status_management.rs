@@ -59,8 +59,8 @@ fn recoursively_update_status(
         updated_statuses.insert(node.uid.clone(), updated_status);
     }
 
-    for child_uid in node.get_all_children() {
-        recoursively_update_status(&child_uid, nodemap, updated_statuses);
+    for child_uid in &node.children {
+        recoursively_update_status(child_uid, nodemap, updated_statuses);
     }
 
     Some(())
@@ -93,8 +93,8 @@ impl StatusSelector {
         let node = nodemap.get(uid).unwrap();
         node.parents
             .iter()
-            .map(|p| nodemap.get(&p.uid).unwrap())
-            .map(|p| (p.uid.to_string(), p.get_status_for_child(uid)))
+            .map(|p| (&p.parent_type, nodemap.get(&p.uid).unwrap()))
+            .map(|(ptype, n)| (n.uid.to_string(), n.get_status_for_child(ptype)))
             .collect()
     }
 
@@ -323,9 +323,7 @@ mod tests {
         let selector = StatusSelector {
             parent_statuses: vec![JobStatus::Failed, JobStatus::Completed(NodeResult::Node)],
         };
-        let node_behavior = NodeBehavior::OneOfNode {
-            children: Vec::new(),
-        };
+        let node_behavior = NodeBehavior::OneOfNode;
         matches!(
             selector.get_updated_status(&node_behavior),
             JobStatus::ReadyForSubmission
@@ -340,9 +338,7 @@ mod tests {
                 JobStatus::Completed(NodeResult::If(true)),
             ],
         };
-        let node_behavior = NodeBehavior::RootNode {
-            children: Vec::new(),
-        };
+        let node_behavior = NodeBehavior::RootNode;
         matches!(
             selector.get_updated_status(&node_behavior),
             JobStatus::Failed
@@ -355,9 +351,7 @@ mod tests {
             String::from("p1"),
             Node {
                 uid: String::from("p1"),
-                behavior: NodeBehavior::RootNode {
-                    children: Vec::new(),
-                },
+                behavior: NodeBehavior::RootNode,
                 status: JobStatus::NotSubmitted,
                 parents: Vec::new(),
                 children: Vec::new(),
@@ -367,9 +361,7 @@ mod tests {
             String::from("p2"),
             Node {
                 uid: String::from("p2"),
-                behavior: NodeBehavior::RootNode {
-                    children: Vec::new(),
-                },
+                behavior: NodeBehavior::RootNode,
                 status: JobStatus::NotSubmitted,
                 parents: Vec::new(),
                 children: Vec::new(),
@@ -379,9 +371,7 @@ mod tests {
             String::from("c"),
             Node {
                 uid: String::from("c"),
-                behavior: NodeBehavior::RootNode {
-                    children: Vec::new(),
-                },
+                behavior: NodeBehavior::RootNode,
                 status: JobStatus::NotSubmitted,
                 parents: vec![Parent {
                     parent_type: ParentType::Output {
@@ -420,12 +410,10 @@ mod tests {
             String::from("p"),
             Node {
                 uid: String::from("p"),
-                behavior: NodeBehavior::RootNode {
-                    children: vec![String::from("c")],
-                },
+                behavior: NodeBehavior::RootNode,
                 status: JobStatus::Completed(NodeResult::Node),
                 parents: Vec::new(),
-                children: Vec::new(),
+                children: vec![String::from("c")],
             },
         );
 
@@ -433,9 +421,7 @@ mod tests {
             String::from("c"),
             Node {
                 uid: String::from("c"),
-                behavior: NodeBehavior::RootNode {
-                    children: Vec::new(),
-                },
+                behavior: NodeBehavior::RootNode,
                 status: JobStatus::NotSubmitted,
                 parents: vec![Parent {
                     parent_type: ParentType::Output {
@@ -460,12 +446,10 @@ mod tests {
             String::from("p"),
             Node {
                 uid: String::from("p"),
-                behavior: NodeBehavior::RootNode {
-                    children: vec![String::from("c")],
-                },
+                behavior: NodeBehavior::RootNode,
                 status: JobStatus::Completed(NodeResult::Node),
                 parents: Vec::new(),
-                children: Vec::new(),
+                children: vec![String::from("c")],
             },
         );
 
@@ -473,9 +457,7 @@ mod tests {
             String::from("c"),
             Node {
                 uid: String::from("c"),
-                behavior: NodeBehavior::RootNode {
-                    children: Vec::new(),
-                },
+                behavior: NodeBehavior::RootNode,
                 status: JobStatus::NotSubmitted,
                 parents: vec![Parent {
                     parent_type: ParentType::Output {

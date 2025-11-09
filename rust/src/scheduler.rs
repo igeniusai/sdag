@@ -21,6 +21,7 @@ impl Scheduler {
             .build_nodemap(dag)
             .ok_or_else(|| log::error!("Failed to identify the root node"))
             .unwrap();
+        self.add_child_edges(&mut nodemap);
 
         let submitter = Submitter {
             state: &self.state,

@@ -556,7 +556,6 @@ mod tests {
                     retries: 0,
                     launch_script: String::from("script.sh"),
                     input_kwargs: input_kwargs.clone(),
-                    children: Vec::new(),
                 },
             },
         )]);

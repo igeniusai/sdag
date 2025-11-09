@@ -79,12 +79,10 @@ pub struct InputKwarg {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(tag = "type")]
 pub enum NodeBehavior {
-    RootNode {
-        children: Vec<String>,
-    },
-    EndNode {
-        children: Vec<String>,
-    },
+    RootNode,
+    EndNode,
+    IfNode,
+    OneOfNode,
     TaskNode {
         fname: String,
         caching: bool,
@@ -94,14 +92,6 @@ pub enum NodeBehavior {
         launch_script: String,
         #[serde(default = "Vec::new")]
         input_kwargs: Vec<InputKwarg>,
-        children: Vec<String>,
-    },
-    IfNode {
-        true_branch: Vec<String>,
-        false_branch: Vec<String>,
-    },
-    OneOfNode {
-        children: Vec<String>,
     },
 }
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -115,39 +105,16 @@ pub struct Node {
     #[serde(default = "Vec::new")]
     pub children: Vec<String>,
 }
-
 impl Node {
-    pub fn get_status_for_child(&self, uid: &str) -> JobStatus {
-        if let NodeBehavior::IfNode {
-            true_branch,
-            false_branch,
-        } = &self.behavior
-            && let JobStatus::Completed(NodeResult::If(cond)) = self.status
+    pub fn get_status_for_child(&self, ptype: &ParentType) -> JobStatus {
+        if let NodeBehavior::IfNode = self.behavior
+            && let ParentType::Branch(child_branch) = ptype
+            && let JobStatus::Completed(NodeResult::If(branch)) = self.status
+            && branch != *child_branch
         {
-            let branch = if cond { true_branch } else { false_branch };
-            let is_selected = branch.iter().any(|x| x == uid);
-            if !is_selected {
-                return JobStatus::Skipped;
-            }
-        }
-        self.status.clone()
-    }
-
-    pub fn get_all_children(&self) -> Vec<String> {
-        match &self.behavior {
-            NodeBehavior::IfNode {
-                true_branch,
-                false_branch,
-                ..
-            } => true_branch
-                .iter()
-                .chain(false_branch.iter())
-                .cloned()
-                .collect(),
-            NodeBehavior::OneOfNode { children }
-            | NodeBehavior::RootNode { children }
-            | NodeBehavior::EndNode { children }
-            | NodeBehavior::TaskNode { children, .. } => children.clone(),
+            JobStatus::Skipped
+        } else {
+            self.status.clone()
         }
     }
 }
@@ -171,16 +138,16 @@ mod tests {
     fn get_status_for_child() {
         let n = Node {
             uid: String::from("p"),
-            behavior: NodeBehavior::RootNode {
-                children: vec![String::from("c")],
-            },
+            behavior: NodeBehavior::RootNode,
             status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
-            children: Vec::new(),
+            children: vec![String::from("c")],
         };
 
+        let ptype = ParentType::Logical;
+
         assert!(matches!(
-            n.get_status_for_child("c"),
+            n.get_status_for_child(&ptype),
             JobStatus::Completed(NodeResult::Node)
         ))
     }
@@ -189,17 +156,14 @@ mod tests {
     fn get_if_true_status_for_child() {
         let n = Node {
             uid: String::from("p"),
-            behavior: NodeBehavior::IfNode {
-                true_branch: vec![String::from("c1")],
-                false_branch: vec![String::from("c2")],
-            },
+            behavior: NodeBehavior::IfNode,
             status: JobStatus::Completed(NodeResult::If(true)),
             parents: Vec::new(),
-            children: Vec::new(),
+            children: vec![String::from("c1"), String::from("c2")],
         };
-
+        let ptype = ParentType::Branch(true);
         assert!(matches!(
-            n.get_status_for_child("c1"),
+            n.get_status_for_child(&ptype),
             JobStatus::Completed(NodeResult::If(true))
         ))
     }
@@ -208,66 +172,25 @@ mod tests {
     fn get_if_false_status_for_child() {
         let n = Node {
             uid: String::from("p"),
-            behavior: NodeBehavior::IfNode {
-                true_branch: vec![String::from("c1")],
-                false_branch: vec![String::from("c2")],
-            },
+            behavior: NodeBehavior::IfNode,
             status: JobStatus::Completed(NodeResult::If(true)),
             parents: Vec::new(),
-            children: Vec::new(),
+            children: vec![String::from("c1"), String::from("c2")],
         };
-
-        assert!(matches!(n.get_status_for_child("c2"), JobStatus::Skipped))
+        let ptype = ParentType::Branch(false);
+        assert!(matches!(n.get_status_for_child(&ptype), JobStatus::Skipped))
     }
 
     #[test]
     fn get_if_failed_status_for_child() {
         let n = Node {
             uid: String::from("p"),
-            behavior: NodeBehavior::IfNode {
-                true_branch: vec![String::from("c1")],
-                false_branch: vec![String::from("c2")],
-            },
+            behavior: NodeBehavior::IfNode,
             status: JobStatus::Failed,
             parents: Vec::new(),
-            children: Vec::new(),
+            children: vec![String::from("c1"), String::from("c2")],
         };
-
-        assert!(matches!(n.get_status_for_child("c1"), JobStatus::Failed))
-    }
-
-    #[test]
-    fn if_get_all_children() {
-        let n = Node {
-            uid: String::from("p"),
-            behavior: NodeBehavior::IfNode {
-                true_branch: vec![String::from("c1")],
-                false_branch: vec![String::from("c2")],
-            },
-            status: JobStatus::Failed,
-            parents: Vec::new(),
-            children: Vec::new(),
-        };
-
-        let mut children = n.get_all_children();
-        children.sort();
-        assert_eq!(children, vec![String::from("c1"), String::from("c2")])
-    }
-
-    #[test]
-    fn node_get_all_children() {
-        let n = Node {
-            uid: String::from("p"),
-            behavior: NodeBehavior::RootNode {
-                children: vec![String::from("c1"), String::from("c2")],
-            },
-            status: JobStatus::Failed,
-            parents: Vec::new(),
-            children: Vec::new(),
-        };
-
-        let mut children = n.get_all_children();
-        children.sort();
-        assert_eq!(children, vec![String::from("c1"), String::from("c2")])
+        let ptype = ParentType::Branch(false);
+        assert!(matches!(n.get_status_for_child(&ptype), JobStatus::Failed))
     }
 }
