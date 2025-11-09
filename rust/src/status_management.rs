@@ -360,6 +360,7 @@ mod tests {
                 },
                 status: JobStatus::NotSubmitted,
                 parents: Vec::new(),
+                children: Vec::new(),
             },
         );
         nodemap.insert(
@@ -371,6 +372,7 @@ mod tests {
                 },
                 status: JobStatus::NotSubmitted,
                 parents: Vec::new(),
+                children: Vec::new(),
             },
         );
         nodemap.insert(
@@ -387,6 +389,7 @@ mod tests {
                     },
                     uid: String::from("p2"),
                 }],
+                children: Vec::new(),
             },
         );
         nodemap
@@ -422,6 +425,7 @@ mod tests {
                 },
                 status: JobStatus::Completed(NodeResult::Node),
                 parents: Vec::new(),
+                children: Vec::new(),
             },
         );
 
@@ -439,6 +443,7 @@ mod tests {
                     },
                     uid: String::from("p"),
                 }],
+                children: Vec::new(),
             },
         );
 
@@ -460,6 +465,7 @@ mod tests {
                 },
                 status: JobStatus::Completed(NodeResult::Node),
                 parents: Vec::new(),
+                children: Vec::new(),
             },
         );
 
@@ -477,6 +483,7 @@ mod tests {
                     },
                     uid: String::from("p"),
                 }],
+                children: Vec::new(),
             },
         );
 

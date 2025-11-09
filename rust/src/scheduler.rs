@@ -72,4 +72,26 @@ impl Scheduler {
             .map(|uid| uid.to_string())
             .next()
     }
+
+    fn add_child_edges(&self, nodemap: &mut HashMap<String, Node>) {
+        let mut edges = self.find_child_edges(nodemap);
+        for (uid, node) in nodemap.iter_mut() {
+            if let Some(children) = edges.remove(uid) {
+                node.children.extend(children);
+            }
+        }
+    }
+
+    fn find_child_edges(&self, nodemap: &HashMap<String, Node>) -> HashMap<String, Vec<String>> {
+        let mut children: HashMap<String, Vec<String>> = HashMap::new();
+        for (uid, node) in nodemap.iter() {
+            for parent in &node.parents {
+                let parent_vec = children.entry(parent.uid.clone()).or_default();
+                if !parent_vec.contains(uid) {
+                    parent_vec.push(uid.clone())
+                }
+            }
+        }
+        children
+    }
 }

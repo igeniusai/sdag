@@ -231,6 +231,7 @@ mod tests {
                 },
                 uid: String::from("p"),
             }],
+            children: Vec::new(),
         };
 
         let submitter = Submitter {
@@ -257,6 +258,7 @@ mod tests {
                 },
                 uid: String::from("p"),
             }],
+            children: Vec::new(),
         };
 
         let submitter = Submitter {
@@ -284,6 +286,7 @@ mod tests {
                 },
                 uid: String::from("p"),
             }],
+            children: Vec::new(),
         };
 
         let parent = Node {
@@ -293,6 +296,7 @@ mod tests {
             },
             status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         let submitter = Submitter {
@@ -328,6 +332,7 @@ mod tests {
                 },
                 uid: String::from("p"),
             }],
+            children: Vec::new(),
         };
 
         let parent = Node {
@@ -337,6 +342,7 @@ mod tests {
             },
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         let submitter = Submitter {
@@ -364,6 +370,7 @@ mod tests {
             },
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         let submitter = Submitter {
@@ -398,6 +405,7 @@ mod tests {
                     uid: String::from("p2"),
                 },
             ],
+            children: Vec::new(),
         };
 
         let p1 = Node {
@@ -407,6 +415,7 @@ mod tests {
             },
             status: JobStatus::Failed,
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         let p2 = Node {
@@ -416,6 +425,7 @@ mod tests {
             },
             status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         let submitter = Submitter {
@@ -441,6 +451,7 @@ mod tests {
             },
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         let submitter = Submitter {
@@ -465,6 +476,7 @@ mod tests {
             },
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         let submitter = Submitter {
@@ -489,6 +501,7 @@ mod tests {
             },
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         let submitter = Submitter {

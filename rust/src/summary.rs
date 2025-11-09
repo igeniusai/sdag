@@ -58,6 +58,7 @@ mod tests {
                     },
                     status: JobStatus::Failed,
                     parents: Vec::new(),
+                    children: Vec::new(),
                 },
             ),
             (
@@ -75,6 +76,7 @@ mod tests {
                     },
                     status: JobStatus::Skipped,
                     parents: Vec::new(),
+                    children: Vec::new(),
                 },
             ),
         ]);

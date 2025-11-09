@@ -61,6 +61,7 @@ pub enum ParentType {
     Logical,
     Artifact { key: String, name: String },
     Output { key: String },
+    Branch(bool),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -111,6 +112,8 @@ pub struct Node {
     pub status: JobStatus,
     #[serde(default = "Vec::new")]
     pub parents: Vec<Parent>,
+    #[serde(default = "Vec::new")]
+    pub children: Vec<String>,
 }
 
 impl Node {
@@ -173,6 +176,7 @@ mod tests {
             },
             status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         assert!(matches!(
@@ -191,6 +195,7 @@ mod tests {
             },
             status: JobStatus::Completed(NodeResult::If(true)),
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         assert!(matches!(
@@ -209,6 +214,7 @@ mod tests {
             },
             status: JobStatus::Completed(NodeResult::If(true)),
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         assert!(matches!(n.get_status_for_child("c2"), JobStatus::Skipped))
@@ -224,6 +230,7 @@ mod tests {
             },
             status: JobStatus::Failed,
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         assert!(matches!(n.get_status_for_child("c1"), JobStatus::Failed))
@@ -239,6 +246,7 @@ mod tests {
             },
             status: JobStatus::Failed,
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         let mut children = n.get_all_children();
@@ -255,6 +263,7 @@ mod tests {
             },
             status: JobStatus::Failed,
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         let mut children = n.get_all_children();

@@ -180,6 +180,7 @@ mod tests {
             },
             status: JobStatus::Running(String::from("job1")),
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         let res = slurm.get_job_id_if_running(&node);
@@ -197,6 +198,7 @@ mod tests {
             },
             status: JobStatus::NotSubmitted,
             parents: Vec::new(),
+            children: Vec::new(),
         };
 
         slurm.get_job_id_if_running(&node).unwrap();
@@ -215,6 +217,7 @@ mod tests {
                 },
                 status: JobStatus::Running(String::from("job1")),
                 parents: Vec::new(),
+                children: Vec::new(),
             },
         );
         nodemap.insert(
@@ -226,6 +229,7 @@ mod tests {
                 },
                 status: JobStatus::Running(String::from("job2")),
                 parents: Vec::new(),
+                children: Vec::new(),
             },
         );
 
@@ -252,6 +256,7 @@ mod tests {
                 },
                 status: JobStatus::NotSubmitted,
                 parents: Vec::new(),
+                children: Vec::new(),
             },
         );
 

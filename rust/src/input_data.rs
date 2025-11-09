@@ -78,7 +78,7 @@ impl<'a, T: StateManager> InputDataHandler<'a, T> {
         parent: &Parent,
     ) -> Result<(), Box<dyn Error>> {
         match &parent.parent_type {
-            ParentType::Logical => {}
+            ParentType::Logical | ParentType::Branch(_) => {}
             ParentType::Output { key } => {
                 self.add_parent_output(input_data, &parent.uid, key)?;
             }
@@ -548,6 +548,7 @@ mod tests {
                         key: String::from("b"),
                     },
                 }],
+                children: Vec::new(),
                 behavior: NodeBehavior::TaskNode {
                     fname: String::from("foo"),
                     caching: true,

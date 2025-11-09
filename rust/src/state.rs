@@ -112,6 +112,7 @@ pub mod tests {
                 },
                 status: JobStatus::NotSubmitted,
                 parents: Vec::new(),
+                children: Vec::new(),
             }],
         };
 
@@ -185,6 +186,7 @@ pub mod tests {
                     },
                     status: JobStatus::NotSubmitted,
                     parents: Vec::new(),
+                    children: Vec::new(),
                 },
                 Node {
                     uid: String::from("1"),
@@ -199,6 +201,7 @@ pub mod tests {
                     },
                     status: JobStatus::NotSubmitted,
                     parents: Vec::new(),
+                    children: Vec::new(),
                 },
             ],
         };
