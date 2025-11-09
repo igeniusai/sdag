@@ -4,6 +4,7 @@ mod model;
 mod summary;
 
 mod backend;
+mod graph;
 mod status_management;
 mod submission;
 
@@ -31,7 +32,7 @@ fn sscheduler_start(argv: Vec<String>) {
     log::debug!("SDAG home directory: {home_dir:?}");
 
     let dag = startup::read_dag(&args.pipeline)
-        .map_err(|e| log::error!("{e}"))
+        .map_err(|e| log::error!("Failed to read DAG: {e}"))
         .unwrap();
 
     let state = LocalDirState::new(home_dir.join(&dag.name));
