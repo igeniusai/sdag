@@ -64,9 +64,17 @@ impl StateManager for LocalDirState {
     }
 
     fn copy_output(&self, src_uid: &str, dst_uid: &str) -> io::Result<u64> {
-        let src_path = self.pipeline_dir.join(src_uid).join(&self.output_fname);
-        let dst_path = self.pipeline_dir.join(dst_uid).join(&self.output_fname);
-        fs::copy(src_path, dst_path)
+        let src_dir = self.pipeline_dir.join(src_uid);
+        let dst_dir = self.pipeline_dir.join(dst_uid);
+        fs::create_dir(&dst_dir)?;
+
+        let src_input = src_dir.join(&self.input_fname);
+        let dst_input = dst_dir.join(&self.input_fname);
+        fs::copy(src_input, dst_input)?;
+
+        let src_output = src_dir.join(&self.output_fname);
+        let dst_output = dst_dir.join(&self.output_fname);
+        fs::copy(src_output, dst_output)
     }
 
     fn read_output(&self, uid: &str) -> io::Result<String> {
