@@ -78,7 +78,7 @@ impl<'a, T: StateManager> InputDataHandler<'a, T> {
         parent: &Parent,
     ) -> Result<(), Box<dyn Error>> {
         match &parent.parent_type {
-            ParentType::Logical | ParentType::Branch(_) => {}
+            ParentType::Logical | ParentType::Branch { .. } => {}
             ParentType::Output { key } => {
                 self.add_parent_output(input_data, &parent.uid, key)?;
             }

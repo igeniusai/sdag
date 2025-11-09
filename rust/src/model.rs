@@ -61,7 +61,7 @@ pub enum ParentType {
     Logical,
     Artifact { key: String, name: String },
     Output { key: String },
-    Branch(bool),
+    Branch { branch: bool },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -108,9 +108,9 @@ pub struct Node {
 impl Node {
     pub fn get_status_for_child(&self, ptype: &ParentType) -> JobStatus {
         if let NodeBehavior::IfNode = self.behavior
-            && let ParentType::Branch(child_branch) = ptype
+            && let ParentType::Branch { branch: child_b } = ptype
             && let JobStatus::Completed(NodeResult::If(branch)) = self.status
-            && branch != *child_branch
+            && branch != *child_b
         {
             JobStatus::Skipped
         } else {
@@ -161,7 +161,7 @@ mod tests {
             parents: Vec::new(),
             children: vec![String::from("c1"), String::from("c2")],
         };
-        let ptype = ParentType::Branch(true);
+        let ptype = ParentType::Branch { branch: true };
         assert!(matches!(
             n.get_status_for_child(&ptype),
             JobStatus::Completed(NodeResult::If(true))
@@ -177,7 +177,7 @@ mod tests {
             parents: Vec::new(),
             children: vec![String::from("c1"), String::from("c2")],
         };
-        let ptype = ParentType::Branch(false);
+        let ptype = ParentType::Branch { branch: false };
         assert!(matches!(n.get_status_for_child(&ptype), JobStatus::Skipped))
     }
 
@@ -190,7 +190,7 @@ mod tests {
             parents: Vec::new(),
             children: vec![String::from("c1"), String::from("c2")],
         };
-        let ptype = ParentType::Branch(false);
+        let ptype = ParentType::Branch { branch: false };
         assert!(matches!(n.get_status_for_child(&ptype), JobStatus::Failed))
     }
 }
