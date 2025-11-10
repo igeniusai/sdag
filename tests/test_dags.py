@@ -1,11 +1,17 @@
 """DAG tests."""
 
+import json
 from pathlib import Path
 
 import pytest
 
 from sdag.dags import DAG, SDAG
-from sdag.exceptions import IncorrectElifError, MissingActiveBranchError
+from sdag.exceptions import (
+    DAGNotSetError,
+    IncorrectElifError,
+    MissingActiveBranchError,
+    TaskNotUniqueError,
+)
 from sdag.models import (
     BranchType,
     Graph,
@@ -16,6 +22,7 @@ from sdag.models import (
     RootNode,
     TaskNode,
 )
+from sdag.wrappers import IfWrapper, Pipeline
 
 
 def test_sdag_obj_is_reachable():
@@ -259,3 +266,297 @@ class TestDAG:
         )
         with pytest.raises(IncorrectElifError):
             dag.register_elif_expression(node)
+
+
+class TestSDAG:
+    """SDAG tests."""
+
+    @pytest.fixture
+    def sdag(self) -> SDAG:
+        """sdag.
+
+        Returns:
+            SDAG: sdag object.
+        """
+        return SDAG()
+
+    def test_get_uid(self, sdag: SDAG) -> None:
+        """Test the UID retrieval.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        uid = sdag.get_uid()
+        assert isinstance(uid, str)
+        assert int(uid) < sdag.uid
+
+    def test_reset_uid(self, sdag: SDAG) -> None:
+        """Test uid deterministic behavior.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        uid1 = sdag.get_uid()
+        sdag._reset_uid()
+        uid2 = sdag.get_uid()
+        assert uid1 == uid2
+
+    def test_task_decoration(self, sdag: SDAG) -> None:
+        """Test the task decorator.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+
+        @sdag.task(launch_script="submit.sh")
+        def foo(): ...
+
+        assert sdag.taskdict == {"foo": foo.fn}
+
+    def test_duplicate_task_decoration(self, sdag: SDAG) -> None:
+        """Duplicate task names are not allowed.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+
+        @sdag.task(launch_script="submit.sh")
+        def foo(): ...  # type: ignore
+
+        with pytest.raises(TaskNotUniqueError):
+
+            @sdag.task(launch_script="submit.sh")
+            def foo(): ...
+
+    def test_pipeline_deconration(self, sdag: SDAG) -> None:
+        """Test the pipeline decorator.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+
+        @sdag.pipeline
+        def pipeline(): ...
+
+        assert isinstance(pipeline, Pipeline)
+
+    def test_first_dag_set(self, sdag: SDAG) -> None:
+        """Test the dag set without other dags.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        sdag.set_current_dag("dag")
+        assert isinstance(sdag.current, DAG)
+
+    def test_second_dag_set(self, sdag: SDAG) -> None:
+        """Test the dag set with another active dag.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        sdag.set_current_dag("dag1")
+        sdag.set_current_dag("dag2")
+        assert isinstance(sdag.current, DAG)
+        assert isinstance(sdag.dagstack[0], DAG)
+
+    def test_push_branch_without_dag(self, sdag: SDAG) -> None:
+        """DAG does not exist.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        branch = Node(uid="1", behavior=IfNode())
+        with pytest.raises(DAGNotSetError):
+            sdag.push_branch(branch)
+
+    def test_push_branch(self, sdag: SDAG) -> None:
+        """Push a branch to the stack.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        sdag.set_current_dag(name="dag")
+        branch = Node(uid="1", behavior=IfNode())
+        sdag.push_branch(branch)
+        assert sdag.current is not None
+        assert sdag.current.branchstack == [branch]
+
+    def test_register_without_dag(self, sdag: SDAG) -> None:
+        """Test reistration without a DAG.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        node = Node(uid="1", behavior=RootNode())
+        with pytest.raises(DAGNotSetError):
+            sdag.register(node)
+
+    def test_register(self, sdag: SDAG) -> None:
+        """Register a node.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        sdag.set_current_dag(name="dag")
+        node = Node(uid="1", behavior=RootNode())
+        sdag.register(node)
+
+        assert sdag.current is not None
+        assert sdag.current.graph.nodes == [node]
+
+    def test_oneof(self, sdag: SDAG) -> None:
+        """Test the OneOf node.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        sdag.set_current_dag(name="dag")
+        node = Node(uid="1", behavior=RootNode())
+        oneof = sdag.OneOf(node)
+
+        assert sdag.current is not None
+        assert sdag.current.graph.nodes == [oneof]
+        assert oneof.parents == [Parent(uid="1", parent_type=LogicalType())]
+
+    def test_oneof_without_dag(self, sdag: SDAG) -> None:
+        """DAG does not exist.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        node = Node(uid="1", behavior=RootNode())
+        with pytest.raises(DAGNotSetError):
+            sdag.OneOf(node)
+
+    def test_get_one_graph(self, sdag: SDAG) -> None:
+        """Test the retrieval of the only graph.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        sdag.set_current_dag("dag")
+        graph = sdag.get_graph()
+        assert isinstance(graph, Graph)
+        assert sdag.current is None
+
+    def test_get_two_graphs(self, sdag: SDAG) -> None:
+        """Test the retrieval in the case of two graphs.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        sdag.set_current_dag("dag1")
+        sdag.set_current_dag("dag2")
+        graph = sdag.get_graph()
+        assert isinstance(graph, Graph)
+        assert isinstance(sdag.current, DAG)
+
+    def test_get_missing_graph(self, sdag: SDAG) -> None:
+        """Try to retrieve a graph the doesnt' exist.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        with pytest.raises(DAGNotSetError):
+            sdag.get_graph()
+
+    def test_register_if(self, sdag: SDAG) -> None:
+        """Test the if branch registration.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        sdag.set_current_dag(name="dag")
+        node = Node(
+            uid="1",
+            behavior=TaskNode(
+                fname="fname",
+                launch_script=Path("submit.sh"),
+                caching=False,
+                retries=0,
+            ),
+        )
+        wrapper = sdag.If(node)
+
+        assert sdag.current is not None
+        assert sdag.current.graph.nodes == [wrapper.node]
+        assert wrapper.node.parents == [
+            Parent(uid="1", parent_type=LogicalType())
+        ]
+
+    def test_if_without_dag(self, sdag: SDAG) -> None:
+        """Register an If to a non-existing dag.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        node = Node(
+            uid="1",
+            behavior=TaskNode(
+                fname="fname",
+                launch_script=Path("submit.sh"),
+                caching=False,
+                retries=0,
+            ),
+        )
+        with pytest.raises(DAGNotSetError):
+            sdag.If(node)
+
+    def test_elif_without_dag(self, sdag: SDAG) -> None:
+        """Register an elif to a non-existing dag.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        node = Node(
+            uid="1",
+            behavior=TaskNode(
+                fname="fname",
+                launch_script=Path("submit.sh"),
+                caching=False,
+                retries=0,
+            ),
+        )
+        with pytest.raises(DAGNotSetError):
+            sdag.Elif(node)
+
+    def test_register_elif(self, sdag: SDAG) -> None:
+        """Test the elif registration.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+        sdag.set_current_dag(name="dag")
+
+        @sdag.task(launch_script="submit.sh")
+        def if_cond(): ...
+
+        @sdag.task(launch_script="submit.sh")
+        def elif_cond(): ...
+
+        with sdag.If(if_cond()):
+            ...
+
+        wrapper = sdag.Elif(elif_cond())
+        assert isinstance(wrapper, IfWrapper)
+
+    def test_compile(self, sdag: SDAG, tmp_path: Path) -> None:
+        """Empty pipeline compilation
+
+        There are only root and end nodes.
+        """
+
+        @sdag.pipeline
+        def pipeline(): ...
+
+        json_path = tmp_path / "pipeline.json"
+        sdag.compile(pipeline, json_path)
+
+        with json_path.open() as f:
+            data = json.load(f)
+
+        graph = Graph.model_validate(data)
+
+        assert graph.name == "pipeline"
+        assert len(graph.nodes) == 2
