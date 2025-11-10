@@ -94,7 +94,7 @@ class DAG:
             last_branch.behavior.to_be_dropped = True
 
     def register_elif_expression(self, expr: Node) -> None:
-        """Register an Elif expression.
+        """Register an Elif condition node.
 
         Args:
             expr (Node): Elif condition.
@@ -123,10 +123,6 @@ class DAG:
         expr.add_branch_edge(
             last_branch.uid, branch=last_branch.behavior.branch
         )
-
-    def pop_stack(self) -> None:
-        """Remove an IfNode from the stack."""
-        self.branchstack.pop()
 
     def push_stack(self, node: Node[IfNode]) -> None:
         """Push IfNode to the stack.
