@@ -1,6 +1,5 @@
 """Wrappers."""
 
-import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Self
@@ -79,20 +78,20 @@ class Task:
                 node.register_artifact(k)
 
         for parent in args:
-            parent.add_logical_edge(node)
+            node.add_logical_edge(parent.uid)
 
         for key, value in kwargs.items():
             # Parent node output
             if isinstance(value, Node):
-                value.add_output_edge(node, key)
+                node.add_output_edge(value.uid, key)
 
             elif isinstance(value, ArtifactContainer):
-                value.node.add_artifact_edge(node, key, name=value.key)
+                node.add_artifact_edge(
+                    parent_uid=value.node.uid, key=key, name=value.key
+                )
 
             else:
-                # Static input kwargs
-                serialized_value = json.dumps(value)
-                input_kwarg = InputKwarg(key=key, value=serialized_value)
+                input_kwarg = InputKwarg(key=key, value=value)
                 node.behavior.input_kwargs.append(input_kwarg)
 
         self._register(node)
@@ -175,7 +174,7 @@ class Pipeline:
         graph = self.compile()
         root = graph.get_root()
         for parent in args:
-            parent.add_logical_edge(root)
+            root.add_logical_edge(parent.uid)
 
         return graph.get_end()
 

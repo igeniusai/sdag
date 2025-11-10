@@ -48,16 +48,20 @@ class DAG:
         root = Node(uid=uid, behavior=RootNode())
         for node in self.graph.nodes:
             if not node.parents:
-                root.add_logical_edge(node)
+                node.add_logical_edge(root.uid)
+
         self.graph.nodes.append(root)
 
     def add_end(self) -> None:
         """Add end node."""
         uid = f"{self.prefix}_end_"
         end = Node(uid=uid, behavior=EndNode())
+        not_leaves = self.graph.find_nodes_with_children()
+
         for node in self.graph.nodes:
-            if node.is_leaf():
-                node.add_logical_edge(end)
+            if node.uid not in not_leaves:
+                end.add_logical_edge(node.uid)
+
         self.graph.nodes.append(end)
 
     def register(self, node: Node) -> None:
@@ -77,7 +81,9 @@ class DAG:
 
         # We are within a branch
         if last_branch.behavior.in_context:
-            last_branch.add_logical_edge(node)
+            node.add_branch_edge(
+                last_branch.uid, branch=last_branch.behavior.branch
+            )
 
         # Fully exited, the branch must be dropped
         elif last_branch.behavior.to_be_dropped:
@@ -114,7 +120,9 @@ class DAG:
             raise IncorrectElifError
 
         last_branch.behavior.branch = False
-        last_branch.add_logical_edge(expr)
+        expr.add_branch_edge(
+            last_branch.uid, branch=last_branch.behavior.branch
+        )
 
     def pop_stack(self) -> None:
         """Remove an IfNode from the stack."""
@@ -330,7 +338,7 @@ class SDAG:
 
         node = Node(uid=self.get_uid(), behavior=IfNode())
         self.current.register(node)
-        expr.add_logical_edge(node)
+        node.add_logical_edge(expr.uid)
         return IfWrapper(node=node, push_branch=self.push_branch)
 
     def Else(self) -> IfWrapper:  # noqa: N802
@@ -403,7 +411,7 @@ class SDAG:
         node = Node(uid=self.get_uid(), behavior=OneOfNode())
         self.current.register(node)
         for parent in args:
-            parent.add_logical_edge(node)
+            node.add_logical_edge(parent.uid)
         return node
 
     def register(self, node: Node) -> None:

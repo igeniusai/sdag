@@ -1,6 +1,5 @@
 """DAG model."""
 
-from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any, Generic, Literal, TypeVar
@@ -34,24 +33,8 @@ class TaskOutput(BaseModel):
     artifacts: list[Artifact]
 
 
-class BaseNodeType(ABC, BaseModel):
+class BaseNodeType(BaseModel):
     """Base class for all nodes."""
-
-    @abstractmethod
-    def add_child(self, uid: str) -> None:
-        """Add a child to the current node.
-
-        Args:
-            uid (str): Child unique id.
-        """
-
-    @abstractmethod
-    def is_leaf(self) -> bool:
-        """Check wether a node is a leaf.
-
-        Returns:
-            bool: True if the node is a leaf, False otherwise.
-        """
 
 
 class InputKwarg(BaseModel):
@@ -61,11 +44,11 @@ class InputKwarg(BaseModel):
 
     Attributes:
         key (str): Input name.
-        value (str): Input value (JSON string).
+        value (Any): Input value.
     """
 
     key: str
-    value: str
+    value: Any
 
 
 class TaskNode(BaseNodeType):
@@ -81,7 +64,6 @@ class TaskNode(BaseNodeType):
         caching (bool): Set to True to enable output caching.
         retries (int): Number of retries.
         input_kwargs (list[InputKwarg]): Static input kwargs.
-        children (list[str]): Children uids.
     """
 
     type: Literal["TaskNode"] = "TaskNode"
@@ -90,24 +72,6 @@ class TaskNode(BaseNodeType):
     caching: bool
     retries: int
     input_kwargs: list[InputKwarg] = Field(default_factory=list)
-    children: list[str] = Field(default_factory=list)
-
-    def add_child(self, uid: str) -> None:
-        """Add a child.
-
-        Args:
-            uid (str): Child uid.
-        """
-        if uid not in self.children:
-            self.children.append(uid)
-
-    def is_leaf(self) -> bool:
-        """Check if the task is a leaf or not.
-
-        Returns:
-            bool: True if the task is a leaf.
-        """
-        return not self.children
 
 
 class IfNode(BaseNodeType):
@@ -116,10 +80,6 @@ class IfNode(BaseNodeType):
     Attributes:
         type (Literal['IfNode']): Node type.
         branch (bool): Selected branch. Defaults to True.
-        true_branch (str): Uids of the child nodes in the
-            True branch.
-        false_branch (str): Uids of the child nodes in the
-            false branch.
         in_context (bool): True if the context manager is
             active (so we are within the branch). Defaults
             to True.
@@ -129,29 +89,8 @@ class IfNode(BaseNodeType):
 
     type: Literal["IfNode"] = "IfNode"
     branch: bool = True
-    true_branch: list[str] = Field(default_factory=list)
-    false_branch: list[str] = Field(default_factory=list)
     in_context: bool = False
     to_be_dropped: bool = False
-
-    def add_child(self, uid: str) -> None:
-        """Add a child to the correct branch.
-
-        Args:
-            uid (str): Child unique id.
-        """
-        if self.branch:
-            self.true_branch.append(uid)
-        else:
-            self.false_branch.append(uid)
-
-    def is_leaf(self) -> bool:
-        """Check if the node is a leaf.
-
-        Returns:
-            bool: Always false, IfNodes cannot be leaves.
-        """
-        return False
 
 
 class OneOfNode(BaseNodeType):
@@ -163,28 +102,9 @@ class OneOfNode(BaseNodeType):
 
     Attributes:
         type (Literal['OneOf']): Node type.
-        children (list[str]): Children uids.
     """
 
     type: Literal["OneOfNode"] = "OneOfNode"
-    children: list[str] = Field(default_factory=list)
-
-    def add_child(self, uid: str) -> None:
-        """Add a child to the node.
-
-        Args:
-            uid (str): Child uid.
-        """
-        if uid not in self.children:
-            self.children.append(uid)
-
-    def is_leaf(self) -> bool:
-        """Check if the node is a leaf.
-
-        Returns:
-            bool: True if the node is a leaf.
-        """
-        return not self.children
 
 
 class EndNode(BaseNodeType):
@@ -192,31 +112,9 @@ class EndNode(BaseNodeType):
 
     Args:
         type (Literal['EndNode']): Node type.
-        children (list[str]): Children uids.
     """
 
     type: Literal["EndNode"] = "EndNode"
-    children: list[str] = Field(default_factory=list)
-
-    def add_child(self, uid: str) -> None:
-        """Add a child to the node.
-
-        Args:
-            uid (str): Child uid.
-        """
-        if uid not in self.children:
-            self.children.append(uid)
-
-    def is_leaf(self) -> bool:
-        """Check if the node is a leaf.
-
-        Endnodes may not be leaves for pipelines
-        called within other pipelines.
-
-        Returns:
-            bool: True if the node is a leaf.
-        """
-        return not self.children
 
 
 class RootNode(BaseNodeType):
@@ -228,30 +126,9 @@ class RootNode(BaseNodeType):
     """
 
     type: Literal["RootNode"] = "RootNode"
-    children: list[str] = Field(default_factory=list)
-
-    def add_child(self, uid: str) -> None:
-        """Add a child to the node.
-
-        Args:
-            uid (str): Child uid.
-        """
-        if uid not in self.children:
-            self.children.append(uid)
-
-    def is_leaf(self) -> bool:
-        """Check if the node is a leaf.
-
-        Returns:
-            bool: True if the node is a leaf.
-        """
-        return not self.children
 
 
 T = TypeVar("T", bound=BaseNodeType, covariant=True)
-"""Node type."""
-
-U = TypeVar("U", bound=BaseNodeType)
 """Node type."""
 
 
@@ -301,6 +178,20 @@ class OutputType(ParentType):
     key: str
 
 
+class BranchType(ParentType):
+    """Branch relationship.
+
+    Node depends on one of the two branches of the parent.
+
+    Attributes:
+        type (Literal['If']): Parent type.
+        branch (bool): Branch the child depends on.
+    """
+
+    type: Literal["Branch"] = "Branch"
+    branch: bool
+
+
 V = TypeVar("V", bound=ParentType, covariant=True)
 """Node type."""
 
@@ -340,7 +231,7 @@ class ArtifactContainer:
 
 
 ParentTypeUnion = Annotated[
-    LogicalType | ArtifactType | OutputType,
+    LogicalType | ArtifactType | OutputType | BranchType,
     Field(discriminator="type"),
 ]
 """Node type discriminated union."""
@@ -388,62 +279,55 @@ class Node(BaseModel, Generic[T]):
         """
         self._artifacts[key] = ArtifactContainer(key, self)
 
-    def is_leaf(self) -> bool:
-        """Check if the node is a leaf.
+    def add_logical_edge(self, parent_uid: str) -> None:
+        """Add a child->parent logical edge.
 
-        Returns:
-            bool: True if the node is a leaf.
-        """
-        return self.behavior.is_leaf()
-
-    def add_logical_edge(self, child: "Node[U]") -> None:
-        """Add a logical edge.
-
-        It is a logical dependence, no data exchange.
+        It is a logical dependence, no data exchanged.
 
         Args:
-            child (Node[U]): Child node.
+            parent_uid (str): Parent uid.
         """
-        parent = Parent(uid=self.uid, parent_type=LogicalType())
-        child.parents.append(parent)
-        self._add_child(child)
+        parent = Parent(uid=parent_uid, parent_type=LogicalType())
+        self.parents.append(parent)
 
-    def add_output_edge(self, child: "Node[U]", key: str) -> None:
-        """Add output edge.
+    def add_output_edge(self, parent_uid, key: str) -> None:
+        """Add a child->parent output edge.
 
         Child will read the parent output.
 
         Args:
-            child (Node[U]): Child node.
+            parent_uid (str): Parent uid.
             key (str): parent output key in the child input kwargs.
         """
-        parent = Parent(uid=self.uid, parent_type=OutputType(key=key))
-        child.parents.append(parent)
-        self._add_child(child)
+        parent = Parent(uid=parent_uid, parent_type=OutputType(key=key))
+        self.parents.append(parent)
 
-    def add_artifact_edge(self, child: "Node[U]", key: str, name: str) -> None:
-        """Add an artifact edge.
+    def add_artifact_edge(self, parent_uid: str, key: str, name: str) -> None:
+        """Add a child->parent artifact edge.
 
         The child will use an artifact produced by the parent.
 
         Args:
-            child (Node[U]): Child node.
+            parent_uid (str): Parent uid.
             key (str): Artifact key in the child input kwargs.
             name (str): Artifact name.
         """
         parent = Parent(
-            uid=self.uid, parent_type=ArtifactType(key=key, name=name)
+            uid=parent_uid, parent_type=ArtifactType(key=key, name=name)
         )
-        child.parents.append(parent)
-        self._add_child(child)
+        self.parents.append(parent)
 
-    def _add_child(self, node: "Node[U]") -> None:
-        """Add a child to the current node.
+    def add_branch_edge(self, parent_uid: str, branch: bool) -> None:
+        """Add a child->parent branch edge.
+
+        The child depends on one of the branches of an IfNode.
 
         Args:
-            node (Self): Child.
+            parent_uid (str): Parent uid.
+            branch (bool): Branch the child depeds on.
         """
-        return self.behavior.add_child(node.uid)
+        parent = Parent(uid=parent_uid, parent_type=BranchType(branch=branch))
+        self.parents.append(parent)
 
 
 BehaviorUnion = Annotated[
@@ -495,8 +379,19 @@ class Graph(BaseModel):
         Returns:
             Node: End node.
         """
+        not_leaves = self.find_nodes_with_children()
         for node in self.nodes:
-            if node.is_leaf():
+            if node.uid not in not_leaves:
                 return node
 
         raise EndNotFoundError
+
+    def find_nodes_with_children(self) -> set[str]:
+        """Find the uids of all nodes with children.
+
+        Useful to identify leaves.
+
+        Returns:
+            set[str]: Nodes without children.
+        """
+        return {p.uid for node in self.nodes for p in node.parents}
