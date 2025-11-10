@@ -126,7 +126,7 @@ class DAG:
 
     def pop_stack(self) -> None:
         """Remove an IfNode from the stack."""
-        self.last_branch = self.branchstack.pop()
+        self.branchstack.pop()
 
     def push_stack(self, node: Node[IfNode]) -> None:
         """Push IfNode to the stack.
@@ -134,7 +134,6 @@ class DAG:
         Args:
             node (Node[IfNode]): Node to be pushed to the stack.
         """
-        self.last_branch = node
         self.branchstack.append(node)
 
     def get_graph(self) -> Graph:
