@@ -3,6 +3,11 @@ use serde_json::Value;
 use std::{fmt, path::PathBuf};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct TaskMeta {
+    pub fname: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Artifact {
     pub name: String,
     pub path: PathBuf,

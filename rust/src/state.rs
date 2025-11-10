@@ -1,5 +1,6 @@
-use crate::model::DAG;
+use crate::model::{DAG, Node, NodeBehavior, TaskMeta};
 use log;
+use serde_json;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -20,6 +21,7 @@ pub struct LocalDirState {
     pipeline_fname: String,
     output_fname: String,
     input_fname: String,
+    meta_fname: String,
 }
 
 impl LocalDirState {
@@ -29,6 +31,7 @@ impl LocalDirState {
             pipeline_fname: String::from("pipeline.json"),
             output_fname: String::from("output.json"),
             input_fname: String::from("input.json"),
+            meta_fname: String::from("meta.json"),
         }
     }
 
@@ -39,22 +42,76 @@ impl LocalDirState {
         }
 
         for node in &dag.nodes {
-            let path = self.pipeline_dir.join(&node.uid);
-            let res = fs::create_dir(path);
-            if let Err(_) = res {
-                let uid = &node.uid;
-                log::debug!(
-                    "Failed to create stage '{uid}' \
-                    directory, it likely already exists."
-                )
+            if let NodeBehavior::TaskNode { fname, .. } = &node.behavior {
+                let path = self.pipeline_dir.join(&node.uid);
+                if !path.is_dir() {
+                    fs::create_dir(&path)?;
+                    self.write_meta(&path, fname)?
+                }
             }
         }
         Ok(())
+    }
+
+    fn write_meta(&self, path: &PathBuf, fname: &str) -> Result<(), io::Error> {
+        let meta = TaskMeta {
+            fname: String::from(fname),
+        };
+        let content = serde_json::to_string(&meta)?;
+        let dst = path.join(&self.meta_fname);
+        fs::write(dst, &content)
+    }
+
+    fn clear_cache(&self, dag: &DAG) -> Result<(), io::Error> {
+        for entry in fs::read_dir(&self.pipeline_dir)? {
+            let path = entry?.path();
+            if !path.is_dir() {
+                continue;
+            }
+
+            if self.dir_must_be_deleted(&path, dag) {
+                let _ = fs::remove_dir_all(path)
+                    .map_err(|e| log::error!("Failed cache dir deletion: {e}"));
+            }
+        }
+        Ok(())
+    }
+
+    fn dir_must_be_deleted(&self, path: &PathBuf, dag: &DAG) -> bool {
+        if let Some(dirname) = path.file_name().and_then(|n| n.to_str()) {
+            for node in &dag.nodes {
+                if self.is_node_matching(node, path, dirname) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
+    fn read_task_name(&self, path: &PathBuf) -> Result<String, io::Error> {
+        let meta_path = path.join(&self.meta_fname);
+        let content = fs::read_to_string(meta_path)?;
+        let meta: TaskMeta = serde_json::from_str(&content)?;
+        Ok(meta.fname)
+    }
+
+    fn is_node_matching(&self, node: &Node, path: &PathBuf, dirname: &str) -> bool {
+        if node.uid == dirname
+            && let NodeBehavior::TaskNode { fname, caching, .. } = &node.behavior
+            && *caching
+            && let Ok(task_name) = self.read_task_name(path)
+        {
+            return task_name == *fname;
+        }
+        false
     }
 }
 
 impl StateManager for LocalDirState {
     fn prepare(&self, dag: &DAG) -> io::Result<()> {
+        if self.pipeline_dir.is_dir() {
+            self.clear_cache(dag)?;
+        }
         self.create_working_dir(dag)
     }
 
@@ -109,7 +166,255 @@ pub mod tests {
     }
 
     #[test]
-    fn create_entire_structure() {
+    fn test_working_dir_creation() {
+        let dag = DAG {
+            name: String::from("dag"),
+            creation_dt: String::from("1900-01-01T09:20:20"),
+            nodes: vec![Node {
+                uid: String::from("0"),
+                parents: Vec::new(),
+                children: Vec::new(),
+                status: JobStatus::NotSubmitted,
+                behavior: NodeBehavior::TaskNode {
+                    fname: String::from("fname"),
+                    caching: false,
+                    try_num: 0,
+                    retries: 0,
+                    launch_script: String::from("lauch.sh"),
+                    input_kwargs: Vec::new(),
+                },
+            }],
+        };
+
+        let pipeline_dir = get_tmp_dir().join("pipeline-name");
+        let manager = LocalDirState::new(pipeline_dir.clone());
+        let res = manager.create_working_dir(&dag);
+        assert!(matches!(res, Ok(_)));
+        assert!(pipeline_dir.join("0").join("meta.json").is_file());
+    }
+
+    #[test]
+    fn write_metadata() {
+        let pipeline_dir = get_tmp_dir().join("pipeline-name");
+        let meta_dir = pipeline_dir.clone();
+        fs::create_dir_all(&pipeline_dir).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir);
+        manager.write_meta(&meta_dir, "foo").unwrap();
+
+        let meta_path = meta_dir.join("meta.json");
+        let meta_str = fs::read_to_string(meta_path).unwrap();
+        let meta: TaskMeta = serde_json::from_str(&meta_str).unwrap();
+        assert_eq!(meta.fname, "foo");
+    }
+
+    #[test]
+    fn clear_cache_no_dirs() {
+        let dag = DAG {
+            name: String::from("dag"),
+            creation_dt: String::from("1900-01-01T09:20:20"),
+            nodes: Vec::new(),
+        };
+
+        let pipeline_dir = get_tmp_dir().join("pipeline-name");
+        fs::create_dir_all(&pipeline_dir).unwrap();
+        let manager = LocalDirState::new(pipeline_dir);
+        assert!(matches!(manager.clear_cache(&dag), Ok(_)));
+    }
+
+    #[test]
+    fn dir_must_be_deleted() {
+        // caching is false
+        let dag = DAG {
+            name: String::from("dag"),
+            creation_dt: String::from("1900-01-01T09:20:20"),
+            nodes: vec![Node {
+                uid: String::from("0"),
+                parents: Vec::new(),
+                children: Vec::new(),
+                status: JobStatus::NotSubmitted,
+                behavior: NodeBehavior::TaskNode {
+                    fname: String::from("fname"),
+                    caching: false,
+                    try_num: 0,
+                    retries: 0,
+                    launch_script: String::from("lauch.sh"),
+                    input_kwargs: Vec::new(),
+                },
+            }],
+        };
+
+        let pipeline_dir = get_tmp_dir().join("pipeline-name");
+        let path = pipeline_dir.join("0");
+        let meta_path = path.join("meta.json");
+        fs::create_dir_all(&path).unwrap();
+        fs::write(&meta_path, r#"{"fname": "fname"}"#).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir);
+        assert!(manager.dir_must_be_deleted(&path, &dag));
+    }
+
+    #[test]
+    fn dir_must_not_be_deleted() {
+        let dag = DAG {
+            name: String::from("dag"),
+            creation_dt: String::from("1900-01-01T09:20:20"),
+            nodes: vec![Node {
+                uid: String::from("0"),
+                parents: Vec::new(),
+                children: Vec::new(),
+                status: JobStatus::NotSubmitted,
+                behavior: NodeBehavior::TaskNode {
+                    fname: String::from("fname"),
+                    caching: true,
+                    try_num: 0,
+                    retries: 0,
+                    launch_script: String::from("lauch.sh"),
+                    input_kwargs: Vec::new(),
+                },
+            }],
+        };
+
+        let pipeline_dir = get_tmp_dir().join("pipeline-name");
+        let path = pipeline_dir.join("0");
+        let meta_path = path.join("meta.json");
+        fs::create_dir_all(&path).unwrap();
+        fs::write(&meta_path, r#"{"fname": "fname"}"#).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir);
+        assert!(!manager.dir_must_be_deleted(&path, &dag));
+    }
+
+    #[test]
+    fn node_is_matching() {
+        let node = Node {
+            uid: String::from("0"),
+            parents: Vec::new(),
+            children: Vec::new(),
+            status: JobStatus::NotSubmitted,
+            behavior: NodeBehavior::TaskNode {
+                fname: String::from("fname"),
+                caching: true,
+                try_num: 0,
+                retries: 0,
+                launch_script: String::from("lauch.sh"),
+                input_kwargs: Vec::new(),
+            },
+        };
+
+        let pipeline_dir = get_tmp_dir().join("pipeline-name");
+        let path = pipeline_dir.join("0");
+        let meta_path = path.join("meta.json");
+        fs::create_dir_all(&path).unwrap();
+        fs::write(&meta_path, r#"{"fname": "fname"}"#).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir);
+        assert!(manager.is_node_matching(&node, &path, "0"));
+    }
+
+    #[test]
+    fn node_not_matching_because_of_id() {
+        let node = Node {
+            uid: String::from("1"),
+            parents: Vec::new(),
+            children: Vec::new(),
+            status: JobStatus::NotSubmitted,
+            behavior: NodeBehavior::TaskNode {
+                fname: String::from("fname"),
+                caching: true,
+                try_num: 0,
+                retries: 0,
+                launch_script: String::from("lauch.sh"),
+                input_kwargs: Vec::new(),
+            },
+        };
+
+        let pipeline_dir = get_tmp_dir().join("pipeline-name");
+        let path = pipeline_dir.join("0");
+        let meta_path = path.join("meta.json");
+        fs::create_dir_all(&path).unwrap();
+        fs::write(&meta_path, r#"{"fname": "fname"}"#).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir);
+        assert!(!manager.is_node_matching(&node, &path, "0"));
+    }
+
+    #[test]
+    fn node_not_matching_because_of_behavior() {
+        let node = Node {
+            uid: String::from("0"),
+            parents: Vec::new(),
+            children: Vec::new(),
+            status: JobStatus::NotSubmitted,
+            behavior: NodeBehavior::RootNode {},
+        };
+
+        let pipeline_dir = get_tmp_dir().join("pipeline-name");
+        let path = pipeline_dir.join("0");
+        let meta_path = path.join("meta.json");
+        fs::create_dir_all(&path).unwrap();
+        fs::write(&meta_path, r#"{"fname": "fname"}"#).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir);
+        assert!(!manager.is_node_matching(&node, &path, "0"));
+    }
+
+    #[test]
+    fn node_not_matching_because_of_caching() {
+        let node = Node {
+            uid: String::from("0"),
+            parents: Vec::new(),
+            children: Vec::new(),
+            status: JobStatus::NotSubmitted,
+            behavior: NodeBehavior::TaskNode {
+                fname: String::from("fname"),
+                caching: false,
+                try_num: 0,
+                retries: 0,
+                launch_script: String::from("lauch.sh"),
+                input_kwargs: Vec::new(),
+            },
+        };
+
+        let pipeline_dir = get_tmp_dir().join("pipeline-name");
+        let path = pipeline_dir.join("0");
+        let meta_path = path.join("meta.json");
+        fs::create_dir_all(&path).unwrap();
+        fs::write(&meta_path, r#"{"fname": "fname"}"#).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir);
+        assert!(!manager.is_node_matching(&node, &path, "0"));
+    }
+
+    #[test]
+    fn node_not_matching_because_of_task_name() {
+        let node = Node {
+            uid: String::from("0"),
+            parents: Vec::new(),
+            children: Vec::new(),
+            status: JobStatus::NotSubmitted,
+            behavior: NodeBehavior::TaskNode {
+                fname: String::from("different_name"),
+                caching: true,
+                try_num: 0,
+                retries: 0,
+                launch_script: String::from("lauch.sh"),
+                input_kwargs: Vec::new(),
+            },
+        };
+
+        let pipeline_dir = get_tmp_dir().join("pipeline-name");
+        let path = pipeline_dir.join("0");
+        let meta_path = path.join("meta.json");
+        fs::create_dir_all(&path).unwrap();
+        fs::write(&meta_path, r#"{"fname": "fname"}"#).unwrap();
+
+        let manager = LocalDirState::new(pipeline_dir);
+        assert!(!manager.is_node_matching(&node, &path, "0"));
+    }
+
+    #[test]
+    fn do_not_create_folder() {
         let dag = DAG {
             name: String::from("pipeline-name"),
             creation_dt: String::from("2025-01-01 09:10:10"),
@@ -126,7 +431,7 @@ pub mod tests {
         let manager = LocalDirState::new(pipeline_dir);
         let res = manager.prepare(&dag);
         assert!(matches!(res, Ok(_)));
-        assert!(manager.pipeline_dir.join("0").is_dir());
+        assert!(!manager.pipeline_dir.join("0").is_dir());
     }
 
     #[test]
@@ -150,7 +455,7 @@ pub mod tests {
         let content = r#"{"output": true}"#;
         fs::create_dir_all(&src_path).unwrap();
         fs::write(src_path.join("output.json"), content).unwrap();
-        fs::create_dir(&dst_path).unwrap();
+        fs::write(src_path.join("input.json"), content).unwrap();
 
         let manager = LocalDirState::new(pipeline_dir);
         manager.copy_output("0", "1").unwrap();
@@ -211,15 +516,52 @@ pub mod tests {
 
         let pipeline_dir = get_tmp_dir().join("pipeline");
         let path = pipeline_dir.join("1");
-        let content = r#"{"output": true}"#;
         fs::create_dir_all(&path).unwrap();
-        fs::write(path.join("output.json"), content).unwrap();
+
+        let content = r#"{"output": true}"#;
+        let output_path = path.join("output.json");
+        let input_path = path.join("input.json");
+        let meta_path = path.join("meta.json");
+
+        fs::write(output_path, content).unwrap();
+        fs::write(input_path, r#"{}"#).unwrap();
+        fs::write(meta_path, r#"{"fname": "fname"}"#).unwrap();
 
         let manager = LocalDirState::new(pipeline_dir);
         let res = manager.prepare(&dag);
+
         assert!(matches!(res, Ok(_)));
-        assert!(manager.pipeline_dir.join("0").is_dir());
         assert!(manager.pipeline_dir.join("1").join("output.json").is_file());
+        assert!(manager.pipeline_dir.join("1").join("input.json").is_file());
+        assert!(manager.pipeline_dir.join("1").join("meta.json").is_file());
+    }
+
+    #[test]
+    fn prepare_without_pipeline_dir() {
+        let dag = DAG {
+            name: String::from("dag"),
+            creation_dt: String::from("1900-01-01T09:20:20"),
+            nodes: vec![Node {
+                uid: String::from("0"),
+                parents: Vec::new(),
+                children: Vec::new(),
+                status: JobStatus::NotSubmitted,
+                behavior: NodeBehavior::TaskNode {
+                    fname: String::from("fname"),
+                    caching: false,
+                    try_num: 0,
+                    retries: 0,
+                    launch_script: String::from("lauch.sh"),
+                    input_kwargs: Vec::new(),
+                },
+            }],
+        };
+
+        let pipeline_dir = get_tmp_dir().join("pipeline-name");
+        let manager = LocalDirState::new(pipeline_dir.clone());
+        let res = manager.prepare(&dag);
+        assert!(matches!(res, Ok(_)));
+        assert!(pipeline_dir.join("0").join("meta.json").exists())
     }
 
     #[test]
