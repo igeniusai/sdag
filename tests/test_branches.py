@@ -4,7 +4,7 @@ import pytest
 
 from sdag import SDAG
 from sdag.exceptions import SDAGError
-from sdag.models import IfNode, LogicalType, Parent, TaskNode
+from sdag.models import BranchType, IfNode, LogicalType, Parent, TaskNode
 
 
 def test_elif_without_if() -> None:
@@ -142,11 +142,9 @@ def test_if() -> None:
     assert isinstance(cond.behavior, TaskNode)
 
     assert ifnode.parents == [Parent(uid=cond.uid, parent_type=LogicalType())]
-    assert ifnode.behavior.true_branch == [func.uid]
-    assert not ifnode.behavior.false_branch
-
-    assert func.parents == [Parent(uid=ifnode.uid, parent_type=LogicalType())]
-    assert cond.behavior.children == [ifnode.uid]
+    assert func.parents == [
+        Parent(uid=ifnode.uid, parent_type=BranchType(branch=True))
+    ]
 
 
 def test_if_elif_else() -> None:
@@ -223,32 +221,19 @@ def test_if_elif_else() -> None:
     assert isinstance(taskelif.behavior, TaskNode)
     assert isinstance(taskelse.behavior, TaskNode)
 
-    assert condif.behavior.children == [nodeif.uid]
     assert condif.parents
-
-    assert nodeif.behavior.true_branch == [taskif.uid]
-    assert nodeif.behavior.false_branch == [condelif.uid]
     assert nodeif.parents == [
         Parent(uid=condif.uid, parent_type=LogicalType())
     ]
-
     assert condelif.parents == [
-        Parent(uid=nodeif.uid, parent_type=LogicalType())
+        Parent(uid=nodeif.uid, parent_type=BranchType(branch=False))
     ]
-    assert condelif.behavior.children == [nodeelif.uid]
-
     assert nodeelif.parents == [
         Parent(uid=condelif.uid, parent_type=LogicalType())
     ]
-    assert nodeelif.behavior.true_branch == [taskelif.uid]
-    assert nodeelif.behavior.false_branch == [taskelse.uid]
-
     assert taskelif.parents == [
-        Parent(uid=nodeelif.uid, parent_type=LogicalType())
+        Parent(uid=nodeelif.uid, parent_type=BranchType(branch=True))
     ]
-    assert taskelif.behavior.children
-
     assert taskelse.parents == [
-        Parent(uid=nodeelif.uid, parent_type=LogicalType())
+        Parent(uid=nodeelif.uid, parent_type=BranchType(branch=False))
     ]
-    assert taskelse.behavior.children

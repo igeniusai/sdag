@@ -5,6 +5,8 @@ from pathlib import Path
 import pytest
 
 from sdag.models import (
+    Artifact,
+    ArtifactType,
     EndNode,
     Graph,
     IfNode,
@@ -75,7 +77,7 @@ class MockSDAG:
         return Graph(
             name="",
             nodes=[
-                Node(uid="0", behavior=RootNode(children=["1"])),
+                Node(uid="0", behavior=RootNode()),
                 Node(
                     uid="1",
                     parents=[Parent(uid="0", parent_type=LogicalType())],
@@ -84,7 +86,6 @@ class MockSDAG:
                         launch_script=Path(),
                         caching=False,
                         retries=0,
-                        children=["2"],
                     ),
                 ),
                 Node(
@@ -101,6 +102,9 @@ class TestTask:
 
     def mock_stage(self) -> None:
         """Mocked stage function."""
+
+    def mock_stage_artifact(self, a: Artifact, b: str) -> None:
+        """Mocked stage function with artifacts."""
 
     def test_call(self) -> None:
         """Test the task call."""
@@ -126,7 +130,7 @@ class TestTask:
         assert node.behavior.retries == task.retries
         assert node.behavior.launch_script == task.launch_script
         assert node.behavior.input_kwargs == [
-            InputKwarg(key="static_input", value=r'{"a": 1}')
+            InputKwarg(key="static_input", value={"a": 1})
         ]
 
         assert sorted(node.parents, key=lambda x: x.uid) == [
@@ -134,8 +138,35 @@ class TestTask:
             Parent(uid="2", parent_type=OutputType(key="kwarg")),
         ]
 
-        assert argnode.behavior.children == ["0"]
-        assert kwargnode.behavior.children == ["0"]
+    def test_call_artifact(self) -> None:
+        """Test the task call."""
+        sdag = MockSDAG()
+        task = Task(
+            fn=self.mock_stage_artifact,
+            caching=False,
+            retries=1,
+            launch_script=Path(),
+            register=sdag.register,
+            get_uid=sdag.get_uid,
+        )
+
+        parent = Node(uid="1", behavior=RootNode())
+        parent.register_artifact("artifact")
+        node = task(a=parent.artifacts["artifact"], b="/path/to/artifact")
+
+        assert node.uid == "0"
+        assert sdag.nodes[0] is node
+        assert node.behavior.caching == task.caching
+        assert node.behavior.retries == task.retries
+        assert node.behavior.launch_script == task.launch_script
+        assert node.behavior.input_kwargs == [
+            InputKwarg(key="b", value="/path/to/artifact")
+        ]
+        assert node.parents == [
+            Parent(
+                uid="1", parent_type=ArtifactType(key="a", name="artifact")
+            ),
+        ]
 
 
 class TestIfWrapper:
@@ -193,3 +224,16 @@ class TestPipeline:
             fn=func, set_dag=sdag.set_dag, get_graph=sdag.get_graph
         )
         pipeline(parent_node)
+
+    def test_compile(self) -> None:
+        """Test mocked pipeline compilation."""
+
+        def func() -> None:
+            """Test the pipeline call."""
+
+        sdag = MockSDAG()
+        pipeline = Pipeline(
+            fn=func, set_dag=sdag.set_dag, get_graph=sdag.get_graph
+        )
+        graph = pipeline.compile()
+        assert isinstance(graph, Graph)

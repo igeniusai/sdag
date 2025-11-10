@@ -7,211 +7,17 @@ import pytest
 
 from sdag.exceptions import EndNotFoundError, RootNotFoundError
 from sdag.models import (
+    ArtifactType,
+    BranchType,
     EndNode,
     Graph,
-    IfNode,
     LogicalType,
     Node,
-    OneOfNode,
     OutputType,
     Parent,
     RootNode,
     TaskNode,
 )
-
-
-class TestTaskNode:
-    """Task node tests."""
-
-    @pytest.fixture
-    def task_node(self) -> TaskNode:
-        """Task node.
-
-        Returns:
-            TaskNode: Task node.
-        """
-        return TaskNode(
-            fname="fname", launch_script=Path(), caching=False, retries=0
-        )
-
-    def test_add_child(self, task_node: TaskNode) -> None:
-        """Test the child addition.
-
-        Args:
-            task_node (TaskNode): Task node.
-        """
-        task_node.add_child("0")
-        assert task_node.children == ["0"]
-
-    def test_is_leaf(self, task_node: TaskNode) -> None:
-        """This node is a leaf.
-
-        Args:
-            task_node (TaskNode): Task node.
-        """
-        assert task_node.is_leaf()
-
-    def test_is_not_leaf(self, task_node: TaskNode) -> None:
-        """After a child addition, it's not a leaf anymore.
-
-        Args:
-            task_node (TaskNode): Task node.
-        """
-        task_node.add_child("0")
-        assert not task_node.is_leaf()
-
-
-class TestIfNode:
-    """If node tests."""
-
-    @pytest.fixture
-    def if_node(self) -> IfNode:
-        """If node.
-
-        Returns:
-            IfNode: If node.
-        """
-        return IfNode()
-
-    @pytest.mark.parametrize(
-        argnames=("branch", "true_branch", "false_branch"),
-        argvalues=[
-            (True, ["0"], []),
-            (False, [], ["0"]),
-        ],
-    )
-    def test_add_child(
-        self,
-        if_node: IfNode,
-        branch: bool,
-        true_branch: list[str],
-        false_branch: list[str],
-    ) -> None:
-        """Test the child addition.
-
-        Args:
-            if_node (IfNode): If node.
-            branch (bool): Current branch.
-            true_branch (list[str]): Branch if the condition is True.
-            false_branch (list[str]): Branch if the condition is False.
-        """
-        if_node.branch = branch
-        if_node.add_child("0")
-        assert if_node.true_branch == true_branch
-        assert if_node.false_branch == false_branch
-
-
-class TestOneOfNode:
-    """OneOf node tests."""
-
-    @pytest.fixture
-    def oneof_node(self) -> OneOfNode:
-        """OneOf node.
-
-        Returns:
-            OneOfNode: OneOf node.
-        """
-        return OneOfNode()
-
-    def test_add_child(self, oneof_node: OneOfNode) -> None:
-        """Test the child addition.
-
-        Args:
-            oneof_node (OneOfNode): OneOf node.
-        """
-        oneof_node.add_child("0")
-        assert oneof_node.children == ["0"]
-
-    def test_is_leaf(self, oneof_node: OneOfNode) -> None:
-        """Node is leaf.
-
-        Args:
-            oneof_node (OneOfNode): OneOf node.
-        """
-        assert oneof_node.is_leaf()
-
-    def test_is_not_leaf(self, oneof_node: OneOfNode) -> None:
-        """Node is not a leaf anymore after the child addition.
-
-        Args:
-            oneof_node (OneOfNode): OneOf node.
-        """
-        oneof_node.add_child("0")
-        assert not oneof_node.is_leaf()
-
-
-class TestRootNode:
-    """Test the root node."""
-
-    @pytest.fixture
-    def root_node(self) -> RootNode:
-        """Root node."""
-        return RootNode()
-
-    def test_add_child(self, root_node: RootNode) -> None:
-        """Test the child addition.
-
-        Args:
-            root_node (RootNode): Root node.
-        """
-        root_node.add_child("0")
-        assert root_node.children == ["0"]
-
-    def test_is_leaf(self, root_node: RootNode) -> None:
-        """The node is a leaf at the moment.
-
-        Args:
-            root_node (RootNode): Root node.
-        """
-        assert root_node.is_leaf()
-
-    def test_is_not_leaf(self, root_node: RootNode) -> None:
-        """Node is not a leaf anymore after the child addition.
-
-        Args:
-            root_node (RootNode): Root node.
-        """
-        root_node.add_child("0")
-        assert not root_node.is_leaf()
-
-
-class TestEndNode:
-    """End node tests."""
-
-    @pytest.fixture
-    def end_node(self) -> EndNode:
-        """End node.
-
-        Returns:
-            EndNode: End node.
-        """
-        return EndNode()
-
-    def test_add_child(self, end_node: EndNode) -> None:
-        """Test the child addition.
-
-        Args:
-            end_node (EndNode): End node.
-        """
-        end_node.add_child("0")
-        assert end_node.children == ["0"]
-
-    def test_is_leaf(self, end_node: EndNode) -> None:
-        """Node is a leaf.
-
-        Args:
-            end_node (EndNode): End node.
-        """
-        assert end_node.is_leaf()
-
-    def test_is_not_leaf(self, end_node: EndNode) -> None:
-        """Node is not a leaf anymore after the child addition.
-
-        Args:
-            end_node (EndNode): End node.
-        """
-        end_node.add_child("0")
-        assert not end_node.is_leaf()
 
 
 class TestNode:
@@ -226,27 +32,60 @@ class TestNode:
         """
         return Node(uid="0", behavior=RootNode())
 
-    def test_is_leaf(self, node: Node[RootNode]) -> None:
-        """Test if the node is a leaf.
+    def test_register_artifact(self, node: Node[RootNode]) -> None:
+        """Test the artifact registration.
 
         Args:
             node (Node[RootNode]): Node.
         """
-        assert node.is_leaf()
+        node.register_artifact(key="artifact")
+        artifacts = node.artifacts
+        assert artifacts["artifact"].key == "artifact"
+        assert artifacts["artifact"].node is node
 
-    def test_add_edge(self, node: Node[RootNode]) -> None:
-        """Test edge addition.
+    def test_add_logical_edge(self, node: Node[RootNode]) -> None:
+        """Test logical edge addition.
 
         Args:
             node (Node[RootNode]): Node.
         """
-        child = Node(uid="1", behavior=EndNode())
-        node.add_output_edge(child, key="test")
+        node.add_logical_edge(parent_uid="1")
+        assert node.parents == [Parent(uid="1", parent_type=LogicalType())]
 
-        assert child.parents == [
-            Parent(uid="0", parent_type=OutputType(key="test"))
+    def test_add_output_edge(self, node: Node[RootNode]) -> None:
+        """Test output edge addition.
+
+        Args:
+            node (Node[RootNode]): Node.
+        """
+        node.add_output_edge(parent_uid="1", key="key")
+        assert node.parents == [
+            Parent(uid="1", parent_type=OutputType(key="key"))
         ]
-        assert node.behavior.children == ["1"]
+
+    def test_add_artifact_edge(self, node: Node[RootNode]) -> None:
+        """Test artifact edge addition.
+
+        Args:
+            node (Node[RootNode]): Node.
+        """
+        node.add_artifact_edge(parent_uid="1", key="key", name="artifact")
+        assert node.parents == [
+            Parent(
+                uid="1", parent_type=ArtifactType(key="key", name="artifact")
+            )
+        ]
+
+    def test_add_branch_edge(self, node: Node[RootNode]) -> None:
+        """Test branch edge addition.
+
+        Args:
+            node (Node[RootNode]): Node.
+        """
+        node.add_branch_edge(parent_uid="1", branch=False)
+        assert node.parents == [
+            Parent(uid="1", parent_type=BranchType(branch=False))
+        ]
 
 
 class TestGraph:
@@ -263,7 +102,7 @@ class TestGraph:
             name="graph",
             creation_dt=datetime(1920, 1, 1, 9, 20, 20),
             nodes=[
-                Node(uid="root", behavior=RootNode(children=["test"])),
+                Node(uid="root", behavior=RootNode()),
                 Node(
                     uid="end",
                     parents=[Parent(uid="task", parent_type=LogicalType())],
@@ -277,7 +116,6 @@ class TestGraph:
                         launch_script=Path(),
                         caching=False,
                         retries=0,
-                        children=["end"],
                     ),
                 ),
             ],
@@ -311,12 +149,25 @@ class TestGraph:
         with pytest.raises(RootNotFoundError):
             graph.get_root()
 
+    def test_find_nodes_with_children(self, graph: Graph) -> None:
+        """Check the children node uid retrieval.
+
+        Args:
+            graph (Graph): Graph.
+        """
+        parent_uids = graph.find_nodes_with_children()
+        assert parent_uids == {"root", "task"}
+
     def test_fail_get_end(self, graph: Graph) -> None:
         """Method fails if a end node is not found.
 
         Args:
             graph (Graph): Graph.
         """
-        graph.nodes = [n for n in graph.nodes if n.uid != "end"]
+        # Fake edge to the end node
+        graph.nodes[0].parents.append(
+            Parent(uid="end", parent_type=LogicalType())
+        )
+
         with pytest.raises(EndNotFoundError):
             graph.get_end()
