@@ -1,7 +1,7 @@
 [project]
 name = "sdag"
 version = "0.1.0"
-description = "Add your description here"
+description = "DAGs for Slurm"
 readme = "README.md"
 authors = [
     { name = "Alessandro Rognoni", email = "alessandro.rognoni@domyn.com" }
