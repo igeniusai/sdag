@@ -4,8 +4,6 @@ DAGs for Slurm.
 
 ## Getting started
 
-sdag creates a working directory to store stage outputs (`~/.sdag` by default). You can export the `SDAG_HOME` environment variable to point to a different path. It's a good idea to set the variable in the `.bashrc` file.
-
 After cloning and installing this repo as editable:
 
 ```sh
@@ -30,4 +28,4 @@ def pipeline():
 sdag.compile(pipeline)
 ```
 
-Check out the `sdag-examples` repository for more complex examples.
+Check out the [sdag examples](https://github.com/igeniusai/sdag_examples) for end-to-end examples.
