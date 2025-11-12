@@ -146,6 +146,7 @@ impl LocalDirState {
 
 /// Implement the StateManager for local file systems.
 impl StateManager for LocalDirState {
+    /// Prepare the working directory in the local fs.
     fn prepare(&self, dag: &DAG) -> io::Result<()> {
         if self.pipeline_dir.is_dir() {
             self.clear_cache(dag)?;
@@ -153,11 +154,13 @@ impl StateManager for LocalDirState {
         self.create_working_dir(dag)
     }
 
+    /// Copy the DAG JSON as-is into the working directory.
     fn copy_dag_into_working_dir(&self, path: &PathBuf) -> io::Result<u64> {
         let dst_path = self.pipeline_dir.join(&self.pipeline_fname);
         fs::copy(path, dst_path)
     }
 
+    /// Copy the node content into the node working directory.
     fn copy_output(&self, src_uid: &str, dst_uid: &str) -> io::Result<u64> {
         let src_dir = self.pipeline_dir.join(src_uid);
         let dst_dir = self.pipeline_dir.join(dst_uid);
@@ -172,20 +175,24 @@ impl StateManager for LocalDirState {
         fs::copy(src_output, dst_output)
     }
 
+    /// Read the output of a node.
     fn read_output(&self, uid: &str) -> io::Result<String> {
         let path = self.pipeline_dir.join(uid).join(&self.output_fname);
         fs::read_to_string(path)
     }
 
+    /// Get the path to the pipeline folder.
     fn get_pipeline_dir(&self) -> &PathBuf {
         &self.pipeline_dir
     }
 
+    /// Read the input of a cached node.
     fn read_cached_input(&self, uid: &str) -> io::Result<String> {
         let path = self.pipeline_dir.join(uid).join(&self.input_fname);
         fs::read_to_string(path)
     }
 
+    /// Save the input in the working directory.
     fn save_input(&self, uid: &str, input: &str) -> Result<(), io::Error> {
         let path = self.pipeline_dir.join(uid).join(&self.input_fname);
         fs::write(path, input)
@@ -203,6 +210,7 @@ pub mod tests {
         env::temp_dir().join(Uuid::new_v4().to_string())
     }
 
+    /// The working directory is correctly created.
     #[test]
     fn test_working_dir_creation() {
         let dag = DAG {
@@ -231,6 +239,7 @@ pub mod tests {
         assert!(pipeline_dir.join("0").join("meta.json").is_file());
     }
 
+    /// The metadata is correctly written.
     #[test]
     fn write_metadata() {
         let pipeline_dir = get_tmp_dir().join("pipeline-name");
@@ -246,6 +255,7 @@ pub mod tests {
         assert_eq!(meta.fname, "foo");
     }
 
+    /// Deletion is handle even when the working dir is missing.
     #[test]
     fn clear_cache_no_dirs() {
         let dag = DAG {
