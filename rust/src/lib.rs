@@ -1,12 +1,18 @@
+//! # Slurm DAG scheduler
+//!
+//! It can be used to schedule dynamic DAGs on Slurm clusters. The
+//! scheduler takes the JSON representation of the DAG as input and
+//! schedules task based on the graph structure.
+
 use crate::state::StateManager;
 use pyo3::prelude::*;
-mod model;
+pub mod model;
 mod summary;
 
-mod backend;
-mod graph;
-mod status_management;
-mod submission;
+pub mod backend;
+pub mod graph;
+pub mod status_management;
+pub mod submission;
 
 use std::time;
 mod parser;
@@ -20,6 +26,17 @@ use scheduler::Scheduler;
 mod input_data;
 mod startup;
 
+/// Start the scheduler.
+///
+/// It takes as input the input arguments sent by the user. They are parsed
+/// and used to configure and start the scheduler.
+///
+/// # Panics
+///
+/// - The home directory cannot be found and `SDAG_HOME` is not set.
+/// - The pipeline JSON graph cannot be parsed.
+/// - The working directory cannot be built for any reason.
+/// - The JSON file cannot be copied into the working directory.
 #[pyfunction]
 fn sscheduler_start(argv: Vec<String>) {
     let args = parser::CLI::parse_from(argv);
@@ -60,8 +77,9 @@ fn sscheduler_start(argv: Vec<String>) {
     scheduler.run(dag);
 }
 
-// Function name must match `lib.name` in `Cargo.toml`
+/// Interface between Python and Rust.
 #[pymodule]
+// Function name must match `lib.name` in `Cargo.toml`
 fn sscheduler(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sscheduler_start, m)?)?;
     Ok(())

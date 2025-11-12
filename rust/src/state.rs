@@ -1,40 +1,65 @@
-use crate::model::{DAG, Node, NodeBehavior, TaskMeta};
+//! State management.
+//!
+//! Every interaction with the file system is segregated here.
+
+use crate::model::{Node, NodeBehavior, TaskMeta, DAG};
 use log;
 use serde_json;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
 
+/// State management interface.
 pub trait StateManager {
+    /// Prepare the working directory.
     fn prepare(&self, dag: &DAG) -> io::Result<()>;
+    /// Copy the JSON as-is into the working directory.
     fn copy_dag_into_working_dir(&self, path: &PathBuf) -> io::Result<u64>;
+    /// Get the path to the working directory to set the env.
     fn get_pipeline_dir(&self) -> &PathBuf;
+    /// Copy the output of a node into another one. Useful for OneOf
     fn copy_output(&self, src_uid: &str, dst_uid: &str) -> io::Result<u64>;
+    /// Read the output of a node.
     fn read_output(&self, uid: &str) -> io::Result<String>;
+    /// Save the input of a node.
     fn save_input(&self, uid: &str, input: &str) -> Result<(), io::Error>;
+    /// Read the cached input of a node.
     fn read_cached_input(&self, uid: &str) -> io::Result<String>;
 }
 
+/// Local directory state.
 #[derive(Debug, Clone)]
 pub struct LocalDirState {
+    /// Pipeline directory path.
     pipeline_dir: PathBuf,
+    /// DAG JSON filename in the working dir.
     pipeline_fname: String,
+    /// Node output filename.
     output_fname: String,
+    /// Node input filename.
     input_fname: String,
+    /// Metadata filename.
     meta_fname: String,
 }
 
 impl LocalDirState {
+    /// Standardized way to create a state manager.
     pub fn new(pipeline_dir: PathBuf) -> Self {
         Self {
+            // Pipeline folder name in the working directory.
             pipeline_dir,
+            // Pipeline filename convention.
             pipeline_fname: String::from("pipeline.json"),
+            // Output filename convention.
             output_fname: String::from("output.json"),
+            // Input filename convention.
             input_fname: String::from("input.json"),
+            // Metadata filename convention.
             meta_fname: String::from("meta.json"),
         }
     }
 
+    /// Create a working directory.
     fn create_working_dir(&self, dag: &DAG) -> io::Result<()> {
         let res = fs::create_dir_all(&self.pipeline_dir);
         if let Err(_) = res {
@@ -53,6 +78,7 @@ impl LocalDirState {
         Ok(())
     }
 
+    /// Write metadata.
     fn write_meta(&self, path: &PathBuf, fname: &str) -> Result<(), io::Error> {
         let meta = TaskMeta {
             fname: String::from(fname),
@@ -62,6 +88,7 @@ impl LocalDirState {
         fs::write(dst, &content)
     }
 
+    /// Clear unnecessary cache at the beginning of the pipeline.
     fn clear_cache(&self, dag: &DAG) -> Result<(), io::Error> {
         for entry in fs::read_dir(&self.pipeline_dir)? {
             let path = entry?.path();
@@ -77,6 +104,14 @@ impl LocalDirState {
         Ok(())
     }
 
+    /// Check if a caching directory must be deleted.
+    ///
+    /// Conditions to keep cached directories:
+    /// - The node is a task.
+    /// - Caching must be enabled.
+    /// - The task function name correspods.
+    /// - The Node unique id remains the same.
+    /// - Artifacts must exist.
     fn dir_must_be_deleted(&self, path: &PathBuf, dag: &DAG) -> bool {
         if let Some(dirname) = path.file_name().and_then(|n| n.to_str()) {
             for node in &dag.nodes {
@@ -88,6 +123,7 @@ impl LocalDirState {
         true
     }
 
+    /// Read the task name.
     fn read_task_name(&self, path: &PathBuf) -> Result<String, io::Error> {
         let meta_path = path.join(&self.meta_fname);
         let content = fs::read_to_string(meta_path)?;
@@ -95,6 +131,7 @@ impl LocalDirState {
         Ok(meta.fname)
     }
 
+    /// Check if the caching rules are respected.
     fn is_node_matching(&self, node: &Node, path: &PathBuf, dirname: &str) -> bool {
         if node.uid == dirname
             && let NodeBehavior::TaskNode { fname, caching, .. } = &node.behavior
@@ -107,6 +144,7 @@ impl LocalDirState {
     }
 }
 
+/// Implement the StateManager for local file systems.
 impl StateManager for LocalDirState {
     fn prepare(&self, dag: &DAG) -> io::Result<()> {
         if self.pipeline_dir.is_dir() {
@@ -222,9 +260,9 @@ pub mod tests {
         assert!(matches!(manager.clear_cache(&dag), Ok(_)));
     }
 
+    /// Caching is not enabled
     #[test]
     fn dir_must_be_deleted() {
-        // caching is false
         let dag = DAG {
             name: String::from("dag"),
             creation_dt: String::from("1900-01-01T09:20:20"),
@@ -254,6 +292,7 @@ pub mod tests {
         assert!(manager.dir_must_be_deleted(&path, &dag));
     }
 
+    /// Everything corresponds, the directory is kept.
     #[test]
     fn dir_must_not_be_deleted() {
         let dag = DAG {
@@ -285,6 +324,7 @@ pub mod tests {
         assert!(!manager.dir_must_be_deleted(&path, &dag));
     }
 
+    /// The caching rules are verified.
     #[test]
     fn node_is_matching() {
         let node = Node {
@@ -312,6 +352,7 @@ pub mod tests {
         assert!(manager.is_node_matching(&node, &path, "0"));
     }
 
+    /// No caching, the uid changed.
     #[test]
     fn node_not_matching_because_of_id() {
         let node = Node {
@@ -339,6 +380,7 @@ pub mod tests {
         assert!(!manager.is_node_matching(&node, &path, "0"));
     }
 
+    /// No caching, the node is not a task.
     #[test]
     fn node_not_matching_because_of_behavior() {
         let node = Node {
@@ -359,6 +401,7 @@ pub mod tests {
         assert!(!manager.is_node_matching(&node, &path, "0"));
     }
 
+    /// No caching, caching is not enabled.
     #[test]
     fn node_not_matching_because_of_caching() {
         let node = Node {
@@ -386,6 +429,7 @@ pub mod tests {
         assert!(!manager.is_node_matching(&node, &path, "0"));
     }
 
+    /// No caching, the function name is different.
     #[test]
     fn node_not_matching_because_of_task_name() {
         let node = Node {
@@ -413,6 +457,7 @@ pub mod tests {
         assert!(!manager.is_node_matching(&node, &path, "0"));
     }
 
+    /// The folder must not be create when caching does not happen.
     #[test]
     fn do_not_create_folder() {
         let dag = DAG {
@@ -434,6 +479,7 @@ pub mod tests {
         assert!(!manager.pipeline_dir.join("0").is_dir());
     }
 
+    /// Read the node output.
     #[test]
     fn read_output() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -447,6 +493,7 @@ pub mod tests {
         assert_eq!(output, content);
     }
 
+    /// Copy the output of a node into another one.
     #[test]
     fn copy_output_from_zero_to_one() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -462,6 +509,7 @@ pub mod tests {
         assert!(dst_path.join("output.json").is_file());
     }
 
+    /// Check the pipeline directory path retrieval.
     #[test]
     fn get_pipeline_dir() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -469,6 +517,7 @@ pub mod tests {
         assert_eq!(*manager.get_pipeline_dir(), pipeline_dir);
     }
 
+    /// Copy the JSON into the working directory.
     #[test]
     fn copy_dag() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -484,6 +533,7 @@ pub mod tests {
         assert!(pipeline_dir.join("pipeline.json").exists());
     }
 
+    /// Create the complete working dir structure when caching occurs.
     #[test]
     fn create_entire_structure_with_caching() {
         let dag = DAG {
@@ -536,6 +586,7 @@ pub mod tests {
         assert!(manager.pipeline_dir.join("1").join("meta.json").is_file());
     }
 
+    /// If the working directory is missing, it must be created without errors.
     #[test]
     fn prepare_without_pipeline_dir() {
         let dag = DAG {
@@ -564,6 +615,7 @@ pub mod tests {
         assert!(pipeline_dir.join("0").join("meta.json").exists())
     }
 
+    /// Cached input does not exist.
     #[test]
     #[should_panic]
     fn dont_read_cached_input() {
@@ -572,6 +624,7 @@ pub mod tests {
         manager.read_cached_input("1").unwrap();
     }
 
+    /// Cached input is correctly read.
     #[test]
     fn read_cached_input() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -585,6 +638,7 @@ pub mod tests {
         assert_eq!(input, content)
     }
 
+    /// Check the input data is correctly saved.
     #[test]
     fn test_input_save() {
         let pipeline_dir = get_tmp_dir().join("pipeline");

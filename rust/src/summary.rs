@@ -1,20 +1,28 @@
+//! Create the summary table out of the nodemap.
+
 use crate::model::{Node, NodeBehavior};
 use std::collections::HashMap;
 use tabled::{
+    settings::{object::Columns, Alignment, Style},
     Table, Tabled,
-    settings::{Alignment, Style, object::Columns},
 };
 
 use crate::model::JobStatus;
 
+/// Summary table.
 #[derive(Tabled)]
 struct Summary<'a> {
+    /// Node unique id.
     uid: &'a str,
+    /// Stage function name.
     stage: &'a str,
+    /// Node status.
     status: &'a JobStatus,
+    /// Number of tries.
     num_tries: u32,
 }
 
+/// Build and return the summary table.
 pub fn get_summary_table<'a>(nodemap: &'a HashMap<String, Node>) -> Table {
     let mut records = Vec::new();
     for node in nodemap.values() {
@@ -40,6 +48,7 @@ mod tests {
     use super::*;
     use tabled::assert::assert_table;
 
+    /// Check the summary table is correct.
     #[test]
     fn check_table() {
         let nodemap = HashMap::from([

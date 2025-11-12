@@ -1,12 +1,15 @@
+//! sdag scheduler CLI.
+
 use clap::Parser;
 use std::path::PathBuf;
 
+/// Scheduler CLI.
 #[derive(Parser, Debug)]
 #[command(name = "sscheduler")]
 #[command(version = "0.1.0")]
 #[command(about = "Slurm job scheduler", long_about = None)]
 pub struct CLI {
-    #[arg(short, long, value_name = "FILE", help = "Compile pipeline path")]
+    #[arg(short, long, value_name = "FILE", help = "Compiled pipeline path")]
     pub pipeline: PathBuf,
     #[arg(
         short,
@@ -28,6 +31,7 @@ pub struct CLI {
 mod tests {
     use super::*;
 
+    /// Arguments are parsed correctly.
     #[test]
     fn parse_args() {
         let iter = ["sscheduler", "--pipeline=pipeline.json", "--wait-seconds=2"].iter();
@@ -36,6 +40,7 @@ mod tests {
         assert_eq!(cli.wait_seconds, 2);
     }
 
+    /// The -p/--pipeline is mandatory.
     #[test]
     #[should_panic]
     fn pipeline_is_missing() {
@@ -43,6 +48,7 @@ mod tests {
         CLI::try_parse_from(iter).unwrap();
     }
 
+    /// Non-default log level is correctly captured.
     #[test]
     fn parse_log_level() {
         let iter = [

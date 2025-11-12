@@ -1,3 +1,7 @@
+//! Manage the input data.
+//!
+//! Here is where most of the complex caching logic is implemented.
+
 use crate::model::{InputKwarg, Node, Parent, ParentType, TaskOutput};
 use crate::state::StateManager;
 use serde_json::{self, Value};
@@ -5,12 +9,16 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::io;
 
+/// Input data manager.
 pub struct InputDataHandler<'a, T: StateManager> {
+    /// Node unique id.
     pub uid: &'a str,
+    /// File system interaction.
     pub state: &'a T,
 }
 
 impl<'a, T: StateManager> InputDataHandler<'a, T> {
+    /// Build the input data by combining static and dynamic input.
     pub fn read_input_data(
         &self,
         nodemap: &HashMap<String, Node>,
@@ -25,6 +33,7 @@ impl<'a, T: StateManager> InputDataHandler<'a, T> {
         Ok(input_data)
     }
 
+    /// Check if a node is cached.
     pub fn is_cached(&self, input_data: &HashMap<String, Value>) -> bool {
         if let Err(_) = self.check_if_output_and_artifacts_exist() {
             return false;
@@ -36,17 +45,20 @@ impl<'a, T: StateManager> InputDataHandler<'a, T> {
         }
     }
 
+    /// Save the input data with the help of the state.
     pub fn save_input(&self, input_data: &HashMap<String, Value>) -> Result<(), io::Error> {
         let input_str = serde_json::to_string(input_data)?;
         self.state.save_input(self.uid, &input_str)
     }
 
+    /// Read the cached input data for comparing it with the actual ones.
     fn read_cached_input_data(&self) -> Result<HashMap<String, Value>, Box<dyn Error>> {
         let raw_input = self.state.read_cached_input(self.uid)?;
         let input: HashMap<String, Value> = serde_json::from_str(&raw_input)?;
         Ok(input)
     }
 
+    /// Verify all artifacts exist for caching.
     fn check_if_output_and_artifacts_exist(&self) -> Result<(), Box<dyn Error>> {
         let output = self.state.read_output(self.uid)?;
         let task_output: TaskOutput = serde_json::from_str(&output)?;
@@ -62,6 +74,7 @@ impl<'a, T: StateManager> InputDataHandler<'a, T> {
         Ok(())
     }
 
+    /// Add the static input to the input data.
     fn add_static_input(
         &self,
         input_data: &mut HashMap<String, Value>,
@@ -72,6 +85,7 @@ impl<'a, T: StateManager> InputDataHandler<'a, T> {
         }
     }
 
+    /// Add the dynamic input to the input data.
     fn add_dynamic_input(
         &self,
         input_data: &mut HashMap<String, Value>,
@@ -89,6 +103,7 @@ impl<'a, T: StateManager> InputDataHandler<'a, T> {
         Ok(())
     }
 
+    /// Add the parent output to the dynamic input data.
     fn add_parent_output(
         &self,
         input_data: &mut HashMap<String, Value>,
@@ -100,6 +115,7 @@ impl<'a, T: StateManager> InputDataHandler<'a, T> {
         Ok(())
     }
 
+    /// Add the parent artifacts to the dynamic input data.
     fn add_parent_artifact(
         &self,
         input_data: &mut HashMap<String, Value>,
@@ -121,6 +137,7 @@ impl<'a, T: StateManager> InputDataHandler<'a, T> {
         Ok(())
     }
 
+    /// Get the parent output
     fn get_parent_output(&self, uid: &str) -> Result<TaskOutput, Box<dyn Error>> {
         let output = self.state.read_output(uid)?;
         let parent_output: TaskOutput = serde_json::from_str(&output)?;
@@ -132,11 +149,12 @@ impl<'a, T: StateManager> InputDataHandler<'a, T> {
 mod tests {
     use super::*;
     use crate::model::{
-        Artifact, DAG, InputKwarg, JobStatus, Node, NodeBehavior, Parent, ParentType,
+        Artifact, InputKwarg, JobStatus, Node, NodeBehavior, Parent, ParentType, DAG,
     };
-    use crate::state::{LocalDirState, tests::get_tmp_dir};
+    use crate::state::{tests::get_tmp_dir, LocalDirState};
     use std::{fs, path::PathBuf};
 
+    /// Mocked state for testing purposes
     struct MockState {
         fake_path: PathBuf,
     }
@@ -174,6 +192,7 @@ mod tests {
         }
     }
 
+    /// Test the parent output retrieval.
     #[test]
     fn test_parent_output_retrieval() {
         let state = MockState::new();
@@ -186,6 +205,7 @@ mod tests {
         assert_eq!(output.artifacts[0].name, "a");
     }
 
+    /// Test the parent artifact addition to the input data.
     #[test]
     fn test_parent_artifact_addition() {
         let state = MockState::new();
@@ -204,6 +224,7 @@ mod tests {
         assert_eq!(input_data, expected);
     }
 
+    /// Test the parent output addition to the input data.
     #[test]
     fn test_add_parent_output() {
         let state = MockState::new();
@@ -222,6 +243,7 @@ mod tests {
         assert_eq!(input_data, expected);
     }
 
+    /// Test the whole dynamic output addition.
     #[test]
     fn dynamic_output_addition() {
         let state = MockState::new();
@@ -242,6 +264,7 @@ mod tests {
         assert_eq!(input_data, expected);
     }
 
+    /// Check that logical parents are skipped.
     #[test]
     fn dynamic_logical_addition() {
         let state = MockState::new();
@@ -258,6 +281,7 @@ mod tests {
         assert_eq!(input_data, HashMap::new());
     }
 
+    /// Check the dynamic artifct addition to the input data.
     #[test]
     fn dynamic_artifact_addition() {
         let state = MockState::new();
@@ -279,6 +303,7 @@ mod tests {
         assert_eq!(input_data, expected);
     }
 
+    /// Test the static input addition to the input data.
     #[test]
     fn static_kwarg_addition() {
         let state = MockState::new();
@@ -307,6 +332,7 @@ mod tests {
         assert_eq!(input_data, expected)
     }
 
+    /// The output folder does not exist.
     #[test]
     #[should_panic]
     fn output_doesnt_exist() {
@@ -319,6 +345,7 @@ mod tests {
         handler.check_if_output_and_artifacts_exist().unwrap();
     }
 
+    /// The output data exists.
     #[test]
     fn output_exist() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -335,6 +362,7 @@ mod tests {
         assert!(matches!(res, Ok(_)));
     }
 
+    /// The artifact is missing.
     #[test]
     #[should_panic]
     fn artifact_doesnt_exist() {
@@ -352,6 +380,7 @@ mod tests {
         handler.check_if_output_and_artifacts_exist().unwrap();
     }
 
+    /// The artifact exists.
     #[test]
     fn artifact_exist() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -369,6 +398,7 @@ mod tests {
         assert!(matches!(res, Ok(_)));
     }
 
+    /// Read the input from the cached file.
     #[test]
     fn read_cached_input() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -387,6 +417,7 @@ mod tests {
         assert_eq!(res, expected);
     }
 
+    /// Save the input data
     #[test]
     fn save_input_data() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -403,6 +434,7 @@ mod tests {
         assert!(stage_path.join("input.json").is_file());
     }
 
+    /// Verify the task is correctly cached.
     #[test]
     fn task_is_cached() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -424,6 +456,7 @@ mod tests {
         assert!(handler.is_cached(&input_data));
     }
 
+    /// Artifact does not exist, the task is not cached.
     #[test]
     fn task_is_not_cached_because_of_artifact() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -452,6 +485,7 @@ mod tests {
         assert!(!handler.is_cached(&input_data));
     }
 
+    /// The artifact exist, so the task is cached.
     #[test]
     fn task_is_cached_because_of_artifact() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -481,6 +515,7 @@ mod tests {
         assert!(handler.is_cached(&input_data));
     }
 
+    /// The task folder does not exist, so the task is not cached.
     #[test]
     fn task_does_not_exist() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -493,6 +528,7 @@ mod tests {
         assert!(!handler.is_cached(&input_data));
     }
 
+    /// Complete caching test.
     #[test]
     fn test_caching_full() {
         let pipeline_dir = get_tmp_dir().join("pipeline");
@@ -522,6 +558,7 @@ mod tests {
         assert!(handler.is_cached(&input_data));
     }
 
+    /// Verify the input data is correctly read.
     #[test]
     fn test_read_input_data() {
         let pipeline_dir = get_tmp_dir().join("pipeline");

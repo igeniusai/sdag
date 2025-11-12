@@ -1,3 +1,7 @@
+//! Backend.
+//!
+//! The backend executes jobs and polls the status.
+
 use crate::model::{JobStatus, Node, NodeResult};
 use log;
 use regex::Regex;
@@ -7,6 +11,7 @@ use std::io;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 
+/// Backend trait.
 pub trait Backend {
     fn update_status(&self, nodemap: &mut HashMap<String, Node>);
     fn submit(

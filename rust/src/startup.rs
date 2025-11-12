@@ -1,3 +1,5 @@
+//! Functions executed during the scheduler startup.
+
 use crate::model::DAG;
 use serde_json;
 use std::fs;
@@ -8,12 +10,14 @@ use env_logger::Env;
 use log;
 use std::env;
 
+/// Parse the DAG from the input JSON.
 pub fn read_dag(path: &PathBuf) -> io::Result<DAG> {
     let buf = fs::read_to_string(path)?;
     let dag: DAG = serde_json::from_str(&buf)?;
     Ok(dag)
 }
 
+/// Find the home directory.
 pub fn find_home_dir() -> Result<PathBuf, String> {
     match env::var("SDAG_HOME") {
         Ok(val) => Ok(PathBuf::from(val)),
@@ -27,6 +31,7 @@ pub fn find_home_dir() -> Result<PathBuf, String> {
     }
 }
 
+/// Configure logging.
 pub fn configure_logging(log_level: &str) {
     let env = Env::default()
         .filter_or("SDAG_LOG_LEVEL", log_level)
@@ -41,10 +46,12 @@ mod tests {
     use super::*;
     use uuid::Uuid;
 
+    /// Get a temporary directory for testing purposes.
     fn get_tmp_dir() -> PathBuf {
         env::temp_dir().join(Uuid::new_v4().to_string())
     }
 
+    /// The home directory is correctly identified.
     #[test]
     fn find_home() {
         let path = "/a/path";
@@ -55,6 +62,7 @@ mod tests {
         assert_eq!(home_dir, PathBuf::from(path));
     }
 
+    /// The DAG is correctly parsed.
     #[test]
     fn dag_parsing() {
         let tmp = get_tmp_dir();

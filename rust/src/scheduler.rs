@@ -1,6 +1,16 @@
+//! # Scheduler
+//!
+//! The scheduler exists the infinite loop only
+//! if every node in a final state.
+//!
+//! # Panics
+//!
+//! The scheduler panics if the nodemap cannot be build out
+//! of the DAG.
+
 use crate::backend::SlurmBackend;
 use crate::graph;
-use crate::model::{DAG, JobStatus, Node};
+use crate::model::{JobStatus, Node, DAG};
 use crate::state::LocalDirState;
 use crate::status_management;
 use crate::submission::Submitter;
@@ -10,13 +20,18 @@ use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
 
+/// Scheduler.
 #[derive(Debug, Clone)]
 pub struct Scheduler {
+    /// Time between subsequent Slurm polls (s).
     pub poll_time: Duration,
+    /// State management.
     pub state: LocalDirState,
+    /// Backend to submit and monitor jobs.
     pub backend: SlurmBackend,
 }
 impl Scheduler {
+    /// Run the scheduler.
     pub fn run(&self, dag: DAG) {
         let (root_id, mut nodemap) = graph::build_nodemap(dag)
             .ok_or_else(|| log::error!("Failed to identify the root node"))
@@ -44,6 +59,7 @@ impl Scheduler {
         }
     }
 
+    /// Every node is in a final state (completed, failed, or skipped).
     fn is_simulation_completed(&self, nodemap: &HashMap<String, Node>) -> bool {
         nodemap.values().all(|n| {
             matches!(n.status, JobStatus::Completed { .. })

@@ -1,3 +1,8 @@
+//! Node submission.
+//!
+//! The submission depends on the node type. Tasks are executed as
+//! jobs, other types are managed by the scheduler.
+
 use crate::backend::Backend;
 use crate::input_data::InputDataHandler;
 use crate::model::{BooleanOutput, InputKwarg, JobStatus, Node, NodeBehavior, NodeResult};
@@ -8,18 +13,23 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::io;
 
+/// Execute nodes.
 #[derive(Debug, Clone)]
 pub struct Submitter<'a, T: Backend, U: StateManager> {
+    /// Task submission backend.
     pub backend: &'a T,
+    /// File system interaction.
     pub state: &'a U,
 }
 
 impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
+    /// Execute nodes ready for submission.
     pub fn submit(&self, nodemap: &mut HashMap<String, Node>) {
         let updated_statuses = self.find_updated_statuses(nodemap);
         self.update_status(nodemap, updated_statuses);
     }
 
+    /// Find nodes ready for submission.
     fn find_updated_statuses(&self, nodemap: &HashMap<String, Node>) -> HashMap<String, JobStatus> {
         nodemap
             .iter()
@@ -28,6 +38,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
             .collect()
     }
 
+    /// Update the status of all nodes after the submission.
     fn update_status(
         &self,
         nodemap: &mut HashMap<String, Node>,
@@ -39,6 +50,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
         }
     }
 
+    /// Submit a node based on its behavior.
     fn submit_node(&self, uid: &str, nodemap: &HashMap<String, Node>) -> JobStatus {
         let node = nodemap.get(uid).unwrap();
         match &node.behavior {
@@ -70,6 +82,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
         }
     }
 
+    /// Submit a task.
     fn submit_tasknode(
         &self,
         uid: &str,
@@ -116,6 +129,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
         }
     }
 
+    /// Execute an IfNode and return the selected branch.
     fn submit_ifnode(
         &self,
         uid: &str,
@@ -128,6 +142,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
         Ok(choice.output)
     }
 
+    /// Submit a OneOf node.
     fn submit_oneofnode(&self, uid: &str, nodemap: &HashMap<String, Node>) -> io::Result<String> {
         let parent_statuses = StatusSelector::get_parent_statuses(uid, nodemap);
         let parent_uid = self.find_completed_parent_uid(&parent_statuses);
@@ -135,6 +150,10 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
         Ok(parent_uid)
     }
 
+    /// Find the uid of a completed parent.
+    ///
+    /// # Panics
+    /// The completed parent must exist as it has already been checked.
     fn find_completed_parent_uid(&self, parent_statuses: &HashMap<String, JobStatus>) -> String {
         parent_statuses
             .iter()
@@ -147,11 +166,12 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
 
 #[cfg(test)]
 mod tests {
-    use crate::model::{DAG, Parent, ParentType};
+    use crate::model::{Parent, ParentType, DAG};
 
     use super::*;
     use std::path::PathBuf;
 
+    /// Mocked backend for testing purposes.
     struct MockBackend;
     impl Backend for MockBackend {
         fn update_status(&self, _nodemap: &mut HashMap<String, Node>) {}
@@ -166,6 +186,7 @@ mod tests {
         }
     }
 
+    /// Mocked state for testing purposes.
     struct MockState {
         fake_path: PathBuf,
     }
@@ -201,6 +222,7 @@ mod tests {
         }
     }
 
+    /// Find the completed parent uid for the OneOf node submission.
     #[test]
     fn find_parent_uid_for_oneof() {
         let submitter = Submitter {
@@ -217,6 +239,7 @@ mod tests {
         assert_eq!(uid, String::from("b"));
     }
 
+    /// A rootnode is just marked as completed.
     #[test]
     fn submit_root() {
         let node = Node {
@@ -242,6 +265,7 @@ mod tests {
         assert!(matches!(new_status, JobStatus::Completed(NodeResult::Node)))
     }
 
+    /// And endnode is just marked as completed.
     #[test]
     fn submit_end() {
         let node = Node {
@@ -267,6 +291,7 @@ mod tests {
         assert!(matches!(new_status, JobStatus::Completed(NodeResult::Node)))
     }
 
+    /// If successful, the result of the IfNode contains the selected branch.
     #[test]
     fn submit_if() {
         let node = Node {
@@ -303,6 +328,7 @@ mod tests {
         ))
     }
 
+    /// Submit a task with the help of the backend.
     #[test]
     fn submit_task() {
         let node = Node {
@@ -343,6 +369,7 @@ mod tests {
         assert!(matches!(new_status, JobStatus::Running(_)))
     }
 
+    /// Submit a cached task, so no execution is required.
     #[test]
     fn submit_cached_task() {
         let node = Node {
@@ -370,6 +397,7 @@ mod tests {
         assert!(matches!(new_status, JobStatus::Completed(NodeResult::Node)))
     }
 
+    /// Submit a OneOf node.
     #[test]
     fn submit_oneof() {
         let node = Node {
@@ -423,6 +451,7 @@ mod tests {
         assert!(matches!(new_status, JobStatus::Completed(_)))
     }
 
+    /// Update the status of a node after submission
     #[test]
     fn find_updated_statuses() {
         let node = Node {
@@ -446,6 +475,7 @@ mod tests {
         )
     }
 
+    /// Update the status of a node.
     #[test]
     fn update_status() {
         let node = Node {
@@ -469,6 +499,7 @@ mod tests {
         assert!(matches!(child.status, JobStatus::Failed))
     }
 
+    /// Complete graph execution test.
     #[test]
     fn e2e() {
         let node = Node {

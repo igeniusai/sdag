@@ -1,8 +1,15 @@
+//! Recursive status update and retry management.
+
 use crate::backend::{Backend, SlurmBackend};
 use crate::model::{JobStatus, Node, NodeBehavior};
 use log;
 use std::collections::HashMap;
 
+/// Reschedule a failed job if possible.
+///
+/// To be rescheduled, a node:
+/// - Must be a task
+/// - The number of retries must be lower than the user-selected ones
 fn set_retry_if_possible(node: &mut Node) {
     if let NodeBehavior::TaskNode {
         try_num, retries, ..
@@ -15,6 +22,7 @@ fn set_retry_if_possible(node: &mut Node) {
     }
 }
 
+/// Manage retries
 fn schedule_retries(nodemap: &mut HashMap<String, Node>) {
     for node in nodemap.values_mut() {
         if let JobStatus::Failed = node.status {
@@ -23,6 +31,7 @@ fn schedule_retries(nodemap: &mut HashMap<String, Node>) {
     }
 }
 
+/// Update the retry count for rescheduled tasks.
 fn update_try_count(nodemap: &mut HashMap<String, Node>) {
     for node in nodemap.values_mut() {
         if let JobStatus::ReadyForSubmission = node.status {
@@ -33,6 +42,7 @@ fn update_try_count(nodemap: &mut HashMap<String, Node>) {
     }
 }
 
+/// Update the status based on the backend output.
 pub fn update_status(uid: &str, nodemap: &mut HashMap<String, Node>, backend: &SlurmBackend) {
     backend.update_status(nodemap);
     schedule_retries(nodemap);
@@ -47,6 +57,7 @@ pub fn update_status(uid: &str, nodemap: &mut HashMap<String, Node>, backend: &S
     update_try_count(nodemap);
 }
 
+/// Recursively update the status of children.
 fn recoursively_update_status(
     uid: &str,
     nodemap: &HashMap<String, Node>,
@@ -66,10 +77,12 @@ fn recoursively_update_status(
     Some(())
 }
 
+/// Used to identify the correct status of the parents.
 pub struct StatusSelector {
     parent_statuses: Vec<JobStatus>,
 }
 impl StatusSelector {
+    /// Canonical way of creating the selector.
     pub fn new(
         uid: &str,
         nodemap: &HashMap<String, Node>,
@@ -86,6 +99,10 @@ impl StatusSelector {
         Self { parent_statuses }
     }
 
+    /// Get the correct parent statuses for the child.
+    ///
+    /// Required because nodes like If provide a different status
+    /// for different childs.
     pub fn get_parent_statuses(
         uid: &str,
         nodemap: &HashMap<String, Node>,
@@ -98,6 +115,7 @@ impl StatusSelector {
             .collect()
     }
 
+    /// Decide which protocol should be followed to get the status from parents.
     fn get_updated_status(&self, node_behavior: &NodeBehavior) -> JobStatus {
         match node_behavior {
             NodeBehavior::OneOfNode { .. } => self.get_oneof_status(),
@@ -105,6 +123,7 @@ impl StatusSelector {
         }
     }
 
+    /// Define the new status for most node types.
     fn get_default_status(&self) -> JobStatus {
         if self.all_parents_completed() {
             JobStatus::ReadyForSubmission
@@ -117,6 +136,8 @@ impl StatusSelector {
         }
     }
 
+    /// OneOf is special as failed or skipped parents do not cause
+    /// it to fail or be skipped.
     fn get_oneof_status(&self) -> JobStatus {
         if self.some_parents_completed() {
             JobStatus::ReadyForSubmission
@@ -129,36 +150,42 @@ impl StatusSelector {
         }
     }
 
+    /// Verify that all parent have completed successfully.
     fn all_parents_completed(&self) -> bool {
         self.parent_statuses
             .iter()
             .all(|x| matches!(x, JobStatus::Completed { .. }))
     }
 
+    /// Check if at least one parent completed successfully.
     fn some_parents_completed(&self) -> bool {
         self.parent_statuses
             .iter()
             .any(|x| matches!(x, JobStatus::Completed { .. }))
     }
 
+    /// Check if any parent failed.
     fn some_parents_failed(&self) -> bool {
         self.parent_statuses
             .iter()
             .any(|x| matches!(x, JobStatus::Failed))
     }
 
+    /// Check if all parents have been skipped.
     fn all_parents_skipped(&self) -> bool {
         self.parent_statuses
             .iter()
             .all(|x| matches!(x, JobStatus::Skipped))
     }
 
+    /// Check if at least one parent has been skipped.
     fn some_parents_skipped(&self) -> bool {
         self.parent_statuses
             .iter()
             .any(|x| matches!(x, JobStatus::Skipped))
     }
 
+    /// Check if every parent has failed or has been skipped.
     fn all_parents_failed_or_skipped(&self) -> bool {
         self.parent_statuses
             .iter()
@@ -172,6 +199,7 @@ mod tests {
     use super::*;
     use crate::model::{NodeResult, Parent, ParentType};
 
+    /// Verify the correct OneOf status update.
     macro_rules! oneof_tests {
             ($($name:ident: $value:expr,)*) => {
                 $(
@@ -246,6 +274,7 @@ mod tests {
         ),
     }
 
+    /// Verify the default status update.
     macro_rules! default_tests {
             ($($name:ident: $value:expr,)*) => {
                 $(
@@ -318,6 +347,7 @@ mod tests {
         ),
     }
 
+    /// Find the correct updated status for OneOf nodes.
     #[test]
     fn get_oneof_updated_status() {
         let selector = StatusSelector {
@@ -330,6 +360,7 @@ mod tests {
         );
     }
 
+    /// Check the correct updated status for the default protocol.
     #[test]
     fn get_default_updated_status() {
         let selector = StatusSelector {
@@ -345,6 +376,7 @@ mod tests {
         );
     }
 
+    /// Get a complete nodemap for testing purposes.
     fn get_test_nodemap() -> HashMap<String, Node> {
         let mut nodemap = HashMap::new();
         nodemap.insert(
@@ -385,6 +417,7 @@ mod tests {
         nodemap
     }
 
+    /// Test the correct parent status retrieval.
     #[test]
     fn get_parent_statuses() {
         let nodemap = get_test_nodemap();
@@ -395,6 +428,7 @@ mod tests {
         );
     }
 
+    /// Check the selector parent statuses.
     #[test]
     fn get_selector_creation() {
         let nodemap = get_test_nodemap();
@@ -403,6 +437,7 @@ mod tests {
         assert_eq!(selector.parent_statuses, vec![JobStatus::Failed]);
     }
 
+    /// Test the status recursive update.
     #[test]
     fn check_recoursive_update() {
         let mut nodemap = HashMap::new();
@@ -439,6 +474,7 @@ mod tests {
         assert!(matches!(child_status, JobStatus::ReadyForSubmission))
     }
 
+    /// End-to-end status update test.
     #[test]
     fn e2e() {
         let mut nodemap = HashMap::new();

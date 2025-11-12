@@ -1,7 +1,12 @@
-use crate::model::{DAG, JobStatus, Node, NodeResult};
+//! Pipeline graph.
+//!
+//! To avoid Rc, the graph is represented as a uid -> node hashmap.
+
+use crate::model::{JobStatus, Node, NodeResult, DAG};
 
 use std::collections::HashMap;
 
+/// Build the nodemap and return it alongside the root node unique id.
 pub fn build_nodemap(dag: DAG) -> Option<(String, HashMap<String, Node>)> {
     let mut nodemap = HashMap::new();
     for node in dag.nodes {
@@ -15,6 +20,7 @@ pub fn build_nodemap(dag: DAG) -> Option<(String, HashMap<String, Node>)> {
     Some((root_id, nodemap))
 }
 
+/// Find the uid of the (unique) root node.
 fn find_root_id(nodemap: &HashMap<String, Node>) -> Option<String> {
     nodemap
         .values()
@@ -24,6 +30,10 @@ fn find_root_id(nodemap: &HashMap<String, Node>) -> Option<String> {
         .next()
 }
 
+/// Add children to nodes.
+///
+/// They are added so that the node state can be propagated
+/// to its children.
 fn add_child_edges(nodemap: &mut HashMap<String, Node>) {
     let mut edges = find_child_edges(nodemap);
     for (uid, node) in nodemap.iter_mut() {
@@ -33,6 +43,7 @@ fn add_child_edges(nodemap: &mut HashMap<String, Node>) {
     }
 }
 
+/// construct the child edges.
 fn find_child_edges(nodemap: &HashMap<String, Node>) -> HashMap<String, Vec<String>> {
     let mut children: HashMap<String, Vec<String>> = HashMap::new();
     for (uid, node) in nodemap.iter() {
