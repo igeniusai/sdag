@@ -237,3 +237,16 @@ class TestPipeline:
         )
         graph = pipeline.compile()
         assert isinstance(graph, Graph)
+
+    def test_compile_with_input(self) -> None:
+        """Test mocked pipeline compilation with input arguments."""
+
+        def func(a: str) -> None:
+            """Test the pipeline call."""
+
+        sdag = MockSDAG()
+        pipeline = Pipeline(
+            fn=func, set_dag=sdag.set_dag, get_graph=sdag.get_graph
+        )
+        graph = pipeline.compile({"a": 3})
+        assert isinstance(graph, Graph)

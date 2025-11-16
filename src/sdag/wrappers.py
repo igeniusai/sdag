@@ -152,14 +152,14 @@ class Pipeline:
 
     def __init__(
         self,
-        fn: Callable[[], None],
+        fn: Callable[..., None],
         set_dag: Callable[[str], None],
         get_graph: Callable[[], Graph],
     ):
         """Initialize the pipeline.
 
         Args:
-            fn (Callable[[], None]): Decorated pipeline function.
+            fn (Callable[..., None]): Decorated pipeline function.
             set_dag (Callable[[str], None]): Hook to set the current
                 dag during compilation.
             get_graph (Callable[[], Graph]): Hook to retrieve the
@@ -184,12 +184,17 @@ class Pipeline:
 
         return graph.get_end()
 
-    def compile(self) -> Graph:
+    def compile(self, input_kwargs: dict[str, Any] | None = None) -> Graph:
         """Compile the current pipeline.
+
+        Args:
+            input_kwargs (dict[str, Any] | None): Pipeline input
+                kwargs. Defaults to None.
 
         Returns:
             Graph: Pipeline graph.
         """
+        input_kwargs = {} if input_kwargs is None else input_kwargs
         self.set_dag(self.fn.__name__)
-        self.fn()
+        self.fn(**input_kwargs)
         return self.get_graph()

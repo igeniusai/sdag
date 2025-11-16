@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from sdag.exceptions import (
     DAGNotSetError,
@@ -274,7 +275,10 @@ class SDAG:
         )
 
     def compile(
-        self, pipeline: Pipeline, path: str | Path | None = None
+        self,
+        pipeline: Pipeline,
+        path: str | Path | None = None,
+        input_kwargs: dict[str, Any] | None = None,
     ) -> None:
         """Compile the pipeline to a JSON file.
 
@@ -283,9 +287,11 @@ class SDAG:
             path (str | Path | None, optional): Destination path.
                 If none, it will be equal to `./<pipeline-name>.json`.
                 Defaults to None.
+            input_kwargs (dict[str, Any] | None): Pipeline static input
+                arguments. Defaults to None.
         """
         self._reset_uid()
-        graph = pipeline.compile()
+        graph = pipeline.compile(input_kwargs)
         graph.name = pipeline.fn.__name__
         graph.creation_dt = datetime.now()
 
