@@ -93,7 +93,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
                 ..
             } => {
                 if self.max_concurrency > 0 && self.nrunning >= self.max_concurrency {
-                    return JobStatus::ReadyForSubmission;
+                    return JobStatus::NotSubmitted;
                 }
 
                 let status = self.submit_tasknode(
