@@ -71,6 +71,7 @@ fn sscheduler_start(argv: Vec<String>) {
         poll_time,
         state,
         backend,
+        max_concurrency: args.max_concurrency,
     };
 
     log::info!("Running pipeline '{}'", dag.name);

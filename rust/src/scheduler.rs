@@ -10,7 +10,7 @@
 
 use crate::backend::SlurmBackend;
 use crate::graph;
-use crate::model::{JobStatus, Node, DAG};
+use crate::model::{DAG, JobStatus, Node};
 use crate::state::LocalDirState;
 use crate::status_management;
 use crate::submission::Submitter;
@@ -29,6 +29,8 @@ pub struct Scheduler {
     pub state: LocalDirState,
     /// Backend to submit and monitor jobs.
     pub backend: SlurmBackend,
+    /// Maximum number of concurrent tasks.
+    pub max_concurrency: usize,
 }
 impl Scheduler {
     /// Run the scheduler.
@@ -37,11 +39,7 @@ impl Scheduler {
             .ok_or_else(|| log::error!("Failed to identify the root node"))
             .unwrap();
 
-        let submitter = Submitter {
-            state: &self.state,
-            backend: &self.backend,
-        };
-
+        let mut submitter = Submitter::new(&self.backend, &self.state, self.max_concurrency);
         log::debug!("Starting scheduling loop");
         loop {
             status_management::update_status(&root_id, &mut nodemap, &self.backend);

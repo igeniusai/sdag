@@ -20,17 +20,45 @@ pub struct Submitter<'a, T: Backend, U: StateManager> {
     pub backend: &'a T,
     /// File system interaction.
     pub state: &'a U,
+    /// Maximum number of concurrent tasks.
+    pub max_concurrency: usize,
+    /// Number of running tasks.
+    pub nrunning: usize,
 }
 
 impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
+    /// Set the initial number of running tasks to zero.
+    pub fn new(backend: &'a T, state: &'a U, max_concurrency: usize) -> Self
+    where
+        T: Backend,
+        U: StateManager,
+    {
+        Self {
+            backend,
+            state,
+            max_concurrency,
+            nrunning: 0,
+        }
+    }
+
     /// Execute nodes ready for submission.
-    pub fn submit(&self, nodemap: &mut HashMap<String, Node>) {
+    pub fn submit(&mut self, nodemap: &mut HashMap<String, Node>) {
+        self.set_number_of_running_jobs(nodemap);
         let updated_statuses = self.find_updated_statuses(nodemap);
         self.update_status(nodemap, updated_statuses);
     }
 
+    /// Set the number of running jobs.
+    fn set_number_of_running_jobs(&mut self, nodemap: &HashMap<String, Node>) {
+        let job_ids = self.backend.get_running_job_ids(nodemap);
+        self.nrunning = job_ids.len();
+    }
+
     /// Find nodes ready for submission.
-    fn find_updated_statuses(&self, nodemap: &HashMap<String, Node>) -> HashMap<String, JobStatus> {
+    fn find_updated_statuses(
+        &mut self,
+        nodemap: &HashMap<String, Node>,
+    ) -> HashMap<String, JobStatus> {
         nodemap
             .iter()
             .filter(|(_, node)| matches!(node.status, JobStatus::ReadyForSubmission))
@@ -51,7 +79,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     }
 
     /// Submit a node based on its behavior.
-    fn submit_node(&self, uid: &str, nodemap: &HashMap<String, Node>) -> JobStatus {
+    fn submit_node(&mut self, uid: &str, nodemap: &HashMap<String, Node>) -> JobStatus {
         let node = nodemap.get(uid).unwrap();
         match &node.behavior {
             NodeBehavior::RootNode { .. } | NodeBehavior::EndNode { .. } => {
@@ -63,14 +91,24 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
                 try_num,
                 input_kwargs,
                 ..
-            } => self.submit_tasknode(
-                &node.uid,
-                nodemap,
-                input_kwargs,
-                launch_script,
-                caching,
-                try_num,
-            ),
+            } => {
+                if self.max_concurrency > 0 && self.nrunning >= self.max_concurrency {
+                    return JobStatus::ReadyForSubmission;
+                }
+
+                let status = self.submit_tasknode(
+                    &node.uid,
+                    nodemap,
+                    input_kwargs,
+                    launch_script,
+                    caching,
+                    try_num,
+                );
+                if let JobStatus::Running(_) = status {
+                    self.nrunning += 1;
+                }
+                status
+            }
             NodeBehavior::OneOfNode { .. } => match self.submit_oneofnode(&node.uid, &nodemap) {
                 Ok(uid) => JobStatus::Completed(NodeResult::OneOf(uid)),
                 Err(_) => JobStatus::Failed,
@@ -166,7 +204,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
 
 #[cfg(test)]
 mod tests {
-    use crate::model::{Parent, ParentType, DAG};
+    use crate::model::{DAG, Parent, ParentType};
 
     use super::*;
     use std::path::PathBuf;
@@ -225,10 +263,8 @@ mod tests {
     /// Find the completed parent uid for the OneOf node submission.
     #[test]
     fn find_parent_uid_for_oneof() {
-        let submitter = Submitter {
-            backend: &MockBackend,
-            state: &MockState::new(),
-        };
+        let state = MockState::new();
+        let submitter = Submitter::new(&MockBackend, &state, 0);
         let parent_statuses = HashMap::from([
             (String::from("a"), JobStatus::NotSubmitted),
             (String::from("b"), JobStatus::Completed(NodeResult::Node)),
@@ -255,10 +291,8 @@ mod tests {
             children: Vec::new(),
         };
 
-        let submitter = Submitter {
-            backend: &MockBackend,
-            state: &MockState::new(),
-        };
+        let state = MockState::new();
+        let mut submitter = Submitter::new(&MockBackend, &state, 0);
 
         let nodemap = HashMap::from([("c".to_string(), node)]);
         let new_status = submitter.submit_node("c", &nodemap);
@@ -281,10 +315,8 @@ mod tests {
             children: Vec::new(),
         };
 
-        let submitter = Submitter {
-            backend: &MockBackend,
-            state: &MockState::new(),
-        };
+        let state = MockState::new();
+        let mut submitter = Submitter::new(&MockBackend, &state, 0);
 
         let nodemap = HashMap::from([("c".to_string(), node)]);
         let new_status = submitter.submit_node("c", &nodemap);
@@ -315,17 +347,16 @@ mod tests {
             children: vec!["c".to_string()],
         };
 
-        let submitter = Submitter {
-            backend: &MockBackend,
-            state: &MockState::new(),
-        };
+        let state = MockState::new();
+        let mut submitter = Submitter::new(&MockBackend, &state, 0);
 
         let nodemap = HashMap::from([("c".to_string(), node), ("p".to_string(), parent)]);
         let new_status = submitter.submit_node("c", &nodemap);
+
         assert!(matches!(
             new_status,
             JobStatus::Completed(NodeResult::If(true))
-        ))
+        ));
     }
 
     /// Submit a task with the help of the backend.
@@ -359,14 +390,14 @@ mod tests {
             children: vec!["c".to_string()],
         };
 
-        let submitter = Submitter {
-            backend: &MockBackend,
-            state: &MockState::new(),
-        };
+        let state = MockState::new();
+        let mut submitter = Submitter::new(&MockBackend, &state, 0);
 
         let nodemap = HashMap::from([("c".to_string(), node), ("p".to_string(), parent)]);
         let new_status = submitter.submit_node("c", &nodemap);
-        assert!(matches!(new_status, JobStatus::Running(_)))
+
+        assert!(matches!(new_status, JobStatus::Running(_)));
+        assert_eq!(submitter.nrunning, 1);
     }
 
     /// Submit a cached task, so no execution is required.
@@ -387,10 +418,8 @@ mod tests {
             children: Vec::new(),
         };
 
-        let submitter = Submitter {
-            backend: &MockBackend,
-            state: &MockState::new(),
-        };
+        let state = MockState::new();
+        let mut submitter = Submitter::new(&MockBackend, &state, 0);
 
         let nodemap = HashMap::from([("_cached_".to_string(), node)]);
         let new_status = submitter.submit_node("_cached_", &nodemap);
@@ -437,10 +466,8 @@ mod tests {
             children: vec!["c".to_string()],
         };
 
-        let submitter = Submitter {
-            backend: &MockBackend,
-            state: &MockState::new(),
-        };
+        let state = MockState::new();
+        let mut submitter = Submitter::new(&MockBackend, &state, 0);
 
         let nodemap = HashMap::from([
             ("c".to_string(), node),
@@ -462,10 +489,8 @@ mod tests {
             children: Vec::new(),
         };
 
-        let submitter = Submitter {
-            backend: &MockBackend,
-            state: &MockState::new(),
-        };
+        let state = MockState::new();
+        let mut submitter = Submitter::new(&MockBackend, &state, 0);
 
         let nodemap = HashMap::from([("c".to_string(), node)]);
         let updated_statuses = submitter.find_updated_statuses(&nodemap);
@@ -486,10 +511,8 @@ mod tests {
             children: Vec::new(),
         };
 
-        let submitter = Submitter {
-            backend: &MockBackend,
-            state: &MockState::new(),
-        };
+        let state = MockState::new();
+        let submitter = Submitter::new(&MockBackend, &state, 0);
 
         let mut nodemap = HashMap::from([("c".to_string(), node)]);
         let updated_statuses = HashMap::from([("c".to_string(), JobStatus::Failed)]);
@@ -510,11 +533,8 @@ mod tests {
             children: Vec::new(),
         };
 
-        let submitter = Submitter {
-            backend: &MockBackend,
-            state: &MockState::new(),
-        };
-
+        let state = MockState::new();
+        let mut submitter = Submitter::new(&MockBackend, &state, 0);
         let mut nodemap = HashMap::from([("c".to_string(), node)]);
 
         submitter.submit(&mut nodemap);
@@ -523,5 +543,96 @@ mod tests {
             child.status,
             JobStatus::Completed(NodeResult::Node)
         ))
+    }
+
+    /// Verify the number of running tasks is correctly set.
+    #[test]
+    fn check_number_of_running_tasks() {
+        let nodemap = HashMap::from([
+            (
+                String::from("1"),
+                Node {
+                    uid: String::from("1"),
+                    parents: Vec::new(),
+                    children: Vec::new(),
+                    status: JobStatus::Running(String::from("1234")),
+                    behavior: NodeBehavior::TaskNode {
+                        fname: String::from("function"),
+                        launch_script: String::from("script"),
+                        caching: false,
+                        retries: 0,
+                        try_num: 0,
+                        input_kwargs: Vec::new(),
+                    },
+                },
+            ),
+            (
+                String::from("2"),
+                Node {
+                    uid: String::from("2"),
+                    parents: Vec::new(),
+                    children: Vec::new(),
+                    status: JobStatus::ReadyForSubmission,
+                    behavior: NodeBehavior::TaskNode {
+                        fname: String::from("function"),
+                        launch_script: String::from("script"),
+                        caching: false,
+                        retries: 0,
+                        try_num: 0,
+                        input_kwargs: Vec::new(),
+                    },
+                },
+            ),
+        ]);
+
+        let state = MockState::new();
+        let mut submitter = Submitter::new(&MockBackend, &state, 2);
+        submitter.set_number_of_running_jobs(&nodemap);
+        assert_eq!(submitter.nrunning, 1);
+    }
+
+    // Task not submitted because the max concurrency is already reached.
+    #[test]
+    fn max_concurrency_reached() {
+        let node = Node {
+            uid: String::from("c"),
+            behavior: NodeBehavior::TaskNode {
+                fname: String::from("function"),
+                launch_script: String::from("script"),
+                caching: false,
+                retries: 0,
+                try_num: 0,
+                input_kwargs: Vec::new(),
+            },
+            status: JobStatus::ReadyForSubmission,
+            parents: vec![Parent {
+                parent_type: ParentType::Output {
+                    key: String::from("p"),
+                },
+                uid: String::from("p"),
+            }],
+            children: Vec::new(),
+        };
+
+        let parent = Node {
+            uid: String::from("p"),
+            behavior: NodeBehavior::RootNode,
+            status: JobStatus::ReadyForSubmission,
+            parents: Vec::new(),
+            children: vec!["c".to_string()],
+        };
+
+        let state = MockState::new();
+        let mut submitter = Submitter {
+            backend: &MockBackend,
+            state: &state,
+            max_concurrency: 1,
+            nrunning: 1,
+        };
+
+        let nodemap = HashMap::from([("c".to_string(), node), ("p".to_string(), parent)]);
+        let new_status = submitter.submit_node("c", &nodemap);
+        assert!(matches!(new_status, JobStatus::ReadyForSubmission));
+        assert_eq!(submitter.nrunning, 1);
     }
 }

@@ -21,6 +21,13 @@ pub struct CLI {
     #[arg(
         short,
         long,
+        default_value_t = 0,
+        help = "Max number of concurrent tasks. Set to 0 to disable."
+    )]
+    pub max_concurrency: usize,
+    #[arg(
+        short,
+        long,
         default_value_t = String::from("info"),
         help = "Logging level (debug, info, error, or tracing)"
     )]
@@ -38,6 +45,7 @@ mod tests {
         let cli = CLI::try_parse_from(iter).unwrap();
         assert_eq!(cli.pipeline, PathBuf::from("pipeline.json"));
         assert_eq!(cli.wait_seconds, 2);
+        assert_eq!(cli.max_concurrency, 0);
     }
 
     /// The -p/--pipeline is mandatory.
@@ -59,5 +67,18 @@ mod tests {
         .iter();
         let cli = CLI::try_parse_from(iter).unwrap();
         assert_eq!(cli.log_level, String::from("debug"));
+    }
+
+    /// Non-default log level is correctly captured.
+    #[test]
+    fn parse_max_concurrency() {
+        let iter = [
+            "sscheduler",
+            "--pipeline=pipeline.json",
+            "--max-concurrency=3",
+        ]
+        .iter();
+        let cli = CLI::try_parse_from(iter).unwrap();
+        assert_eq!(cli.max_concurrency, 3);
     }
 }
