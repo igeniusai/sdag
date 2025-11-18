@@ -632,7 +632,7 @@ mod tests {
 
         let nodemap = HashMap::from([("c".to_string(), node), ("p".to_string(), parent)]);
         let new_status = submitter.submit_node("c", &nodemap);
-        assert!(matches!(new_status, JobStatus::ReadyForSubmission));
+        assert!(matches!(new_status, JobStatus::NotSubmitted));
         assert_eq!(submitter.nrunning, 1);
     }
 }
