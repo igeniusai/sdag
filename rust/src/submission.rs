@@ -75,6 +75,17 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
         for (k, v) in updated_statuses.into_iter() {
             let updated_node = nodemap.get_mut(&k).unwrap();
             updated_node.status = v;
+            self.update_try_count(updated_node);
+        }
+    }
+
+    /// Update the retry count for rescheduled tasks.
+    fn update_try_count(&self, node: &mut Node) {
+        if let NodeBehavior::TaskNode { try_num, .. } = &mut node.behavior {
+            match node.status {
+                JobStatus::Running(_) | JobStatus::Failed => *try_num += 1,
+                _ => {}
+            }
         }
     }
 
@@ -520,6 +531,72 @@ mod tests {
         submitter.update_status(&mut nodemap, updated_statuses);
         let child = nodemap.get("c").unwrap();
         assert!(matches!(child.status, JobStatus::Failed))
+    }
+
+    /// Update the status of a task.
+    #[test]
+    fn update_task_status() {
+        let node = Node {
+            uid: String::from("c"),
+            behavior: NodeBehavior::TaskNode {
+                fname: String::from("function"),
+                launch_script: String::from("script"),
+                caching: false,
+                retries: 0,
+                try_num: 0,
+                input_kwargs: Vec::new(),
+            },
+            status: JobStatus::ReadyForSubmission,
+            parents: Vec::new(),
+            children: Vec::new(),
+        };
+
+        let state = MockState::new();
+        let submitter = Submitter::new(&MockBackend, &state, 0);
+
+        let mut nodemap = HashMap::from([("c".to_string(), node)]);
+        let updated_statuses = HashMap::from([("c".to_string(), JobStatus::Failed)]);
+
+        submitter.update_status(&mut nodemap, updated_statuses);
+        let child = nodemap.get("c").unwrap();
+        assert!(matches!(child.status, JobStatus::Failed));
+        assert!(matches!(
+            child.behavior,
+            NodeBehavior::TaskNode { try_num: 1, .. }
+        ));
+    }
+
+    /// Task not submitted, the try count is not updated.
+    #[test]
+    fn update_nonsubmitted_task_status() {
+        let node = Node {
+            uid: String::from("c"),
+            behavior: NodeBehavior::TaskNode {
+                fname: String::from("function"),
+                launch_script: String::from("script"),
+                caching: false,
+                retries: 0,
+                try_num: 0,
+                input_kwargs: Vec::new(),
+            },
+            status: JobStatus::ReadyForSubmission,
+            parents: Vec::new(),
+            children: Vec::new(),
+        };
+
+        let state = MockState::new();
+        let submitter = Submitter::new(&MockBackend, &state, 0);
+
+        let mut nodemap = HashMap::from([("c".to_string(), node)]);
+        let updated_statuses = HashMap::from([("c".to_string(), JobStatus::NotSubmitted)]);
+
+        submitter.update_status(&mut nodemap, updated_statuses);
+        let child = nodemap.get("c").unwrap();
+        assert!(matches!(child.status, JobStatus::NotSubmitted));
+        assert!(matches!(
+            child.behavior,
+            NodeBehavior::TaskNode { try_num: 0, .. }
+        ));
     }
 
     /// Complete graph execution test.

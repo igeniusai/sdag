@@ -31,17 +31,6 @@ fn schedule_retries(nodemap: &mut HashMap<String, Node>) {
     }
 }
 
-/// Update the retry count for rescheduled tasks.
-fn update_try_count(nodemap: &mut HashMap<String, Node>) {
-    for node in nodemap.values_mut() {
-        if let JobStatus::ReadyForSubmission = node.status {
-            if let NodeBehavior::TaskNode { try_num, .. } = &mut node.behavior {
-                *try_num += 1;
-            }
-        }
-    }
-}
-
 /// Update the status based on the backend output.
 pub fn update_status(uid: &str, nodemap: &mut HashMap<String, Node>, backend: &SlurmBackend) {
     backend.update_status(nodemap);
@@ -53,8 +42,6 @@ pub fn update_status(uid: &str, nodemap: &mut HashMap<String, Node>, backend: &S
         let updated_node = nodemap.get_mut(&k).unwrap();
         updated_node.status = v;
     }
-
-    update_try_count(nodemap);
 }
 
 /// Recursively update the status of children.
