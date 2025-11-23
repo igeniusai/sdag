@@ -340,19 +340,29 @@ NodeUnion = Node[BehaviorUnion]
 """Node of all possible types."""
 
 
+class GraphMetadata(BaseModel):
+    """Graph metadata.
+
+    Attributes:
+        name (str): Pipeline name.
+        creation_dt (datetime): Pipeline compilation datetime.
+    """
+
+    name: str
+    creation_dt: datetime = Field(default_factory=datetime.now)
+
+
 class Graph(BaseModel):
     """Node graph.
 
     This is the object exported when the pipeline is compiled.
 
     Attributes:
-        name (str): Pipeline name. Defaults to ''.
-        creation_dt (datetime): Pipeline compilation datetime.
+        meta (PipelineMetadata): Pipeline metadata.
         nodes (list[NodeUnion]): Graph nodes.
     """
 
-    name: str = ""
-    creation_dt: datetime = Field(default_factory=datetime.now)
+    meta: GraphMetadata
     nodes: list[NodeUnion] = Field(default_factory=list)
 
     def get_root(self) -> Node:

@@ -39,8 +39,10 @@ class TestIOManager:
             dict[str, Any]: Graph dictionary.
         """
         return {
-            "name": "test",
-            "creation_dt": "1920-01-01 09:20:20",
+            "meta": {
+                "name": "test",
+                "creation_dt": "1920-01-01 09:20:20",
+            },
             "nodes": [
                 {
                     "uid": "0",

@@ -9,6 +9,7 @@ from sdag.models import (
     ArtifactType,
     EndNode,
     Graph,
+    GraphMetadata,
     IfNode,
     InputKwarg,
     LogicalType,
@@ -75,7 +76,7 @@ class MockSDAG:
             Graph: Graph.
         """
         return Graph(
-            name="",
+            meta=GraphMetadata(name="test"),
             nodes=[
                 Node(uid="0", behavior=RootNode()),
                 Node(

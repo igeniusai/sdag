@@ -1,7 +1,6 @@
 """DAGs."""
 
 from collections.abc import Callable
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +12,15 @@ from sdag.exceptions import (
     TaskNotUniqueError,
 )
 from sdag.io import IOManager
-from sdag.models import EndNode, Graph, IfNode, Node, OneOfNode, RootNode
+from sdag.models import (
+    EndNode,
+    Graph,
+    GraphMetadata,
+    IfNode,
+    Node,
+    OneOfNode,
+    RootNode,
+)
 from sdag.wrappers import IfWrapper, Pipeline, Task
 
 
@@ -40,7 +47,7 @@ class DAG:
             name (str, optional): DAG name. Defaults to "".
         """
         self.prefix = f"_{name}_{uid}"
-        self.graph = Graph()
+        self.graph = Graph(meta=GraphMetadata(name=name))
         self.branchstack: list[Node[IfNode]] = []
 
     def add_root(self) -> None:
@@ -292,8 +299,6 @@ class SDAG:
         """
         self._reset_uid()
         graph = pipeline.compile(input_kwargs)
-        graph.name = pipeline.fn.__name__
-        graph.creation_dt = datetime.now()
 
         if path is not None:
             path = Path(path)

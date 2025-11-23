@@ -15,6 +15,7 @@ from sdag.exceptions import (
 from sdag.models import (
     BranchType,
     Graph,
+    GraphMetadata,
     IfNode,
     LogicalType,
     Node,
@@ -73,7 +74,7 @@ class TestDAG:
         node1 = Node(uid="1", behavior=RootNode())
         node2 = Node(uid="2", behavior=RootNode())
         dag.register(node1)
-        graph = Graph(name="graph", nodes=[node2])
+        graph = Graph(meta=GraphMetadata(name="graph"), nodes=[node2])
         dag.join(graph)
 
         assert sorted(dag.graph.nodes, key=lambda x: x.uid) == [node1, node2]
@@ -558,5 +559,5 @@ class TestSDAG:
 
         graph = Graph.model_validate(data)
 
-        assert graph.name == "pipeline"
+        assert graph.meta.name == "pipeline"
         assert len(graph.nodes) == 2

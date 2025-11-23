@@ -11,6 +11,7 @@ from sdag.models import (
     BranchType,
     EndNode,
     Graph,
+    GraphMetadata,
     LogicalType,
     Node,
     OutputType,
@@ -99,8 +100,10 @@ class TestGraph:
             Graph: Graph.
         """
         return Graph(
-            name="graph",
-            creation_dt=datetime(1920, 1, 1, 9, 20, 20),
+            meta=GraphMetadata(
+                name="graph",
+                creation_dt=datetime(1920, 1, 1, 9, 20, 20),
+            ),
             nodes=[
                 Node(uid="root", behavior=RootNode()),
                 Node(
