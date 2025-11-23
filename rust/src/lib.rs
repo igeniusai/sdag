@@ -6,16 +6,17 @@
 
 use crate::state::StateManager;
 use pyo3::prelude::*;
-pub mod model;
-mod summary;
-
 pub mod backend;
+mod checkpoint;
 pub mod graph;
+pub mod model;
 pub mod status_management;
 pub mod submission;
+mod summary;
 
 use std::time;
 mod parser;
+use checkpoint::Checkpointer;
 use clap::Parser;
 
 mod state;
@@ -52,17 +53,16 @@ fn sscheduler_start(argv: Vec<String>) {
         .map_err(|e| log::error!("Failed to read DAG: {e}"))
         .unwrap();
 
-    let state = LocalDirState::new(home_dir.join(&dag.name));
+    let state = LocalDirState::new(home_dir.join(&dag.meta.name));
     log::info!("Working directory: '{:?}'", state.get_pipeline_dir());
 
-    state
-        .prepare(&dag)
-        .map_err(|e| log::error!("Working directory creation failed: {e}."))
-        .unwrap();
+    let checkpointer = Checkpointer {
+        meta: dag.meta.clone(),
+        restart: args.restart,
+    };
 
-    state
-        .copy_dag_into_working_dir(&args.pipeline)
-        .map_err(|e| log::error!("Failed to copy DAG file: {e}"))
+    let dag = startup::prepare_dag(dag, &args.pipeline, &checkpointer, &state)
+        .map_err(|e| log::error!("Failed to prepare DAG: {e}"))
         .unwrap();
 
     let backend = backend::SlurmBackend;
@@ -71,10 +71,11 @@ fn sscheduler_start(argv: Vec<String>) {
         poll_time,
         state,
         backend,
+        checkpointer,
         max_concurrency: args.max_concurrency,
     };
 
-    log::info!("Running pipeline '{}'", dag.name);
+    log::info!("Running pipeline '{}'", dag.meta.name);
     scheduler.run(dag);
 }
 

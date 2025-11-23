@@ -1,19 +1,37 @@
 //! Functions executed during the scheduler startup.
 
-use crate::model::DAG;
+use crate::checkpoint::Checkpointer;
+use crate::model::{DAG, Node};
+use crate::state::StateManager;
+use env_logger::Env;
+use log;
 use serde_json;
+use std::env;
+use std::error::Error;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
 
-use env_logger::Env;
-use log;
-use std::env;
+pub fn prepare_dag<'a, T: StateManager>(
+    dag: DAG<Node>,
+    path: &PathBuf,
+    checkpointer: &Checkpointer,
+    state: &T,
+) -> Result<DAG<Node>, Box<dyn Error>> {
+    if !checkpointer.restart {
+        state.prepare(&dag)?;
+        state.copy_dag_into_working_dir(path)?;
+        return Ok(dag);
+    }
+
+    log::info!("Loading checkpoint...");
+    checkpointer.load_checkpoint(state)
+}
 
 /// Parse the DAG from the input JSON.
-pub fn read_dag(path: &PathBuf) -> io::Result<DAG> {
+pub fn read_dag(path: &PathBuf) -> io::Result<DAG<Node>> {
     let buf = fs::read_to_string(path)?;
-    let dag: DAG = serde_json::from_str(&buf)?;
+    let dag: DAG<Node> = serde_json::from_str(&buf)?;
     Ok(dag)
 }
 
@@ -70,13 +88,15 @@ mod tests {
         let path = tmp.join("pipeline.json");
         let contents = r#"
         {
-            "name": "pipeline",
-            "creation_dt": "2025-01-01 10:20:20",
+            "meta": {
+                "name": "pipeline",
+                "creation_dt": "2025-01-01 10:20:20"
+            },
             "nodes": []
         }"#;
         fs::write(&path, contents).unwrap();
 
         let dag = read_dag(&path).unwrap();
-        assert_eq!(dag.name, "pipeline");
+        assert_eq!(dag.meta.name, "pipeline");
     }
 }

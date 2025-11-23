@@ -149,9 +149,9 @@ impl<'a, T: StateManager> InputDataHandler<'a, T> {
 mod tests {
     use super::*;
     use crate::model::{
-        Artifact, InputKwarg, JobStatus, Node, NodeBehavior, Parent, ParentType, DAG,
+        Artifact, DAG, InputKwarg, JobStatus, Node, NodeBehavior, Parent, ParentType,
     };
-    use crate::state::{tests::get_tmp_dir, LocalDirState};
+    use crate::state::{LocalDirState, tests::get_tmp_dir};
     use std::{fs, path::PathBuf};
 
     /// Mocked state for testing purposes
@@ -167,7 +167,7 @@ mod tests {
     }
 
     impl StateManager for MockState {
-        fn prepare(&self, _dag: &DAG) -> io::Result<()> {
+        fn prepare(&self, _dag: &DAG<Node>) -> io::Result<()> {
             Ok(())
         }
         fn copy_output(&self, _src_uid: &str, _dst_uid: &str) -> std::io::Result<u64> {
@@ -189,6 +189,18 @@ mod tests {
         }
         fn read_cached_input(&self, _uid: &str) -> io::Result<String> {
             Ok(String::from(r#"{}"#))
+        }
+
+        fn read_checkpoint(&self) -> io::Result<String> {
+            Ok(String::from("checkpoint"))
+        }
+
+        fn save_checkpoint(&self, _dag: &DAG<&Node>) -> io::Result<()> {
+            Ok(())
+        }
+
+        fn validate_checkpoint(&self, _dag: &DAG<Node>) -> Result<(), String> {
+            Ok(())
         }
     }
 

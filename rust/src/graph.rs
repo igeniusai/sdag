@@ -2,12 +2,12 @@
 //!
 //! To avoid Rc, the graph is represented as a uid -> node hashmap.
 
-use crate::model::{JobStatus, Node, NodeResult, DAG};
+use crate::model::{DAG, JobStatus, Node, NodeResult};
 
 use std::collections::HashMap;
 
 /// Build the nodemap and return it alongside the root node unique id.
-pub fn build_nodemap(dag: DAG) -> Option<(String, HashMap<String, Node>)> {
+pub fn build_nodemap(dag: DAG<Node>) -> Option<(String, HashMap<String, Node>)> {
     let mut nodemap = HashMap::new();
     for node in dag.nodes {
         nodemap.insert(node.uid.clone(), node);

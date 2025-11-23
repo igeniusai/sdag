@@ -9,9 +9,10 @@
 //! of the DAG.
 
 use crate::backend::SlurmBackend;
+use crate::checkpoint::Checkpointer;
 use crate::graph;
 use crate::model::{DAG, JobStatus, Node};
-use crate::state::LocalDirState;
+use crate::state::StateManager;
 use crate::status_management;
 use crate::submission::Submitter;
 use crate::summary;
@@ -22,28 +23,36 @@ use std::time::Duration;
 
 /// Scheduler.
 #[derive(Debug, Clone)]
-pub struct Scheduler {
+pub struct Scheduler<T: StateManager> {
     /// Time between subsequent Slurm polls (s).
     pub poll_time: Duration,
     /// State management.
-    pub state: LocalDirState,
+    pub state: T,
     /// Backend to submit and monitor jobs.
     pub backend: SlurmBackend,
+    /// Checkpoint mgmt
+    pub checkpointer: Checkpointer,
     /// Maximum number of concurrent tasks.
     pub max_concurrency: usize,
 }
-impl Scheduler {
+impl<T: StateManager> Scheduler<T> {
     /// Run the scheduler.
-    pub fn run(&self, dag: DAG) {
+    pub fn run(&self, dag: DAG<Node>) {
         let (root_id, mut nodemap) = graph::build_nodemap(dag)
             .ok_or_else(|| log::error!("Failed to identify the root node"))
             .unwrap();
 
         let mut submitter = Submitter::new(&self.backend, &self.state, self.max_concurrency);
         log::debug!("Starting scheduling loop");
+
         loop {
             status_management::update_status(&root_id, &mut nodemap, &self.backend);
             submitter.submit(&mut nodemap);
+
+            let res = self.checkpointer.save_checkpoint(&nodemap, &self.state);
+            if let Err(e) = res {
+                log::error!("Failed to save checkpoint: {e}");
+            }
 
             let table = summary::get_summary_table(&nodemap);
             log::info!("Summary:\n{table}");

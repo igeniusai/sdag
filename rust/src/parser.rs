@@ -1,6 +1,6 @@
 //! sdag scheduler CLI.
 
-use clap::Parser;
+use clap::{ArgAction, Parser};
 use std::path::PathBuf;
 
 /// Scheduler CLI.
@@ -32,6 +32,13 @@ pub struct CLI {
         help = "Logging level (debug, info, error, or tracing)"
     )]
     pub log_level: String,
+    #[arg(
+        short,
+        long,
+        action=ArgAction::SetTrue,
+        help = "Restart a pipeline from the last checkpoint"
+    )]
+    pub restart: bool,
 }
 
 #[cfg(test)]
@@ -46,6 +53,7 @@ mod tests {
         assert_eq!(cli.pipeline, PathBuf::from("pipeline.json"));
         assert_eq!(cli.wait_seconds, 2);
         assert_eq!(cli.max_concurrency, 0);
+        assert_eq!(cli.restart, false);
     }
 
     /// The -p/--pipeline is mandatory.
@@ -80,5 +88,13 @@ mod tests {
         .iter();
         let cli = CLI::try_parse_from(iter).unwrap();
         assert_eq!(cli.max_concurrency, 3);
+    }
+
+    /// Check the restart flag is correctly parsed.
+    #[test]
+    fn parse_restart() {
+        let iter = ["sscheduler", "--pipeline=pipeline.json", "--restart"].iter();
+        let cli = CLI::try_parse_from(iter).unwrap();
+        assert_eq!(cli.restart, true);
     }
 }

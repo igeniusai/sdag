@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{fmt, path::PathBuf};
+use std::{borrow::Borrow, fmt, path::PathBuf};
 
 /// Task metadata as written in the working dir.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -194,15 +194,21 @@ impl Node {
     }
 }
 
-/// Pipeline JSON file.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct DAG {
+pub struct DAGMetadata {
     /// Pipeline name.
     pub name: String,
     /// Pipeline creation datetime.
     pub creation_dt: String,
+}
+
+/// Pipeline JSON file.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct DAG<T: Borrow<Node>> {
+    /// Pipeline metadata.
+    pub meta: DAGMetadata,
     /// Pipeline nodes.
-    pub nodes: Vec<Node>,
+    pub nodes: Vec<T>,
 }
 
 /// Output of a condition task.
@@ -218,6 +224,8 @@ pub struct BooleanOutput {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+
     /// Not an IfNode, The status is the same of the parent.
     #[test]
     fn get_status_for_child() {
@@ -280,5 +288,42 @@ mod tests {
         };
         let ptype = ParentType::Branch { branch: false };
         assert!(matches!(n.get_status_for_child(&ptype), JobStatus::Failed))
+    }
+
+    #[test]
+    fn serialize_borrowed_dag() {
+        let nodemap = HashMap::from([(
+            String::from("0"),
+            Node {
+                uid: String::from("0"),
+                parents: Vec::new(),
+                children: Vec::new(),
+                status: JobStatus::Running(String::from("1234")),
+                behavior: NodeBehavior::TaskNode {
+                    fname: String::from("fname"),
+                    caching: false,
+                    try_num: 0,
+                    retries: 0,
+                    launch_script: String::from("lauch.sh"),
+                    input_kwargs: Vec::new(),
+                },
+            },
+        )]);
+
+        let node = nodemap.get(&String::from("0")).unwrap();
+        let dag = DAG {
+            meta: DAGMetadata {
+                name: String::from("dag"),
+                creation_dt: String::from("2011-01-01T09:20:20"),
+            },
+            nodes: vec![node],
+        };
+
+        let serialized = serde_json::to_string(&dag).unwrap();
+        let deserialized_dag: DAG<Node> = serde_json::from_str(&serialized).unwrap();
+        assert!(matches!(
+            deserialized_dag.nodes[0].status,
+            JobStatus::Running(_)
+        ));
     }
 }

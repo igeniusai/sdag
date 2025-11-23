@@ -2,7 +2,8 @@
 //!
 //! Every interaction with the file system is segregated here.
 
-use crate::model::{Node, NodeBehavior, TaskMeta, DAG};
+use crate::model::NodeResult;
+use crate::model::{DAG, JobStatus, Node, NodeBehavior, TaskMeta};
 use log;
 use serde_json;
 use std::fs;
@@ -12,7 +13,7 @@ use std::path::PathBuf;
 /// State management interface.
 pub trait StateManager {
     /// Prepare the working directory.
-    fn prepare(&self, dag: &DAG) -> io::Result<()>;
+    fn prepare(&self, dag: &DAG<Node>) -> io::Result<()>;
     /// Copy the JSON as-is into the working directory.
     fn copy_dag_into_working_dir(&self, path: &PathBuf) -> io::Result<u64>;
     /// Get the path to the working directory to set the env.
@@ -25,6 +26,12 @@ pub trait StateManager {
     fn save_input(&self, uid: &str, input: &str) -> Result<(), io::Error>;
     /// Read the cached input of a node.
     fn read_cached_input(&self, uid: &str) -> io::Result<String>;
+    /// Read last checkpoint
+    fn read_checkpoint(&self) -> io::Result<String>;
+    /// Validate the checkpoint.
+    fn validate_checkpoint(&self, dag: &DAG<Node>) -> Result<(), String>;
+    /// Save checkpoint.
+    fn save_checkpoint(&self, dag: &DAG<&Node>) -> io::Result<()>;
 }
 
 /// Local directory state.
@@ -40,6 +47,8 @@ pub struct LocalDirState {
     input_fname: String,
     /// Metadata filename.
     meta_fname: String,
+    /// Checkpoint filename
+    checkpoint_fname: String,
 }
 
 impl LocalDirState {
@@ -56,11 +65,13 @@ impl LocalDirState {
             input_fname: String::from("input.json"),
             // Metadata filename convention.
             meta_fname: String::from("meta.json"),
+            // Checkpoint filename convention.
+            checkpoint_fname: String::from("checkpoint.json"),
         }
     }
 
     /// Create a working directory.
-    fn create_working_dir(&self, dag: &DAG) -> io::Result<()> {
+    fn create_working_dir(&self, dag: &DAG<Node>) -> io::Result<()> {
         let res = fs::create_dir_all(&self.pipeline_dir);
         if let Err(_) = res {
             log::debug!("pipeline dir creation failed, it likely already exists.")
@@ -89,7 +100,7 @@ impl LocalDirState {
     }
 
     /// Clear unnecessary cache at the beginning of the pipeline.
-    fn clear_cache(&self, dag: &DAG) -> Result<(), io::Error> {
+    fn clear_cache(&self, dag: &DAG<Node>) -> Result<(), io::Error> {
         for entry in fs::read_dir(&self.pipeline_dir)? {
             let path = entry?.path();
             if !path.is_dir() {
@@ -112,7 +123,7 @@ impl LocalDirState {
     /// - The task function name correspods.
     /// - The Node unique id remains the same.
     /// - Artifacts must exist.
-    fn dir_must_be_deleted(&self, path: &PathBuf, dag: &DAG) -> bool {
+    fn dir_must_be_deleted(&self, path: &PathBuf, dag: &DAG<Node>) -> bool {
         if let Some(dirname) = path.file_name().and_then(|n| n.to_str()) {
             for node in &dag.nodes {
                 if self.is_node_matching(node, path, dirname) {
@@ -142,12 +153,46 @@ impl LocalDirState {
         }
         false
     }
+
+    fn validate_node_from_checkpoint(&self, node: &Node) -> Result<(), String> {
+        let working_dir = self.pipeline_dir.join(&node.uid);
+        if !working_dir.is_dir() {
+            let err = format!("uid '{}' directory not found", node.uid);
+            return Err(err);
+        }
+
+        if let JobStatus::Completed(NodeResult::Task(_)) = node.status {
+            self.validate_completed_task_for_checkpoint(node, &working_dir)?;
+        }
+
+        Ok(())
+    }
+
+    fn validate_completed_task_for_checkpoint(
+        &self,
+        node: &Node,
+        working_dir: &PathBuf,
+    ) -> Result<(), String> {
+        let path_out = working_dir.join(&self.output_fname);
+        if !path_out.is_file() {
+            let err = format!("uid '{}' output not found", node.uid);
+            return Err(err);
+        }
+
+        let path_meta = working_dir.join(&self.meta_fname);
+        if !path_meta.is_file() {
+            let err = format!("uid '{}' metadata not found", node.uid);
+            return Err(err);
+        }
+
+        Ok(())
+    }
 }
 
 /// Implement the StateManager for local file systems.
 impl StateManager for LocalDirState {
     /// Prepare the working directory in the local fs.
-    fn prepare(&self, dag: &DAG) -> io::Result<()> {
+    fn prepare(&self, dag: &DAG<Node>) -> io::Result<()> {
         if self.pipeline_dir.is_dir() {
             self.clear_cache(dag)?;
         }
@@ -197,12 +242,35 @@ impl StateManager for LocalDirState {
         let path = self.pipeline_dir.join(uid).join(&self.input_fname);
         fs::write(path, input)
     }
+
+    /// Read a checkpoint
+    fn read_checkpoint(&self) -> io::Result<String> {
+        let path = self.pipeline_dir.join(&self.checkpoint_fname);
+        fs::read_to_string(path)
+    }
+
+    /// Read a checkpoint
+    fn save_checkpoint(&self, dag: &DAG<&Node>) -> io::Result<()> {
+        let path = self.pipeline_dir.join(&self.checkpoint_fname);
+        let checkpoint = serde_json::to_string(dag)?;
+        fs::write(path, checkpoint)
+    }
+
+    /// Validate checkpoint
+    fn validate_checkpoint(&self, dag: &DAG<Node>) -> Result<(), String> {
+        for node in &dag.nodes {
+            if let NodeBehavior::TaskNode { .. } = node.behavior {
+                self.validate_node_from_checkpoint(&node)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::model::{JobStatus, Node, NodeBehavior};
+    use crate::model::{DAGMetadata, JobStatus, Node, NodeBehavior};
     use std::env;
     use uuid::Uuid;
 
@@ -214,8 +282,10 @@ pub mod tests {
     #[test]
     fn test_working_dir_creation() {
         let dag = DAG {
-            name: String::from("dag"),
-            creation_dt: String::from("1900-01-01T09:20:20"),
+            meta: DAGMetadata {
+                name: String::from("dag"),
+                creation_dt: String::from("1900-01-01T09:20:20"),
+            },
             nodes: vec![Node {
                 uid: String::from("0"),
                 parents: Vec::new(),
@@ -259,8 +329,10 @@ pub mod tests {
     #[test]
     fn clear_cache_no_dirs() {
         let dag = DAG {
-            name: String::from("dag"),
-            creation_dt: String::from("1900-01-01T09:20:20"),
+            meta: DAGMetadata {
+                name: String::from("dag"),
+                creation_dt: String::from("1900-01-01T09:20:20"),
+            },
             nodes: Vec::new(),
         };
 
@@ -274,8 +346,10 @@ pub mod tests {
     #[test]
     fn dir_must_be_deleted() {
         let dag = DAG {
-            name: String::from("dag"),
-            creation_dt: String::from("1900-01-01T09:20:20"),
+            meta: DAGMetadata {
+                name: String::from("dag"),
+                creation_dt: String::from("1900-01-01T09:20:20"),
+            },
             nodes: vec![Node {
                 uid: String::from("0"),
                 parents: Vec::new(),
@@ -306,8 +380,10 @@ pub mod tests {
     #[test]
     fn dir_must_not_be_deleted() {
         let dag = DAG {
-            name: String::from("dag"),
-            creation_dt: String::from("1900-01-01T09:20:20"),
+            meta: DAGMetadata {
+                name: String::from("dag"),
+                creation_dt: String::from("1900-01-01T09:20:20"),
+            },
             nodes: vec![Node {
                 uid: String::from("0"),
                 parents: Vec::new(),
@@ -471,8 +547,10 @@ pub mod tests {
     #[test]
     fn do_not_create_folder() {
         let dag = DAG {
-            name: String::from("pipeline-name"),
-            creation_dt: String::from("2025-01-01 09:10:10"),
+            meta: DAGMetadata {
+                name: String::from("pipeline-name"),
+                creation_dt: String::from("2025-01-01 09:10:10"),
+            },
             nodes: vec![Node {
                 uid: String::from("0"),
                 behavior: NodeBehavior::RootNode,
@@ -547,8 +625,10 @@ pub mod tests {
     #[test]
     fn create_entire_structure_with_caching() {
         let dag = DAG {
-            name: String::from("pipeline-name"),
-            creation_dt: String::from("2025-01-01 09:10:10"),
+            meta: DAGMetadata {
+                name: String::from("pipeline-name"),
+                creation_dt: String::from("2025-01-01 09:10:10"),
+            },
             nodes: vec![
                 Node {
                     uid: String::from("0"),
@@ -600,8 +680,10 @@ pub mod tests {
     #[test]
     fn prepare_without_pipeline_dir() {
         let dag = DAG {
-            name: String::from("dag"),
-            creation_dt: String::from("1900-01-01T09:20:20"),
+            meta: DAGMetadata {
+                name: String::from("dag"),
+                creation_dt: String::from("1900-01-01T09:20:20"),
+            },
             nodes: vec![Node {
                 uid: String::from("0"),
                 parents: Vec::new(),
@@ -660,5 +742,116 @@ pub mod tests {
         manager.save_input("1", input).unwrap();
 
         assert!(path.join(manager.input_fname).exists());
+    }
+
+    #[test]
+    #[should_panic]
+    fn node_dir_not_found_in_checkpoint_val() {
+        let pipeline_dir = get_tmp_dir().join("pipeline");
+        fs::create_dir_all(&pipeline_dir).unwrap();
+
+        let state = LocalDirState::new(pipeline_dir);
+        let node = Node {
+            uid: String::from("0"),
+            parents: Vec::new(),
+            children: Vec::new(),
+            status: JobStatus::Running(String::from("1234")),
+            behavior: NodeBehavior::TaskNode {
+                fname: String::from("fname"),
+                caching: false,
+                try_num: 0,
+                retries: 0,
+                launch_script: String::from("lauch.sh"),
+                input_kwargs: Vec::new(),
+            },
+        };
+
+        state.validate_node_from_checkpoint(&node).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn output_not_found_in_checkpoint_val() {
+        let pipeline_dir = get_tmp_dir().join("pipeline");
+        let node_dir = pipeline_dir.join("0");
+        fs::create_dir_all(&node_dir).unwrap();
+
+        let state = LocalDirState::new(pipeline_dir);
+        let node = Node {
+            uid: String::from("0"),
+            parents: Vec::new(),
+            children: Vec::new(),
+            status: JobStatus::Completed(NodeResult::Task(String::from("1234"))),
+            behavior: NodeBehavior::TaskNode {
+                fname: String::from("fname"),
+                caching: false,
+                try_num: 0,
+                retries: 0,
+                launch_script: String::from("lauch.sh"),
+                input_kwargs: Vec::new(),
+            },
+        };
+
+        state.validate_node_from_checkpoint(&node).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn meta_not_found_in_checkpoint_val() {
+        let pipeline_dir = get_tmp_dir().join("pipeline");
+        let node_dir = pipeline_dir.join("0");
+        fs::create_dir_all(&node_dir).unwrap();
+
+        let output_path = node_dir.join("output.json");
+        fs::write(&output_path, r#"{"output":null}"#).unwrap();
+
+        let state = LocalDirState::new(pipeline_dir);
+        let node = Node {
+            uid: String::from("0"),
+            parents: Vec::new(),
+            children: Vec::new(),
+            status: JobStatus::Completed(NodeResult::Task(String::from("1234"))),
+            behavior: NodeBehavior::TaskNode {
+                fname: String::from("fname"),
+                caching: false,
+                try_num: 0,
+                retries: 0,
+                launch_script: String::from("lauch.sh"),
+                input_kwargs: Vec::new(),
+            },
+        };
+
+        state.validate_node_from_checkpoint(&node).unwrap();
+    }
+
+    #[test]
+    fn checkpoint_node_correctly_validated() {
+        let pipeline_dir = get_tmp_dir().join("pipeline");
+        let node_dir = pipeline_dir.join("0");
+        fs::create_dir_all(&node_dir).unwrap();
+
+        let output_path = node_dir.join("output.json");
+        fs::write(&output_path, r#"{"output":null}"#).unwrap();
+
+        let meta_path = node_dir.join("meta.json");
+        fs::write(&meta_path, r#"{"fname":"fname"}"#).unwrap();
+
+        let state = LocalDirState::new(pipeline_dir);
+        let node = Node {
+            uid: String::from("0"),
+            parents: Vec::new(),
+            children: Vec::new(),
+            status: JobStatus::Completed(NodeResult::Task(String::from("1234"))),
+            behavior: NodeBehavior::TaskNode {
+                fname: String::from("fname"),
+                caching: false,
+                try_num: 0,
+                retries: 0,
+                launch_script: String::from("lauch.sh"),
+                input_kwargs: Vec::new(),
+            },
+        };
+
+        state.validate_node_from_checkpoint(&node).unwrap();
     }
 }

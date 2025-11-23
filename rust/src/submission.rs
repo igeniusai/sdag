@@ -248,7 +248,7 @@ mod tests {
     }
 
     impl StateManager for MockState {
-        fn prepare(&self, _dag: &DAG) -> io::Result<()> {
+        fn prepare(&self, _dag: &DAG<Node>) -> io::Result<()> {
             Ok(())
         }
         fn copy_output(&self, _src_uid: &str, _dst_uid: &str) -> std::io::Result<u64> {
@@ -268,6 +268,17 @@ mod tests {
         }
         fn read_cached_input(&self, _uid: &str) -> io::Result<String> {
             Ok(String::from(r#"{}"#))
+        }
+        fn read_checkpoint(&self) -> io::Result<String> {
+            Ok(String::from("checkpoint"))
+        }
+
+        fn save_checkpoint(&self, _dag: &DAG<&Node>) -> io::Result<()> {
+            Ok(())
+        }
+
+        fn validate_checkpoint(&self, _dag: &DAG<Node>) -> Result<(), String> {
+            Ok(())
         }
     }
 
