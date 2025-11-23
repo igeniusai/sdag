@@ -87,21 +87,37 @@ class Task:
             node.add_logical_edge(parent.uid)
 
         for key, value in kwargs.items():
-            # Parent node output
-            if isinstance(value, Node):
-                node.add_output_edge(value.uid, key)
-
-            elif isinstance(value, ArtifactContainer):
-                node.add_artifact_edge(
-                    parent_uid=value.node.uid, key=key, name=value.key
-                )
-
-            else:
-                input_kwarg = InputKwarg(key=key, value=value)
-                node.behavior.input_kwargs.append(input_kwarg)
+            self._handle_input_kwarg(node, key, value)
 
         self._register(node)
         return node
+
+    def _handle_input_kwarg(
+        self, node: Node[TaskNode], key: str, value: Any
+    ) -> None:
+        """Handle input kwargs.
+
+        Three types of input kwargs are possible:
+        - dynamic input
+        - artifacts
+        - static input
+
+        Args:
+            node (Node[TaskNode]): Child node.
+            key (str): Input key.
+            value (Any): Input value.
+        """
+        if isinstance(value, Node):
+            node.add_output_edge(value.uid, key)
+
+        elif isinstance(value, ArtifactContainer):
+            node.add_artifact_edge(
+                parent_uid=value.node.uid, key=key, name=value.key
+            )
+
+        else:
+            input_kwarg = InputKwarg(key=key, value=value)
+            node.behavior.input_kwargs.append(input_kwarg)
 
 
 class IfWrapper:
