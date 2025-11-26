@@ -81,7 +81,7 @@ ignore = [
 [tool.ruff.lint.extend-per-file-ignores]
 # ignore unused imports
 "__init__.py" = ["F401"]
-# ignore pydocstyle rules for tests and tasks
+# ignore pydocstyle rules for tests
 # Tests can access private functions
 "tests/*" = ["D", "SLF001"]
 
@@ -89,7 +89,7 @@ ignore = [
 convention = "google"
 
 [tool.pyright]
-include = ["src"]
+include = ["src", "tests"]
 exclude = [
     "**/__pycache__",
 ]
