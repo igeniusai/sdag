@@ -37,7 +37,7 @@ class Task:
 
     def __init__(
         self,
-        fn: Callable,
+        fn: Callable[..., Any],
         caching: bool,
         retries: int,
         launch_script: Path,
@@ -213,7 +213,7 @@ class Pipeline:
 
     def __init__(
         self,
-        fn: Callable[..., None],
+        fn: Callable[..., Any],
         set_dag: Callable[[str], None],
         get_graph: Callable[[], Graph],
     ):
@@ -230,20 +230,25 @@ class Pipeline:
         self.set_dag = set_dag
         self.get_graph = get_graph
 
-    def __call__(self, *args: Node) -> Node:
-        """Run the pipeline function to compile it.
+    def __call__(self, *args: Node, **input_kwargs: Any) -> Node:
+        """Call the pipeline function to compile it.
 
-        *args (Node): Parent nodes.
+        args (Node): Parent nodes.
+        input_kwargs (Any): Pipeline input kwargs.
 
         Returns:
             Node: End node of the pipeline.
         """
-        graph = self.compile()
+        self.set_dag(self.fn.__name__)
+        output = self.fn(**input_kwargs)
+        graph = self.get_graph()
+        self._mark_nodes_requiring_output(graph)
+
         root = graph.get_root()
         for parent in args:
             root.add_logical_edge(parent.uid)
 
-        return graph.get_end()
+        return output if output is not None else graph.get_end()
 
     def compile(self, input_kwargs: dict[str, Any] | None = None) -> Graph:
         """Compile the current pipeline.
