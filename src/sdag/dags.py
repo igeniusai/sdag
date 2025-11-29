@@ -344,7 +344,7 @@ class SDAG:
 
         node = Node(uid=self.get_uid(), behavior=IfNode())
         self.current.register(node)
-        node.add_logical_edge(expr.uid)
+        node.add_output_edge(parent_uid=expr.uid, key="expr")
         return IfWrapper(node=node, push_branch=self.push_branch)
 
     def Else(self) -> IfWrapper:  # noqa: N802

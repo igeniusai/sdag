@@ -1,5 +1,6 @@
 """Wrappers."""
 
+import inspect
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -10,6 +11,7 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+from sdag.exceptions import DynamicArtifactError, KwargNotFoundError
 from sdag.models import (
     Artifact,
     ArtifactContainer,
@@ -79,18 +81,58 @@ class Task:
             ),
         )
 
-        for k, v in self.fn.__annotations__.items():
-            if v == Artifact:
-                node.register_artifact(k)
-
         for parent in args:
             node.add_logical_edge(parent.uid)
 
-        for key, value in kwargs.items():
+        self._add_kwargs(node, kwargs)
+        self._register(node)
+
+        return node
+
+    def _add_kwargs(
+        self, node: Node[TaskNode], kwargs: dict[str, Any]
+    ) -> None:
+        """Add kwargs.
+
+        Args:
+            node (Node[TaskNode]): Task node.
+            kwargs (dict[str, Any]): Input kwargs.
+
+        Raises:
+            KwargNotFoundError: Keyword argument not found in
+                the input values.
+        """
+        signature = inspect.signature(self.fn)
+        for key, param in signature.parameters.items():
+            if key not in kwargs and param.default is param.empty:
+                raise KwargNotFoundError(key)
+
+            value = kwargs.get(key, param.default)
+            if param.annotation == Artifact:
+                self._set_output_artifact(node, key, value)
+
             self._handle_input_kwarg(node, key, value)
 
-        self._register(node)
-        return node
+    def _set_output_artifact(
+        self, node: Node[TaskNode], key: str, value: Any
+    ) -> None:
+        """Set output artifact.
+
+        Args:
+            node (Node[TaskNode]): Task node.
+            key (str): Artifact key.
+            value (Any): Input value.
+
+        Raises:
+            DynamicArtifactError: Dynamic artifacts are not supported.
+        """
+        if isinstance(value, Node):
+            raise DynamicArtifactError(key)
+
+        path = (
+            value.path if isinstance(value, ArtifactContainer) else Path(value)
+        )
+        node.register_artifact(key, path)
 
     def _handle_input_kwarg(
         self, node: Node[TaskNode], key: str, value: Any
@@ -112,7 +154,10 @@ class Task:
 
         elif isinstance(value, ArtifactContainer):
             node.add_artifact_edge(
-                parent_uid=value.node.uid, key=key, name=value.key
+                parent_uid=value.node.uid,
+                key=key,
+                name=value.key,
+                path=value.path,
             )
 
         else:
@@ -213,4 +258,34 @@ class Pipeline:
         input_kwargs = {} if input_kwargs is None else input_kwargs
         self.set_dag(self.fn.__name__)
         self.fn(**input_kwargs)
-        return self.get_graph()
+        graph = self.get_graph()
+        self._mark_nodes_requiring_output(graph)
+        return graph
+
+    def _mark_nodes_requiring_output(self, graph: Graph) -> None:
+        """Nodes requiring output are tagged.
+
+        Args:
+            graph (Graph): Compiled graph.
+        """
+        uids = set()
+        for node in graph.nodes:
+            uids.update(
+                p.uid for p in node.parents if p.parent_type.type == "Output"
+            )
+
+        self._bubbles_up_oneof(uids, graph)
+
+    def _bubbles_up_oneof(self, uids: set[str], graph: Graph) -> None:
+        """Assign output used flag and propagate OneOf nodes.
+
+        Args:
+            uids (set[str]): Nodes that require the output.
+            graph (Graph): Compiled graph.
+        """
+        nodemap = {node.uid: node for node in graph.nodes}
+        while uids:
+            node = nodemap[uids.pop()]
+            node.output_used = True
+            if node.behavior.type == "OneOfNode":
+                uids.update(p.uid for p in node.parents)

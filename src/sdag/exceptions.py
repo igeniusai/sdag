@@ -5,6 +5,32 @@ class SDAGError(Exception):
     """Base exception, can be used to catch them all."""
 
 
+class KwargNotFoundError(SDAGError):
+    """Task input kwarg not found."""
+
+    def __init__(self, key: str):
+        """Raise the error.
+
+        Args:
+            key (str): Input key not found.
+        """
+        msg = f"Input argument '{key}' not found."
+        super().__init__(msg)
+
+
+class DynamicArtifactError(SDAGError):
+    """Dynamic artifacts are not allowed."""
+
+    def __init__(self, key: str):
+        """Raise the error.
+
+        Args:
+            key (str): Input key not found.
+        """
+        msg = f"key '{key}': Dynamic artifacts are not allowed."
+        super().__init__(msg)
+
+
 class NodeNotFoundError(SDAGError):
     """Node not found in the compiled JSON."""
 

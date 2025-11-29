@@ -14,11 +14,11 @@ class Artifact(BaseModel):
 
     Attributes:
         name (str): Artifact name.
-        path (Path | str): Artifact path.
+        path (Path): Artifact path.
     """
 
     name: str
-    path: Path | str = Field(default_factory=Path)
+    path: Path
 
 
 class TaskOutput(BaseModel):
@@ -157,11 +157,13 @@ class ArtifactType(ParentType):
         type (Literal['Artifact']): Parent type.
         key (str): Artifact key in the node input kwargs.
         name (str): Artifact name.
+        path (Path): Artifact path.
     """
 
     type: Literal["Artifact"] = "Artifact"
     key: str
     name: str
+    path: Path
 
 
 class OutputType(ParentType):
@@ -216,17 +218,20 @@ class ArtifactContainer:
 
     Attributes:
         key (str): Artifact key.
+        path (str): Artifact path.
         node (Node): Parent node.
     """
 
-    def __init__(self, key: str, node: "Node"):
+    def __init__(self, key: str, path: Path, node: "Node"):
         """Initialize the artifact container.
 
         Args:
             key (str): Artifact key.
+            path (str): Artifact path.
             node (Node): Parent node.
         """
         self.key = key
+        self.path = path
         self.node = node
 
 
@@ -249,6 +254,7 @@ class Node(BaseModel, Generic[T]):
 
     Attributes:
         uid (str): Node unique id.
+        output_used (bool): True if the output is used.
         parents (list[Parent]): Node parents.
         behavior (BaseNodeType): Node type.
         _artifacts (dict[str, ArtifactContainer]): Artifact
@@ -256,9 +262,11 @@ class Node(BaseModel, Generic[T]):
     """
 
     uid: str
+    output_used: bool = False
     parents: list[ParentUnion] = Field(default_factory=list)
     behavior: T
-    _artifacts: dict[str, ArtifactContainer] = PrivateAttr(
+    output_artifacts: list[Artifact] = Field(default_factory=list)
+    _artifact_containers: dict[str, ArtifactContainer] = PrivateAttr(
         default_factory=dict
     )
 
@@ -269,15 +277,17 @@ class Node(BaseModel, Generic[T]):
         Returns:
             dict[str, ArtifactContainer]: Artifacts.
         """
-        return self._artifacts
+        return self._artifact_containers
 
-    def register_artifact(self, key: str) -> None:
+    def register_artifact(self, key: str, path: Path) -> None:
         """Register an artifact.
 
         Args:
             key (str): Artifact key.
+            path (Path): Artifact path.
         """
-        self._artifacts[key] = ArtifactContainer(key, self)
+        self.output_artifacts.append(Artifact(name=key, path=path))
+        self._artifact_containers[key] = ArtifactContainer(key, path, self)
 
     def add_logical_edge(self, parent_uid: str) -> None:
         """Add a child->parent logical edge.
@@ -302,7 +312,9 @@ class Node(BaseModel, Generic[T]):
         parent = Parent(uid=parent_uid, parent_type=OutputType(key=key))
         self.parents.append(parent)
 
-    def add_artifact_edge(self, parent_uid: str, key: str, name: str) -> None:
+    def add_artifact_edge(
+        self, parent_uid: str, key: str, name: str, path: Path
+    ) -> None:
         """Add a child->parent artifact edge.
 
         The child will use an artifact produced by the parent.
@@ -311,9 +323,11 @@ class Node(BaseModel, Generic[T]):
             parent_uid (str): Parent uid.
             key (str): Artifact key in the child input kwargs.
             name (str): Artifact name.
+            path (Path): Artifact path.
         """
         parent = Parent(
-            uid=parent_uid, parent_type=ArtifactType(key=key, name=name)
+            uid=parent_uid,
+            parent_type=ArtifactType(key=key, name=name, path=path),
         )
         self.parents.append(parent)
 
