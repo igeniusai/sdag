@@ -104,4 +104,5 @@ venv = ".venv"
 [dependency-groups]
 test = [
     "pytest>=8.4.2",
+    "pytest-mock>=3.15.1",
 ]
