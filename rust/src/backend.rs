@@ -180,6 +180,8 @@ mod tests {
         let slurm = SlurmBackend;
         let node = Node {
             uid: String::from("1"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::Running(String::from("job1")),
             parents: Vec::new(),
@@ -196,6 +198,8 @@ mod tests {
         let slurm = SlurmBackend;
         let node = Node {
             uid: String::from("1"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::NotSubmitted,
             parents: Vec::new(),
@@ -213,6 +217,8 @@ mod tests {
             String::from("1"),
             Node {
                 uid: String::from("1"),
+                output_artifacts: Vec::new(),
+                output_used: false,
                 behavior: NodeBehavior::RootNode,
                 status: JobStatus::Running(String::from("job1")),
                 parents: Vec::new(),
@@ -223,6 +229,8 @@ mod tests {
             String::from("2"),
             Node {
                 uid: String::from("2"),
+                output_artifacts: Vec::new(),
+                output_used: false,
                 behavior: NodeBehavior::RootNode,
                 status: JobStatus::Running(String::from("job2")),
                 parents: Vec::new(),
@@ -248,6 +256,8 @@ mod tests {
             String::from("1"),
             Node {
                 uid: String::from("1"),
+                output_artifacts: Vec::new(),
+                output_used: false,
                 behavior: NodeBehavior::RootNode,
                 status: JobStatus::NotSubmitted,
                 parents: Vec::new(),

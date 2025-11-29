@@ -7,6 +7,7 @@
 use crate::state::StateManager;
 use pyo3::prelude::*;
 pub mod backend;
+mod caching;
 mod checkpoint;
 pub mod graph;
 pub mod model;
@@ -24,7 +25,6 @@ use state::LocalDirState;
 mod scheduler;
 use log;
 use scheduler::Scheduler;
-mod input_data;
 mod startup;
 
 /// Start the scheduler.

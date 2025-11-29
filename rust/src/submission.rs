@@ -4,8 +4,8 @@
 //! jobs, other types are managed by the scheduler.
 
 use crate::backend::Backend;
-use crate::input_data::InputDataHandler;
-use crate::model::{BooleanOutput, InputKwarg, JobStatus, Node, NodeBehavior, NodeResult};
+use crate::caching;
+use crate::model::{BooleanOutput, JobStatus, Node, NodeBehavior, NodeResult};
 use crate::state::StateManager;
 use crate::status_management::StatusSelector;
 use serde_json;
@@ -44,6 +44,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     /// Execute nodes ready for submission.
     pub fn submit(&mut self, nodemap: &mut HashMap<String, Node>) {
         self.set_number_of_running_jobs(nodemap);
+        caching::read_input_and_cache_tasks(nodemap, self.state);
         let updated_statuses = self.find_updated_statuses(nodemap);
         self.update_status(nodemap, updated_statuses);
     }
@@ -98,23 +99,14 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
             }
             NodeBehavior::TaskNode {
                 launch_script,
-                caching,
                 try_num,
-                input_kwargs,
                 ..
             } => {
                 if self.max_concurrency > 0 && self.nrunning >= self.max_concurrency {
                     return JobStatus::NotSubmitted;
                 }
 
-                let status = self.submit_tasknode(
-                    &node.uid,
-                    nodemap,
-                    input_kwargs,
-                    launch_script,
-                    caching,
-                    try_num,
-                );
+                let status = self.submit_tasknode(&node.uid, launch_script, try_num);
                 if let JobStatus::Running(_) = status {
                     self.nrunning += 1;
                 }
@@ -132,39 +124,8 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     }
 
     /// Submit a task.
-    fn submit_tasknode(
-        &self,
-        uid: &str,
-        nodemap: &HashMap<String, Node>,
-        input_kwargs: &Vec<InputKwarg>,
-        launch_script: &str,
-        caching: &bool,
-        try_num: &u32,
-    ) -> JobStatus {
+    fn submit_tasknode(&self, uid: &str, launch_script: &str, try_num: &u32) -> JobStatus {
         log::debug!("Submitting Task {uid}");
-        let handler = InputDataHandler {
-            uid,
-            state: self.state,
-        };
-
-        match handler.read_input_data(nodemap, input_kwargs) {
-            Err(e) => {
-                log::error!("Failed to read {uid} input data: {e}");
-                return JobStatus::Failed;
-            }
-            Ok(input) => {
-                if *caching && handler.is_cached(&input) {
-                    log::info!("Task {uid} is cached");
-                    return JobStatus::Completed(NodeResult::Node);
-                }
-
-                if let Err(_) = handler.save_input(&input) {
-                    log::error!("Task {uid}: Failed to save input data");
-                    return JobStatus::Failed;
-                }
-            }
-        }
-
         let pipeline_dir = self.state.get_pipeline_dir();
         let res = self
             .backend
@@ -302,6 +263,8 @@ mod tests {
     fn submit_root() {
         let node = Node {
             uid: String::from("c"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
@@ -326,6 +289,8 @@ mod tests {
     fn submit_end() {
         let node = Node {
             uid: String::from("c"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::EndNode,
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
@@ -350,6 +315,8 @@ mod tests {
     fn submit_if() {
         let node = Node {
             uid: String::from("c"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::IfNode,
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
@@ -363,6 +330,8 @@ mod tests {
 
         let parent = Node {
             uid: String::from("p"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
@@ -386,6 +355,8 @@ mod tests {
     fn submit_task() {
         let node = Node {
             uid: String::from("c"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::TaskNode {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
@@ -406,6 +377,8 @@ mod tests {
 
         let parent = Node {
             uid: String::from("p"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
@@ -422,37 +395,13 @@ mod tests {
         assert_eq!(submitter.nrunning, 1);
     }
 
-    /// Submit a cached task, so no execution is required.
-    #[test]
-    fn submit_cached_task() {
-        let node = Node {
-            uid: String::from("_cached_"),
-            behavior: NodeBehavior::TaskNode {
-                fname: String::from("function"),
-                launch_script: String::from("script"),
-                caching: true,
-                retries: 0,
-                try_num: 0,
-                input_kwargs: Vec::new(),
-            },
-            status: JobStatus::ReadyForSubmission,
-            parents: Vec::new(),
-            children: Vec::new(),
-        };
-
-        let state = MockState::new();
-        let mut submitter = Submitter::new(&MockBackend, &state, 0);
-
-        let nodemap = HashMap::from([("_cached_".to_string(), node)]);
-        let new_status = submitter.submit_node("_cached_", &nodemap);
-        assert!(matches!(new_status, JobStatus::Completed(NodeResult::Node)))
-    }
-
     /// Submit a OneOf node.
     #[test]
     fn submit_oneof() {
         let node = Node {
             uid: String::from("c"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::OneOfNode,
             status: JobStatus::ReadyForSubmission,
             parents: vec![
@@ -474,6 +423,8 @@ mod tests {
 
         let p1 = Node {
             uid: String::from("p1"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::Failed,
             parents: Vec::new(),
@@ -482,6 +433,8 @@ mod tests {
 
         let p2 = Node {
             uid: String::from("p2"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
@@ -505,6 +458,8 @@ mod tests {
     fn find_updated_statuses() {
         let node = Node {
             uid: String::from("c"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
@@ -527,6 +482,8 @@ mod tests {
     fn update_status() {
         let node = Node {
             uid: String::from("c"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
@@ -549,6 +506,8 @@ mod tests {
     fn update_task_status() {
         let node = Node {
             uid: String::from("c"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::TaskNode {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
@@ -582,6 +541,8 @@ mod tests {
     fn update_nonsubmitted_task_status() {
         let node = Node {
             uid: String::from("c"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::TaskNode {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
@@ -615,6 +576,8 @@ mod tests {
     fn e2e() {
         let node = Node {
             uid: String::from("c"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
@@ -641,6 +604,8 @@ mod tests {
                 String::from("1"),
                 Node {
                     uid: String::from("1"),
+                    output_artifacts: Vec::new(),
+                    output_used: false,
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::Running(String::from("1234")),
@@ -658,6 +623,8 @@ mod tests {
                 String::from("2"),
                 Node {
                     uid: String::from("2"),
+                    output_artifacts: Vec::new(),
+                    output_used: false,
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::ReadyForSubmission,
@@ -684,6 +651,8 @@ mod tests {
     fn max_concurrency_reached() {
         let node = Node {
             uid: String::from("c"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::TaskNode {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
@@ -704,6 +673,8 @@ mod tests {
 
         let parent = Node {
             uid: String::from("p"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),

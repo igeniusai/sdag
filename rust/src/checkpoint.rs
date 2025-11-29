@@ -65,6 +65,8 @@ mod tests {
             String::from("0"),
             Node {
                 uid: String::from("0"),
+                output_artifacts: Vec::new(),
+                output_used: false,
                 parents: Vec::new(),
                 children: Vec::new(),
                 status: JobStatus::Running(String::from("1234")),
@@ -104,6 +106,8 @@ mod tests {
             String::from("0"),
             Node {
                 uid: String::from("0"),
+                output_artifacts: Vec::new(),
+                output_used: false,
                 parents: Vec::new(),
                 children: Vec::new(),
                 status: JobStatus::Running(String::from("1234")),

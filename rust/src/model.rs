@@ -98,6 +98,8 @@ pub enum ParentType {
         key: String,
         /// Artifact name.
         name: String,
+        /// Artifact path
+        path: PathBuf,
     },
     /// Node takes the parent output as input.
     Output { key: String },
@@ -162,6 +164,10 @@ pub enum NodeBehavior {
 pub struct Node {
     // Node unique id.
     pub uid: String,
+    // Output used by other nodes.
+    pub output_used: bool,
+    // Output artifacts.
+    pub output_artifacts: Vec<Artifact>,
     // Node type.
     pub behavior: NodeBehavior,
     /// Node status.
@@ -231,6 +237,8 @@ mod tests {
     fn get_status_for_child() {
         let n = Node {
             uid: String::from("p"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
@@ -250,6 +258,8 @@ mod tests {
     fn get_if_true_status_for_child() {
         let n = Node {
             uid: String::from("p"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::IfNode,
             status: JobStatus::Completed(NodeResult::If(true)),
             parents: Vec::new(),
@@ -267,6 +277,8 @@ mod tests {
     fn get_if_false_status_for_child() {
         let n = Node {
             uid: String::from("p"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::IfNode,
             status: JobStatus::Completed(NodeResult::If(true)),
             parents: Vec::new(),
@@ -281,6 +293,8 @@ mod tests {
     fn get_if_failed_status_for_child() {
         let n = Node {
             uid: String::from("p"),
+            output_artifacts: Vec::new(),
+            output_used: false,
             behavior: NodeBehavior::IfNode,
             status: JobStatus::Failed,
             parents: Vec::new(),
@@ -296,6 +310,8 @@ mod tests {
             String::from("0"),
             Node {
                 uid: String::from("0"),
+                output_artifacts: Vec::new(),
+                output_used: false,
                 parents: Vec::new(),
                 children: Vec::new(),
                 status: JobStatus::Running(String::from("1234")),

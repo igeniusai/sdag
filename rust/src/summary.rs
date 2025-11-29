@@ -3,8 +3,8 @@
 use crate::model::{Node, NodeBehavior};
 use std::collections::HashMap;
 use tabled::{
-    settings::{object::Columns, Alignment, Style},
     Table, Tabled,
+    settings::{Alignment, Style, object::Columns},
 };
 
 use crate::model::JobStatus;
@@ -56,6 +56,8 @@ mod tests {
                 String::from("n1"),
                 Node {
                     uid: String::from("n1"),
+                    output_used: false,
+                    output_artifacts: Vec::new(),
                     behavior: NodeBehavior::TaskNode {
                         fname: String::from("stage1"),
                         caching: false,
@@ -73,6 +75,8 @@ mod tests {
                 String::from("n2"),
                 Node {
                     uid: String::from("n2"),
+                    output_used: false,
+                    output_artifacts: Vec::new(),
                     behavior: NodeBehavior::TaskNode {
                         fname: String::from("stage2"),
                         caching: false,
