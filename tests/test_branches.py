@@ -4,7 +4,13 @@ import pytest
 
 from sdag import SDAG
 from sdag.exceptions import SDAGError
-from sdag.models import BranchType, IfNode, LogicalType, Parent, TaskNode
+from sdag.models import (
+    BranchType,
+    IfNode,
+    OutputType,
+    Parent,
+    TaskNode,
+)
 
 
 def test_elif_without_if() -> None:
@@ -141,7 +147,9 @@ def test_if() -> None:
     assert isinstance(ifnode.behavior, IfNode)
     assert isinstance(cond.behavior, TaskNode)
 
-    assert ifnode.parents == [Parent(uid=cond.uid, parent_type=LogicalType())]
+    assert ifnode.parents == [
+        Parent(uid=cond.uid, parent_type=OutputType(key="expr"))
+    ]
     assert func.parents == [
         Parent(uid=ifnode.uid, parent_type=BranchType(branch=True))
     ]
@@ -223,13 +231,13 @@ def test_if_elif_else() -> None:
 
     assert condif.parents
     assert nodeif.parents == [
-        Parent(uid=condif.uid, parent_type=LogicalType())
+        Parent(uid=condif.uid, parent_type=OutputType(key="expr"))
     ]
     assert condelif.parents == [
         Parent(uid=nodeif.uid, parent_type=BranchType(branch=False))
     ]
     assert nodeelif.parents == [
-        Parent(uid=condelif.uid, parent_type=LogicalType())
+        Parent(uid=condelif.uid, parent_type=OutputType(key="expr"))
     ]
     assert taskelif.parents == [
         Parent(uid=nodeelif.uid, parent_type=BranchType(branch=True))

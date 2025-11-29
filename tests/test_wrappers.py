@@ -14,6 +14,7 @@ from sdag.models import (
     InputKwarg,
     LogicalType,
     Node,
+    OneOfNode,
     OutputType,
     Parent,
     RootNode,
@@ -151,8 +152,9 @@ class TestTask:
             get_uid=sdag.get_uid,
         )
 
+        artifact_path = "/path/to/artifact"
         parent = Node(uid="1", behavior=RootNode())
-        parent.register_artifact("artifact")
+        parent.register_artifact("artifact", path=Path(artifact_path))
         node = task(a=parent.artifacts["artifact"], b="/path/to/artifact")
 
         assert node.uid == "0"
@@ -165,7 +167,10 @@ class TestTask:
         ]
         assert node.parents == [
             Parent(
-                uid="1", parent_type=ArtifactType(key="a", name="artifact")
+                uid="1",
+                parent_type=ArtifactType(
+                    key="a", name="artifact", path=Path(artifact_path)
+                ),
             ),
         ]
 
@@ -251,3 +256,80 @@ class TestPipeline:
         )
         graph = pipeline.compile({"a": 3})
         assert isinstance(graph, Graph)
+
+    def test_bubbles_up_oneof(self) -> None:
+        graph = Graph(
+            meta=GraphMetadata(name="graph"),
+            nodes=[
+                Node(
+                    uid="0",
+                    parents=[Parent(uid="1", parent_type=LogicalType())],
+                    behavior=OneOfNode(),
+                ),
+                Node(
+                    uid="1",
+                    behavior=TaskNode(
+                        fname="fname",
+                        launch_script=Path("submit.sh"),
+                        caching=True,
+                        retries=0,
+                    ),
+                ),
+            ],
+        )
+
+        def func() -> None:
+            """Test the pipeline call."""
+
+        sdag = MockSDAG()
+        pipeline = Pipeline(
+            fn=func, set_dag=sdag.set_dag, get_graph=sdag.get_graph
+        )
+        pipeline._bubbles_up_oneof(uids={"0"}, graph=graph)
+        for node in graph.nodes:
+            assert node.output_used
+
+    def test_mark_nodes_requiring_output(self) -> None:
+        graph = Graph(
+            meta=GraphMetadata(name="graph"),
+            nodes=[
+                Node(
+                    uid="0",
+                    parents=[Parent(uid="1", parent_type=LogicalType())],
+                    behavior=OneOfNode(),
+                ),
+                Node(
+                    uid="1",
+                    behavior=TaskNode(
+                        fname="fname",
+                        launch_script=Path("submit.sh"),
+                        caching=True,
+                        retries=0,
+                    ),
+                ),
+                Node(
+                    uid="2",
+                    parents=[Parent(uid="0", parent_type=OutputType(key="a"))],
+                    behavior=TaskNode(
+                        fname="fname",
+                        launch_script=Path("submit.sh"),
+                        caching=True,
+                        retries=0,
+                    ),
+                ),
+            ],
+        )
+
+        def func() -> None:
+            """Test the pipeline call."""
+
+        sdag = MockSDAG()
+        pipeline = Pipeline(
+            fn=func, set_dag=sdag.set_dag, get_graph=sdag.get_graph
+        )
+        pipeline._mark_nodes_requiring_output(graph)
+        nodemap = {node.uid: node for node in graph.nodes}
+
+        assert nodemap["0"].output_used
+        assert nodemap["1"].output_used
+        assert not nodemap["2"].output_used

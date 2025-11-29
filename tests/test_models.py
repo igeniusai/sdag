@@ -7,6 +7,7 @@ import pytest
 
 from sdag.exceptions import EndNotFoundError, RootNotFoundError
 from sdag.models import (
+    Artifact,
     ArtifactType,
     BranchType,
     EndNode,
@@ -39,10 +40,14 @@ class TestNode:
         Args:
             node (Node[RootNode]): Node.
         """
-        node.register_artifact(key="artifact")
+        node.register_artifact(key="artifact", path=Path())
         artifacts = node.artifacts
         assert artifacts["artifact"].key == "artifact"
+        assert artifacts["artifact"].path == Path()
         assert artifacts["artifact"].node is node
+        assert node.output_artifacts == [
+            Artifact(name="artifact", path=Path())
+        ]
 
     def test_add_logical_edge(self, node: Node[RootNode]) -> None:
         """Test logical edge addition.
@@ -70,10 +75,15 @@ class TestNode:
         Args:
             node (Node[RootNode]): Node.
         """
-        node.add_artifact_edge(parent_uid="1", key="key", name="artifact")
+        node.add_artifact_edge(
+            parent_uid="1", key="key", name="artifact", path=Path()
+        )
         assert node.parents == [
             Parent(
-                uid="1", parent_type=ArtifactType(key="key", name="artifact")
+                uid="1",
+                parent_type=ArtifactType(
+                    key="key", name="artifact", path=Path()
+                ),
             )
         ]
 

@@ -19,6 +19,7 @@ from sdag.models import (
     IfNode,
     LogicalType,
     Node,
+    OutputType,
     Parent,
     RootNode,
     TaskNode,
@@ -483,7 +484,7 @@ class TestSDAG:
         assert sdag.current is not None
         assert sdag.current.graph.nodes == [wrapper.node]
         assert wrapper.node.parents == [
-            Parent(uid="1", parent_type=LogicalType())
+            Parent(uid="1", parent_type=OutputType(key="expr"))
         ]
 
     def test_if_without_dag(self, sdag: SDAG) -> None:
