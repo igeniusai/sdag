@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+from pytest_mock import MockerFixture
 
 from sdag.models import (
     Artifact,
@@ -258,6 +259,7 @@ class TestPipeline:
         assert isinstance(graph, Graph)
 
     def test_bubbles_up_oneof(self) -> None:
+        """Test marking nodes requiring output through OneOf nodes."""
         graph = Graph(
             meta=GraphMetadata(name="graph"),
             nodes=[
@@ -290,6 +292,7 @@ class TestPipeline:
             assert node.output_used
 
     def test_mark_nodes_requiring_output(self) -> None:
+        """Test marking nodes requiring output."""
         graph = Graph(
             meta=GraphMetadata(name="graph"),
             nodes=[
@@ -333,3 +336,39 @@ class TestPipeline:
         assert nodemap["0"].output_used
         assert nodemap["1"].output_used
         assert not nodemap["2"].output_used
+
+    def test_call_with_input(self, mocker: MockerFixture) -> None:
+        """Test the pipeline call with input arguments.
+
+        Args:
+            mocker (MockerFixture): Mocker fixture.
+        """
+
+        def func(a: str) -> None:
+            """Mocked pipeline function with input argument."""
+
+        sdag = MockSDAG()
+        parent_node = Node(uid="0", behavior=RootNode())
+        pipeline = Pipeline(
+            fn=func, set_dag=sdag.set_dag, get_graph=sdag.get_graph
+        )
+
+        spy = mocker.spy(pipeline, "fn")
+        pipeline(parent_node, a="test")
+        spy.assert_called_once_with(a="test")
+
+    def test_call_with_output(self) -> None:
+        """Test a pipeline not returning the end node."""
+
+        sdag = MockSDAG()
+
+        def func() -> Node[RootNode]:
+            """Mocked pipeline returning a node."""
+            return Node(uid="0", behavior=RootNode())
+
+        pipeline = Pipeline(
+            fn=func, set_dag=sdag.set_dag, get_graph=sdag.get_graph
+        )
+
+        output = pipeline()
+        assert isinstance(output, Node)
