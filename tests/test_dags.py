@@ -552,10 +552,8 @@ class TestSDAG:
         @sdag.pipeline
         def pipeline(): ...
 
-        json_path = tmp_path / "pipeline.json"
-        sdag.compile(pipeline, json_path)
-
-        with json_path.open() as f:
+        sdag.compile(pipeline, tmp_path)
+        with (tmp_path / "pipeline.json").open() as f:
             data = json.load(f)
 
         graph = Graph.model_validate(data)
