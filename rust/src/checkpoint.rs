@@ -48,11 +48,12 @@ mod tests {
 
     #[test]
     fn save_and_load_checkpoint() {
-        let pipeline_dir = get_tmp_dir().join("pipeline");
-        let task_dir = pipeline_dir.join("0");
+        let home_dir = get_tmp_dir();
+        let pipeline_name = "pipeline";
+        let task_dir = home_dir.join(pipeline_name).join("0");
         fs::create_dir_all(&task_dir).unwrap();
 
-        let state = LocalDirState::new(pipeline_dir);
+        let state = LocalDirState::new(&home_dir, pipeline_name);
         let checkpointer = Checkpointer {
             meta: DAGMetadata {
                 name: String::from("pipeline"),
@@ -92,8 +93,9 @@ mod tests {
     #[test]
     #[should_panic]
     fn fail_checkpoint_save() {
-        let pipeline_dir = get_tmp_dir().join("pipeline");
-        let state = LocalDirState::new(pipeline_dir);
+        let home_dir = get_tmp_dir();
+        let pipeline_name = "pipeline";
+        let state = LocalDirState::new(&home_dir, pipeline_name);
         let checkpointer = Checkpointer {
             meta: DAGMetadata {
                 name: String::from("pipeline"),
@@ -129,8 +131,9 @@ mod tests {
     #[test]
     #[should_panic]
     fn fail_checkpoint_read() {
-        let pipeline_dir = get_tmp_dir().join("pipeline");
-        let state = LocalDirState::new(pipeline_dir);
+        let home_dir = get_tmp_dir();
+        let pipeline_name = "pipeline";
+        let state = LocalDirState::new(&home_dir, pipeline_name);
         let checkpointer = Checkpointer {
             meta: DAGMetadata {
                 name: String::from("pipeline"),

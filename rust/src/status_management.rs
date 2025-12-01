@@ -2,6 +2,7 @@
 
 use crate::backend::{Backend, SlurmBackend};
 use crate::model::{JobStatus, Node, NodeBehavior};
+use crate::state::StateManager;
 use log;
 use std::collections::HashMap;
 
@@ -32,8 +33,13 @@ fn schedule_retries(nodemap: &mut HashMap<String, Node>) {
 }
 
 /// Update the status based on the backend output.
-pub fn update_status(uid: &str, nodemap: &mut HashMap<String, Node>, backend: &SlurmBackend) {
-    backend.update_status(nodemap);
+pub fn update_status(
+    uid: &str,
+    nodemap: &mut HashMap<String, Node>,
+    backend: &SlurmBackend,
+    state: &impl StateManager,
+) {
+    backend.update_status(nodemap, state);
     schedule_retries(nodemap);
 
     let mut updated_statuses: HashMap<String, JobStatus> = HashMap::new();
@@ -185,6 +191,7 @@ mod tests {
 
     use super::*;
     use crate::model::{NodeResult, Parent, ParentType};
+    use crate::state::{LocalDirState, tests::get_tmp_dir};
 
     /// Verify the correct OneOf status update.
     macro_rules! oneof_tests {
@@ -506,8 +513,10 @@ mod tests {
             },
         );
 
+        let home_dir = get_tmp_dir();
         let backend = SlurmBackend;
-        update_status("p", &mut nodemap, &backend);
+        let state = LocalDirState::new(&home_dir, "pipeline");
+        update_status("p", &mut nodemap, &backend, &state);
 
         let child = nodemap.get("c").unwrap();
         assert!(matches!(child.status, JobStatus::ReadyForSubmission))

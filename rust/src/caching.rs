@@ -17,6 +17,18 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::io;
 
+pub fn replace_cache<T: StateManager>(node: &Node, state: &T) {
+    if let JobStatus::Completed(NodeResult::Task(_)) = node.status
+        && let NodeBehavior::TaskNode { caching, fname, .. } = &node.behavior
+        && *caching
+    {
+        state
+            .cache_task(fname, &node.uid)
+            .map_err(|e| log::error!("Failed to save cache for task '{fname}': {e}"))
+            .ok();
+    }
+}
+
 /// Read the input data
 pub fn read_input_and_cache_tasks<T: StateManager>(nodemap: &mut HashMap<String, Node>, state: &T) {
     let caching_res: HashMap<String, Result<bool, Box<dyn Error>>> = nodemap
@@ -75,32 +87,35 @@ fn check_task_caching<T: StateManager>(
     input_kwargs: &Vec<InputKwarg>,
     state: &T,
 ) -> Result<bool, Box<dyn Error>> {
-    if !*caching {
-        let input = read_input_data(node, input_kwargs, state)?;
+    let input = read_input_data(node, input_kwargs, state)?;
+    if !*caching || !output_exists(&node.uid, state) {
         return treat_as_uncached(&node.uid, &input, state);
     }
 
-    if node.output_used {
-        let input = read_input_data(node, input_kwargs, state)?;
-        match read_cached_input_data(&node.uid, state) {
-            Err(_) => {
+    match read_cached_input_data(&node.uid, state) {
+        Err(_) => {
+            return treat_as_uncached(&node.uid, &input, state);
+        }
+        Ok(cached) => {
+            if cached != input {
                 return treat_as_uncached(&node.uid, &input, state);
-            }
-            Ok(cached) => {
-                if cached != input {
-                    return treat_as_uncached(&node.uid, &input, state);
-                }
             }
         }
     }
 
     for artifact in &node.output_artifacts {
         if !artifact.path.exists() {
-            let input = read_input_data(node, input_kwargs, state)?;
             return treat_as_uncached(&node.uid, &input, state);
         }
     }
     Ok(true)
+}
+
+fn output_exists<T: StateManager>(uid: &str, state: &T) -> bool {
+    match state.read_output(uid) {
+        Err(_) => false,
+        Ok(_) => true,
+    }
 }
 
 /// Uncache task
@@ -183,6 +198,7 @@ mod tests {
     use crate::model::{
         Artifact, DAG, InputKwarg, JobStatus, Node, NodeBehavior, Parent, ParentType,
     };
+    use crate::state::{LocalDirState, tests::get_tmp_dir};
     use std::{env, fs, path::PathBuf};
 
     /// Mocked state for testing purposes
@@ -234,6 +250,47 @@ mod tests {
         fn validate_checkpoint(&self, _dag: &DAG<Node>) -> Result<(), String> {
             Ok(())
         }
+        fn cache_task(&self, _fname: &str, _uid: &str) -> io::Result<u64> {
+            Ok(1)
+        }
+    }
+
+    #[test]
+    fn test_replace_cache() {
+        let node = Node {
+            uid: String::from("1"),
+            output_used: false,
+            output_artifacts: Vec::new(),
+            parents: Vec::new(),
+            children: Vec::new(),
+            status: JobStatus::Completed(NodeResult::Task("1234".to_string())),
+            behavior: NodeBehavior::TaskNode {
+                fname: String::from("fname"),
+                caching: true,
+                try_num: 0,
+                retries: 0,
+                launch_script: String::from("submit.sh"),
+                input_kwargs: Vec::new(),
+            },
+        };
+
+        let home_dir = get_tmp_dir();
+        let pipeline_name = "pipeline";
+        let state = LocalDirState::new(&home_dir, pipeline_name);
+        let uid = "1";
+        let res_path = home_dir.join(pipeline_name).join(uid);
+        let cache_path = home_dir.join(".cache").join("fname");
+
+        fs::create_dir_all(&res_path).unwrap();
+        fs::create_dir_all(&cache_path).unwrap();
+        fs::write(res_path.join("input.json"), "hello").unwrap();
+        fs::write(res_path.join("output.json"), "hello").unwrap();
+        fs::write(res_path.join("meta.json"), "hello").unwrap();
+
+        replace_cache(&node, &state);
+        assert!(cache_path.join("input.json").exists());
+        assert!(cache_path.join("output.json").exists());
+        assert!(cache_path.join("meta.json").exists());
     }
 
     /// Test the parent output retrieval.

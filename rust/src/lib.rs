@@ -53,7 +53,7 @@ fn sscheduler_start(argv: Vec<String>) {
         .map_err(|e| log::error!("Failed to read DAG: {e}"))
         .unwrap();
 
-    let state = LocalDirState::new(home_dir.join(&dag.meta.name));
+    let state = LocalDirState::new(&home_dir, &dag.meta.name);
     log::info!("Working directory: '{:?}'", state.get_pipeline_dir());
 
     let checkpointer = Checkpointer {

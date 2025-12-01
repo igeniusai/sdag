@@ -46,7 +46,7 @@ impl<T: StateManager> Scheduler<T> {
         log::debug!("Starting scheduling loop");
 
         loop {
-            status_management::update_status(&root_id, &mut nodemap, &self.backend);
+            status_management::update_status(&root_id, &mut nodemap, &self.backend, &self.state);
             submitter.submit(&mut nodemap);
 
             let res = self.checkpointer.save_checkpoint(&nodemap, &self.state);

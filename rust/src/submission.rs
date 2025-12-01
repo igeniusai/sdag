@@ -184,7 +184,7 @@ mod tests {
     /// Mocked backend for testing purposes.
     struct MockBackend;
     impl Backend for MockBackend {
-        fn update_status(&self, _nodemap: &mut HashMap<String, Node>) {}
+        fn update_status(&self, _nodemap: &mut HashMap<String, Node>, _state: &impl StateManager) {}
         fn submit(
             &self,
             _launch_script: &str,
@@ -240,6 +240,10 @@ mod tests {
 
         fn validate_checkpoint(&self, _dag: &DAG<Node>) -> Result<(), String> {
             Ok(())
+        }
+
+        fn cache_task(&self, _fname: &str, _uid: &str) -> io::Result<u64> {
+            Ok(1)
         }
     }
 

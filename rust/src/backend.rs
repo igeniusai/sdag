@@ -2,7 +2,9 @@
 //!
 //! The backend executes jobs and polls the status.
 
+use crate::caching;
 use crate::model::{JobStatus, Node, NodeResult};
+use crate::state::StateManager;
 use log;
 use regex::Regex;
 use std::collections::HashMap;
@@ -13,7 +15,7 @@ use std::process::{Command, Output};
 
 /// Backend trait.
 pub trait Backend {
-    fn update_status(&self, nodemap: &mut HashMap<String, Node>);
+    fn update_status(&self, nodemap: &mut HashMap<String, Node>, state: &impl StateManager);
     fn submit(
         &self,
         launch_script: &str,
@@ -129,13 +131,14 @@ impl SlurmBackend {
 }
 
 impl Backend for SlurmBackend {
-    fn update_status(&self, nodemap: &mut HashMap<String, Node>) {
+    fn update_status(&self, nodemap: &mut HashMap<String, Node>, state: &impl StateManager) {
         let job_map = self.get_running_job_ids(nodemap);
         let slurm_output = self.check_job_status(&job_map);
         let status_map = self.get_status_map(slurm_output, &job_map);
 
         for (uid, status) in status_map {
             let node = nodemap.get_mut(uid).unwrap();
+            caching::replace_cache(node, state);
             node.status = status;
         }
     }
