@@ -284,17 +284,18 @@ class SDAG:
     def compile(
         self,
         pipeline: Pipeline,
-        path: str | Path | None = None,
+        dst_dir: str | Path | None = None,
+        name: str | None = None,
         input_kwargs: dict[str, Any] | None = None,
     ) -> None:
         """Compile the pipeline to a JSON file.
 
         Args:
             pipeline (Pipeline): Pipeline to be compiled.
-            path (str | Path | None, optional): Destination directory.
-                If none, it will be equal to the current one. The file
-                name will be equal to the pipeline function name.
-                Defaults to None.
+            dst_dir (str | Path | None, optional): Destination
+                directory. If none, it will be equal to the current one.
+            name (str): File name. If None, it will be equal to the
+                pipeline function name. Defaults to None.
             input_kwargs (dict[str, Any] | None): Pipeline static input
                 arguments. Defaults to None.
         """
@@ -302,9 +303,11 @@ class SDAG:
         graph = pipeline.compile(input_kwargs)
         graph_json = graph.model_dump_json(indent=4, warnings="none")
 
-        dst_dir = Path(path) if path is not None else Path().resolve()
-        dst = dst_dir / f"{pipeline.fn.__name__}.json"
-        with dst.open("w") as f:
+        dst_dir = Path(dst_dir) if dst_dir is not None else Path()
+        fname = name if name is not None else pipeline.fn.__name__
+        path = (dst_dir / fname).with_suffix(".json")
+
+        with path.open("w") as f:
             f.write(graph_json)
 
     def get_graph(self) -> Graph:
