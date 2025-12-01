@@ -18,10 +18,12 @@ use std::error::Error;
 use std::io;
 
 pub fn replace_cache<T: StateManager>(node: &Node, state: &T) {
+    log::debug!("Checking task '{}' cache", node.uid);
     if let JobStatus::Completed(NodeResult::Task(_)) = node.status
         && let NodeBehavior::TaskNode { caching, fname, .. } = &node.behavior
         && *caching
     {
+        log::info!("Saving task '{fname}' cache");
         state
             .cache_task(fname, &node.uid)
             .map_err(|e| log::error!("Failed to save cache for task '{fname}': {e}"))
