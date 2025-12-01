@@ -138,8 +138,8 @@ impl Backend for SlurmBackend {
 
         for (uid, status) in status_map {
             let node = nodemap.get_mut(uid).unwrap();
-            caching::replace_cache(node, state);
             node.status = status;
+            caching::replace_cache(node, state);
         }
     }
 
