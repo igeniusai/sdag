@@ -9,7 +9,7 @@ from sdag.dags import SDAG
 from sdag.models import Artifact
 from sdag.sdag import sdag
 
-__all__ = ["SDAG", "Artifact", "__version__", "sdag"]
+__all__ = ["SDAG", "Artifact", "__version__", "sdag", "sscheduler"]
 
 
 def run_scheduler():
