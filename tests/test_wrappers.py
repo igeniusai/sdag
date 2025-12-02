@@ -1,10 +1,14 @@
 """Wrapper tests."""
 
+import inspect
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 from pytest_mock import MockerFixture
 
+from sdag.exceptions import KwargNotFoundError
 from sdag.models import (
     Artifact,
     ArtifactType,
@@ -108,6 +112,125 @@ class TestTask:
 
     def mock_stage_artifact(self, a: Artifact, b: str) -> None:
         """Mocked stage function with artifacts."""
+
+    def test_add_default_values(self) -> None:
+        """Test the default value addition."""
+        sdag = MockSDAG()
+        task = Task(
+            fn=self.mock_stage,
+            caching=True,
+            retries=2,
+            launch_script=Path(),
+            register=sdag.register,
+            get_uid=sdag.get_uid,
+        )
+
+        def fn(a: str, b: int = 5, c: str = "c") -> None:
+            """Mocked function with default values."""
+
+        sig = inspect.signature(fn)
+        kwargs = {"a": "a", "c": "custom_c"}
+        task._add_default_values(sig, kwargs)
+
+        assert kwargs == {"a": "a", "b": 5, "c": "custom_c"}
+
+    @pytest.mark.parametrize(
+        argnames=("fn", "kwargs"),
+        argvalues=[
+            (lambda a: ..., {}),  # noqa: ARG005
+            (lambda: ..., {"a": 1}),
+            (lambda a, **kw: ..., {}),  # noqa: ARG005
+        ],
+    )
+    def test_fail_kwargs_validation(
+        self, fn: Callable[..., None], kwargs: dict[str, Any]
+    ) -> None:
+        """kwarg validation must fail.
+
+        Args:
+            fn (Callable[..., None]): Task function.
+            kwargs (dict[str, Any]): Input kwargs.
+        """
+        sdag = MockSDAG()
+        task = Task(
+            fn=self.mock_stage,
+            caching=True,
+            retries=2,
+            launch_script=Path(),
+            register=sdag.register,
+            get_uid=sdag.get_uid,
+        )
+
+        sig = inspect.signature(fn)
+        with pytest.raises(KwargNotFoundError):
+            task._validate_kwargs(sig, kwargs)
+
+    @pytest.mark.parametrize(
+        argnames=("fn", "kwargs"),
+        argvalues=[
+            (lambda: ..., {}),
+            (lambda a: ..., {"a": 1}),  # noqa: ARG005
+            (lambda **kw: ..., {"a": 1}),  # noqa: ARG005
+            (lambda a=1, **kw: ..., {"a": 1}),  # noqa: ARG005
+            (lambda a=1, **kw: ..., {"a": 1, "b": 2}),  # noqa: ARG005
+        ],
+    )
+    def test_succeed_kwargs_validation(
+        self, fn: Callable[..., None], kwargs: dict[str, Any]
+    ) -> None:
+        """kwarg validation must fail.
+
+        Args:
+            fn (Callable[..., None]): Task function.
+            kwargs (dict[str, Any]): Input kwargs.
+        """
+        sdag = MockSDAG()
+        task = Task(
+            fn=self.mock_stage,
+            caching=True,
+            retries=2,
+            launch_script=Path(),
+            register=sdag.register,
+            get_uid=sdag.get_uid,
+        )
+
+        sig = inspect.signature(fn)
+        task._validate_kwargs(sig, kwargs)
+
+    def test_add_kwargs(self) -> None:
+        """Test the complete kwarg addition."""
+
+        def fn(a: str, b: Artifact, **kw: Any) -> None:
+            """Mocked task function."""
+
+        sdag = MockSDAG()
+        task = Task(
+            fn=fn,
+            caching=True,
+            retries=2,
+            launch_script=Path(),
+            register=sdag.register,
+            get_uid=sdag.get_uid,
+        )
+
+        kwargs = {"a": "a", "b": "/path", "custom_kw": 10}
+        node = Node(
+            uid="0",
+            behavior=TaskNode(
+                fname="fn", caching=True, retries=2, launch_script=Path()
+            ),
+        )
+        task._add_kwargs(node, kwargs)
+
+        assert node.behavior.input_kwargs == [
+            InputKwarg(key="a", value="a"),
+            InputKwarg(key="b", value="/path"),
+            InputKwarg(key="custom_kw", value=10),
+        ]
+
+        assert node.output_artifacts == [
+            Artifact(name="b", path=Path("/path"))
+        ]
 
     def test_call(self) -> None:
         """Test the task call."""
