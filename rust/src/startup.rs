@@ -37,16 +37,17 @@ pub fn read_dag(path: &PathBuf) -> io::Result<DAG<Node>> {
 
 /// Find the home directory.
 pub fn find_home_dir() -> Result<PathBuf, String> {
-    match env::var("SDAG_HOME") {
-        Ok(val) => Ok(PathBuf::from(val)),
+    let path = match env::var("SDAG_HOME") {
+        Ok(val) => PathBuf::from(val),
         Err(_) => {
             let path = env::home_dir().ok_or(String::from(
                 "Failed to identify a home directory. Please Set the \
             'SDAG_HOME' environment variable.",
             ))?;
-            Ok(path.join(".sdag"))
+            path
         }
-    }
+    };
+    Ok(path.join(".sdag"))
 }
 
 /// Configure logging.
@@ -77,7 +78,7 @@ mod tests {
             env::set_var("SDAG_HOME", path);
         }
         let home_dir = find_home_dir().unwrap();
-        assert_eq!(home_dir, PathBuf::from(path));
+        assert_eq!(home_dir, PathBuf::from(path).join(".sdag"));
     }
 
     /// The DAG is correctly parsed.
