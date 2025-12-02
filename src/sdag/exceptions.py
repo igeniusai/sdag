@@ -125,22 +125,3 @@ class IncorrectElifError(SDAGError):
         """Raise the exception."""
         msg = "Elif statement incorrectly used."
         super().__init__(msg)
-
-
-class BadInputError(SDAGError):
-    """Input data does not match the task signature."""
-
-    def __init__(self, uid: str, key: str, fname: str):
-        """Raise the exeption.
-
-        Args:
-            uid (str): Node uid.
-            key (str): Key not found in the function signature.
-            fname (str): Function name.
-        """
-        msg = (
-            f"Task '{uid}': Input value '{key}' not"
-            f" found in function {fname} signature"
-        )
-
-        super().__init__(msg)

@@ -7,7 +7,11 @@ from typing import Any
 
 import pytest
 
-from sdag.exceptions import BadInputError, NodeNotFoundError, NotATaskError
+from sdag.exceptions import (
+    KwargNotFoundError,
+    NodeNotFoundError,
+    NotATaskError,
+)
 from sdag.io import IOManager
 from sdag.models import Graph
 
@@ -216,5 +220,27 @@ class TestIOManager:
         with (path / io_manager._input_fname).open("w") as f:
             json.dump(input_data, f)
 
-        with pytest.raises(BadInputError):
+        with pytest.raises(KwargNotFoundError):
             io_manager.get_input(fn=foo)
+
+    def test_input_kwargs(self, io_manager: IOManager) -> None:
+        """Test the input kwargs.
+
+        The input key is not in the function signature but the function
+        contains input kwargs, no error is thrown.
+
+        Args:
+            io_manager (IOManager): I/O manager.
+        """
+
+        def foo(**kwargs) -> None: ...
+
+        pipeline_dir = io_manager.settings.sdag_pipeline
+        uid = io_manager.settings.sdag_uid
+        path = pipeline_dir / uid
+        path.mkdir(parents=True, exist_ok=True)
+        input_data = {"a": True}
+        with (path / io_manager._input_fname).open("w") as f:
+            json.dump(input_data, f)
+
+        io_manager.get_input(fn=foo)

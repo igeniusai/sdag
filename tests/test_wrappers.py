@@ -25,7 +25,55 @@ from sdag.models import (
     RootNode,
     TaskNode,
 )
-from sdag.wrappers import IfWrapper, Pipeline, Task
+from sdag.wrappers import IfWrapper, Pipeline, Task, validate_kwargs
+
+
+class TestKwargValidation:
+    """Test the input kwarg validation."""
+
+    @pytest.mark.parametrize(
+        argnames=("fn", "kwargs"),
+        argvalues=[
+            (lambda a: ..., {}),  # noqa: ARG005
+            (lambda: ..., {"a": 1}),
+            (lambda a, **kw: ..., {}),  # noqa: ARG005
+        ],
+    )
+    def test_fail_kwargs_validation(
+        self, fn: Callable[..., None], kwargs: dict[str, Any]
+    ) -> None:
+        """kwarg validation must fail.
+
+        Args:
+            fn (Callable[..., None]): Task function.
+            kwargs (dict[str, Any]): Input kwargs.
+        """
+        sig = inspect.signature(fn)
+        with pytest.raises(KwargNotFoundError):
+            validate_kwargs(sig, kwargs)
+
+    @pytest.mark.parametrize(
+        argnames=("fn", "kwargs"),
+        argvalues=[
+            (lambda: ..., {}),
+            (lambda a: ..., {"a": 1}),  # noqa: ARG005
+            (lambda **kw: ..., {"a": 1}),  # noqa: ARG005
+            (lambda a=1, **kw: ..., {"a": 1}),  # noqa: ARG005
+            (lambda a=1, **kw: ..., {"a": 1, "b": 2}),  # noqa: ARG005
+        ],
+    )
+    def test_succeed_kwargs_validation(
+        self, fn: Callable[..., None], kwargs: dict[str, Any]
+    ) -> None:
+        """kwarg validation must fail.
+
+        Args:
+            fn (Callable[..., None]): Task function.
+            kwargs (dict[str, Any]): Input kwargs.
+        """
+
+        sig = inspect.signature(fn)
+        validate_kwargs(sig, kwargs)
 
 
 class MockSDAG:
@@ -133,69 +181,6 @@ class TestTask:
         task._add_default_values(sig, kwargs)
 
         assert kwargs == {"a": "a", "b": 5, "c": "custom_c"}
-
-    @pytest.mark.parametrize(
-        argnames=("fn", "kwargs"),
-        argvalues=[
-            (lambda a: ..., {}),  # noqa: ARG005
-            (lambda: ..., {"a": 1}),
-            (lambda a, **kw: ..., {}),  # noqa: ARG005
-        ],
-    )
-    def test_fail_kwargs_validation(
-        self, fn: Callable[..., None], kwargs: dict[str, Any]
-    ) -> None:
-        """kwarg validation must fail.
-
-        Args:
-            fn (Callable[..., None]): Task function.
-            kwargs (dict[str, Any]): Input kwargs.
-        """
-        sdag = MockSDAG()
-        task = Task(
-            fn=self.mock_stage,
-            caching=True,
-            retries=2,
-            launch_script=Path(),
-            register=sdag.register,
-            get_uid=sdag.get_uid,
-        )
-
-        sig = inspect.signature(fn)
-        with pytest.raises(KwargNotFoundError):
-            task._validate_kwargs(sig, kwargs)
-
-    @pytest.mark.parametrize(
-        argnames=("fn", "kwargs"),
-        argvalues=[
-            (lambda: ..., {}),
-            (lambda a: ..., {"a": 1}),  # noqa: ARG005
-            (lambda **kw: ..., {"a": 1}),  # noqa: ARG005
-            (lambda a=1, **kw: ..., {"a": 1}),  # noqa: ARG005
-            (lambda a=1, **kw: ..., {"a": 1, "b": 2}),  # noqa: ARG005
-        ],
-    )
-    def test_succeed_kwargs_validation(
-        self, fn: Callable[..., None], kwargs: dict[str, Any]
-    ) -> None:
-        """kwarg validation must fail.
-
-        Args:
-            fn (Callable[..., None]): Task function.
-            kwargs (dict[str, Any]): Input kwargs.
-        """
-        sdag = MockSDAG()
-        task = Task(
-            fn=self.mock_stage,
-            caching=True,
-            retries=2,
-            launch_script=Path(),
-            register=sdag.register,
-            get_uid=sdag.get_uid,
-        )
-
-        sig = inspect.signature(fn)
-        task._validate_kwargs(sig, kwargs)
 
     def test_add_kwargs(self) -> None:
         """Test the complete kwarg addition."""

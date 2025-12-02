@@ -1,5 +1,6 @@
 """Node I/O management."""
 
+import inspect
 import json
 from collections.abc import Callable
 from pathlib import Path
@@ -7,7 +8,7 @@ from typing import Any
 
 from pydantic_settings import BaseSettings
 
-from sdag.exceptions import BadInputError, NodeNotFoundError, NotATaskError
+from sdag.exceptions import NodeNotFoundError, NotATaskError
 from sdag.models import (
     Artifact,
     Graph,
@@ -15,6 +16,7 @@ from sdag.models import (
     TaskNode,
     TaskOutput,
 )
+from sdag.wrappers import validate_kwargs
 
 
 class Settings(BaseSettings):
@@ -134,17 +136,9 @@ class IOManager:
         Args:
             input_data (dict[str, Any]): Input data.
             fn (Callable): Task function associated to the data.
-
-        Raises:
-            BadInputError: One or more input values not found in
-                the function signature.
         """
-        argnames = fn.__code__.co_varnames
-        for key in input_data:
-            if key not in argnames:
-                raise BadInputError(
-                    uid=self.settings.sdag_uid, key=key, fname=fn.__name__
-                )
+        sig = inspect.signature(fn)
+        validate_kwargs(sig, input_data)
 
     def _read_dag(self) -> Graph:
         """Parse the compiled pipeline.

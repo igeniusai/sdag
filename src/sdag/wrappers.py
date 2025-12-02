@@ -23,6 +23,27 @@ from sdag.models import (
 )
 
 
+def validate_kwargs(sig: inspect.Signature, kwargs: dict[str, Any]) -> None:
+    """Validate kwarg consistency.
+
+    Args:
+        sig (inspect.Signature): Function signature.
+        kwargs (dict[str, Any]): Input kwargs.
+
+    Raises:
+        KwargNotFoundError: Keyword argument not found in
+            the input values.
+    """
+    any_var = any(p.kind == p.VAR_KEYWORD for p in sig.parameters.values())
+    for key in kwargs:
+        if key not in sig.parameters and not any_var:
+            raise KwargNotFoundError(key)
+
+    for key, param in sig.parameters.items():
+        if key not in kwargs and not param.kind == param.VAR_KEYWORD:
+            raise KwargNotFoundError(key)
+
+
 class Task:
     """Object returned by the task decorator.
 
@@ -104,7 +125,7 @@ class Task:
         """
         sig = inspect.signature(self.fn)
         self._add_default_values(sig, kwargs)
-        self._validate_kwargs(sig, kwargs)
+        validate_kwargs(sig, kwargs)
 
         for key, val in kwargs.items():
             param = sig.parameters.get(key)
@@ -125,28 +146,6 @@ class Task:
         for key, param in sig.parameters.items():
             if key not in kwargs and param.default is not param.empty:
                 kwargs[key] = param.default
-
-    def _validate_kwargs(
-        self, sig: inspect.Signature, kwargs: dict[str, Any]
-    ) -> None:
-        """Validate kwarg consistency.
-
-        Args:
-            sig (inspect.Signature): Function signature.
-            kwargs (dict[str, Any]): Input kwargs.
-
-        Raises:
-            KwargNotFoundError: Keyword argument not found in
-                the input values.
-        """
-        any_var = any(p.kind == p.VAR_KEYWORD for p in sig.parameters.values())
-        for key in kwargs:
-            if key not in sig.parameters and not any_var:
-                raise KwargNotFoundError(key)
-
-        for key, param in sig.parameters.items():
-            if key not in kwargs and not param.kind == param.VAR_KEYWORD:
-                raise KwargNotFoundError(key)
 
     def _set_output_artifact(
         self, node: Node[TaskNode], key: str, value: Any
