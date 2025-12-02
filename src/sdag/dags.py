@@ -268,11 +268,11 @@ class SDAG:
         self.uid += 1
         return str(uid)
 
-    def pipeline(self, fn: Callable[[], None]) -> Pipeline:
+    def pipeline(self, fn: Callable[..., Any]) -> Pipeline:
         """Pipeline decorator.
 
         Args:
-            fn (Callable[[], None]): User-defined pipeline function.
+            fn (Callable[..., Any]): User-defined pipeline function.
 
         Returns:
             Pipeline: Pipeline.
