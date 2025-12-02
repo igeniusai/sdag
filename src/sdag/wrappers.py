@@ -102,16 +102,51 @@ class Task:
             KwargNotFoundError: Keyword argument not found in
                 the input values.
         """
-        signature = inspect.signature(self.fn)
-        for key, param in signature.parameters.items():
-            if key not in kwargs and param.default is param.empty:
+        sig = inspect.signature(self.fn)
+        self._add_default_values(sig, kwargs)
+        self._validate_kwargs(sig, kwargs)
+
+        for key, val in kwargs.items():
+            param = sig.parameters.get(key)
+            if param is not None and param.annotation == Artifact:
+                self._set_output_artifact(node, key, val)
+
+            self._handle_input_kwarg(node, key, val)
+
+    def _add_default_values(
+        self, sig: inspect.Signature, kwargs: dict[str, Any]
+    ) -> None:
+        """Add default values to missing kwargs.
+
+        Args:
+            sig (inspect.Signature): Function signature.
+            kwargs (dict[str, Any]): Input kwargs.
+        """
+        for key, param in sig.parameters.items():
+            if key not in kwargs and param.default is not param.empty:
+                kwargs[key] = param.default
+
+    def _validate_kwargs(
+        self, sig: inspect.Signature, kwargs: dict[str, Any]
+    ) -> None:
+        """Validate kwarg consistency.
+
+        Args:
+            sig (inspect.Signature): Function signature.
+            kwargs (dict[str, Any]): Input kwargs.
+
+        Raises:
+            KwargNotFoundError: Keyword argument not found in
+                the input values.
+        """
+        any_var = any(p.kind == p.VAR_KEYWORD for p in sig.parameters.values())
+        for key in kwargs:
+            if key not in sig.parameters and not any_var:
                 raise KwargNotFoundError(key)
 
-            value = kwargs.get(key, param.default)
-            if param.annotation == Artifact:
-                self._set_output_artifact(node, key, value)
-
-            self._handle_input_kwarg(node, key, value)
+        for key, param in sig.parameters.items():
+            if key not in kwargs and not param.kind == param.VAR_KEYWORD:
+                raise KwargNotFoundError(key)
 
     def _set_output_artifact(
         self, node: Node[TaskNode], key: str, value: Any
