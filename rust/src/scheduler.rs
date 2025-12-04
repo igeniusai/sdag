@@ -8,7 +8,7 @@
 //! The scheduler panics if the nodemap cannot be build out
 //! of the DAG.
 
-use crate::backend::SlurmBackend;
+use crate::backend::Backend;
 use crate::checkpoint::Checkpointer;
 use crate::graph;
 use crate::model::{DAG, JobStatus, Node};
@@ -23,19 +23,19 @@ use std::time::Duration;
 
 /// Scheduler.
 #[derive(Debug, Clone)]
-pub struct Scheduler<T: StateManager> {
+pub struct Scheduler<T: StateManager, U: Backend> {
     /// Time between subsequent Slurm polls (s).
     pub poll_time: Duration,
     /// State management.
     pub state: T,
     /// Backend to submit and monitor jobs.
-    pub backend: SlurmBackend,
+    pub backend: U,
     /// Checkpoint mgmt
     pub checkpointer: Checkpointer,
     /// Maximum number of concurrent tasks.
     pub max_concurrency: usize,
 }
-impl<T: StateManager> Scheduler<T> {
+impl<T: StateManager, U: Backend> Scheduler<T, U> {
     /// Run the scheduler.
     pub fn run(&self, dag: DAG<Node>) {
         let (root_id, mut nodemap) = graph::build_nodemap(dag)

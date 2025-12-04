@@ -1,6 +1,6 @@
 //! Recursive status update and retry management.
 
-use crate::backend::{Backend, SlurmBackend};
+use crate::backend::Backend;
 use crate::model::{JobStatus, Node, NodeBehavior};
 use crate::state::StateManager;
 use log;
@@ -36,7 +36,7 @@ fn schedule_retries(nodemap: &mut HashMap<String, Node>) {
 pub fn update_status(
     uid: &str,
     nodemap: &mut HashMap<String, Node>,
-    backend: &SlurmBackend,
+    backend: &impl Backend,
     state: &impl StateManager,
 ) {
     backend.update_status(nodemap, state);
@@ -190,6 +190,7 @@ impl StatusSelector {
 mod tests {
 
     use super::*;
+    use crate::backend::SlurmBackend;
     use crate::model::{NodeResult, Parent, ParentType};
     use crate::state::{LocalDirState, tests::get_tmp_dir};
 

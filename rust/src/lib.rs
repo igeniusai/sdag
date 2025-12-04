@@ -4,7 +4,7 @@
 //! scheduler takes the JSON representation of the DAG as input and
 //! schedules task based on the graph structure.
 
-use crate::state::StateManager;
+use crate::{backend::get_backend, state::StateManager};
 use pyo3::prelude::*;
 pub mod backend;
 mod caching;
@@ -65,7 +65,7 @@ fn sscheduler_start(argv: Vec<String>) {
         .map_err(|e| log::error!("Failed to prepare DAG: {e}"))
         .unwrap();
 
-    let backend = backend::SlurmBackend;
+    let backend = get_backend(&args.local);
     let poll_time = time::Duration::from_secs(args.wait_seconds);
     let scheduler = Scheduler {
         poll_time,

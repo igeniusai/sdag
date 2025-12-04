@@ -39,6 +39,12 @@ pub struct CLI {
         help = "Restart a pipeline from the last checkpoint"
     )]
     pub restart: bool,
+    #[arg(
+        long,
+        action=ArgAction::SetTrue,
+        help = "Local executor, only runs the last line of the script."
+    )]
+    pub local: bool,
 }
 
 #[cfg(test)]
@@ -95,6 +101,14 @@ mod tests {
     fn parse_restart() {
         let iter = ["sscheduler", "--pipeline=pipeline.json", "--restart"].iter();
         let cli = CLI::try_parse_from(iter).unwrap();
-        assert_eq!(cli.restart, true);
+        assert!(cli.restart);
+    }
+
+    /// Check the restart flag is correctly parsed.
+    #[test]
+    fn parse_local() {
+        let iter = ["sscheduler", "--pipeline=pipeline.json", "--local"].iter();
+        let cli = CLI::try_parse_from(iter).unwrap();
+        assert!(cli.local);
     }
 }
