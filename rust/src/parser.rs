@@ -42,7 +42,7 @@ pub struct CLI {
     #[arg(
         long,
         action=ArgAction::SetTrue,
-        help = "Local executor, only runs the last line of the script."
+        help = "Submit jobs locally as blocking, child processes."
     )]
     pub local: bool,
 }

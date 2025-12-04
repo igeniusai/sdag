@@ -9,8 +9,7 @@ use log;
 use regex::Regex;
 use std::collections::HashMap;
 use std::error::Error;
-use std::fs;
-use std::io::{self, BufRead};
+use std::io;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 
@@ -222,16 +221,13 @@ impl Backend for LocalBackend {
         try_num: &u32,
     ) -> Result<String, Box<dyn Error>> {
         log::info!("Running task '{uid}' locally");
-        let line = self.read_last_line(launch_script)?;
-        log::debug!("Command: {line}");
 
         let try_num_str = try_num.to_string();
         let mut command = Command::new("bash")
             .env("SDAG_TRY_NUM", &try_num_str)
             .env("SDAG_PIPELINE", pipeline_dir)
             .env("SDAG_UID", uid)
-            .arg("-c")
-            .args(line.split(" "))
+            .arg(launch_script)
             .spawn()?;
 
         let pid = command.id();
@@ -254,32 +250,12 @@ impl Backend for LocalBackend {
     }
 }
 
-impl LocalBackend {
-    // Read the last line of the launch script
-    fn read_last_line(&self, launch_script: &str) -> Result<String, Box<dyn Error>> {
-        let file = fs::File::open(launch_script)?;
-        let reader = io::BufReader::new(file);
-        let mut last_line: Option<String> = None;
-
-        for line_result in reader.lines() {
-            let line = line_result?;
-            let line_trim = line.trim();
-            if !line_trim.is_empty() {
-                last_line = Some(line_trim.to_string());
-            }
-        }
-
-        match last_line {
-            None => Err(String::from("Non-empty lines not found.").into()),
-            Some(line) => Ok(line),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::model::NodeBehavior;
+    use crate::state::{LocalDirState, tests::get_tmp_dir};
+    use std::fs;
 
     #[test]
     fn get_running_job_id() {
@@ -481,81 +457,41 @@ mod tests {
         assert!(matches!(get_backend(&false), ProcessBackend::Slurm(_)))
     }
 
-    mod test_local_backend {
-        use super::*;
-        use crate::state::{LocalDirState, tests::get_tmp_dir};
+    #[test]
+    fn local_status_update() {
+        let mut nodemap = HashMap::from([(
+            String::from("1"),
+            Node {
+                uid: String::from("1"),
+                output_artifacts: Vec::new(),
+                output_used: false,
+                behavior: NodeBehavior::RootNode,
+                status: JobStatus::Running(String::from("job1")),
+                parents: Vec::new(),
+                children: Vec::new(),
+            },
+        )]);
 
-        #[test]
-        fn read_last_line() {
-            let tmp_dir = get_tmp_dir();
-            fs::create_dir_all(&tmp_dir).unwrap();
-            let path = tmp_dir.join("submit.sh");
-            let contents = "
+        let backend = LocalBackend;
+        let state = LocalDirState::new(&get_tmp_dir(), "pipeline");
+        backend.update_status(&mut nodemap, &state);
 
-            hello world
+        let node = nodemap.get("1").unwrap();
+        assert!(matches!(
+            node.status,
+            JobStatus::Completed(NodeResult::Task(_))
+        ))
+    }
 
-            ";
-            fs::write(&path, contents).unwrap();
-            let backend = LocalBackend;
-            let line = backend.read_last_line(path.to_str().unwrap()).unwrap();
-            assert_eq!(line, "hello world")
-        }
-
-        #[test]
-        #[should_panic]
-        fn read_last_line_missing_file() {
-            let backend = LocalBackend;
-            backend.read_last_line("/missing/file").unwrap();
-        }
-
-        #[test]
-        #[should_panic]
-        fn read_last_line_empty_file() {
-            let tmp_dir = get_tmp_dir();
-            fs::create_dir_all(&tmp_dir).unwrap();
-            let path = tmp_dir.join("submit.sh");
-            let contents = "    ";
-            fs::write(&path, contents).unwrap();
-            let backend = LocalBackend;
-            backend.read_last_line(path.to_str().unwrap()).unwrap();
-        }
-
-        #[test]
-        fn status_update() {
-            let mut nodemap = HashMap::from([(
-                String::from("1"),
-                Node {
-                    uid: String::from("1"),
-                    output_artifacts: Vec::new(),
-                    output_used: false,
-                    behavior: NodeBehavior::RootNode,
-                    status: JobStatus::Running(String::from("job1")),
-                    parents: Vec::new(),
-                    children: Vec::new(),
-                },
-            )]);
-
-            let backend = LocalBackend;
-            let state = LocalDirState::new(&get_tmp_dir(), "pipeline");
-            backend.update_status(&mut nodemap, &state);
-
-            let node = nodemap.get("1").unwrap();
-            assert!(matches!(
-                node.status,
-                JobStatus::Completed(NodeResult::Task(_))
-            ))
-        }
-
-        #[test]
-        fn test_submission() {
-            let tmp_dir = get_tmp_dir();
-            fs::create_dir_all(&tmp_dir).unwrap();
-            let path = tmp_dir.join("submit.sh");
-            let contents = "echo hello";
-            fs::write(&path, contents).unwrap();
-            let backend = LocalBackend;
-            let launch_script = path.to_str().unwrap();
-            backend.submit(launch_script, "1", &tmp_dir, &1).unwrap();
-        }
+    #[test]
+    fn test_local_submission() {
+        let tmp_dir = get_tmp_dir();
+        fs::create_dir_all(&tmp_dir).unwrap();
+        let path = tmp_dir.join("submit.sh");
+        let contents = "echo hello";
+        fs::write(&path, contents).unwrap();
+        let backend = LocalBackend;
+        let launch_script = path.to_str().unwrap();
+        backend.submit(launch_script, "1", &tmp_dir, &1).unwrap();
     }
 }
