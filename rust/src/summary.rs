@@ -36,7 +36,7 @@ pub fn get_summary_table<'a>(nodemap: &'a HashMap<String, Node>) -> Table {
         }
     }
 
-    records.sort_by_key(|record| record.uid);
+    records.sort_by_key(|record| (record.uid.chars().count(), record.uid));
     let mut table = Table::new(records);
     table.with(Style::modern());
     table.modify(Columns::first(), Alignment::right());
@@ -53,9 +53,9 @@ mod tests {
     fn check_table() {
         let nodemap = HashMap::from([
             (
-                String::from("n1"),
+                String::from("2"),
                 Node {
-                    uid: String::from("n1"),
+                    uid: String::from("2"),
                     output_used: false,
                     output_artifacts: Vec::new(),
                     behavior: NodeBehavior::TaskNode {
@@ -72,9 +72,9 @@ mod tests {
                 },
             ),
             (
-                String::from("n2"),
+                String::from("10"),
                 Node {
-                    uid: String::from("n2"),
+                    uid: String::from("10"),
                     output_used: false,
                     output_artifacts: Vec::new(),
                     behavior: NodeBehavior::TaskNode {
@@ -96,9 +96,9 @@ mod tests {
         "┌─────┬────────┬─────────┬───────────┐"
         "│ uid │ stage  │ status  │ num_tries │"
         "├─────┼────────┼─────────┼───────────┤"
-        "│  n1 │ stage1 │ Failed  │ 1         │"
+        "│   2 │ stage1 │ Failed  │ 1         │"
         "├─────┼────────┼─────────┼───────────┤"
-        "│  n2 │ stage2 │ Skipped │ 2         │"
+        "│  10 │ stage2 │ Skipped │ 2         │"
         "└─────┴────────┴─────────┴───────────┘"
         );
     }
