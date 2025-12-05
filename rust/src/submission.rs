@@ -5,6 +5,7 @@
 
 use crate::backend::Backend;
 use crate::caching;
+use crate::limiters;
 use crate::model::{BooleanOutput, JobStatus, Node, NodeBehavior, NodeResult};
 use crate::state::StateManager;
 use crate::status_management::StatusSelector;
@@ -45,6 +46,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     pub fn submit(&mut self, nodemap: &mut HashMap<String, Node>) {
         self.set_number_of_running_jobs(nodemap);
         caching::read_input_and_cache_tasks(nodemap, self.state);
+        limiters::limit_cached_tasks_same_name(nodemap);
         let updated_statuses = self.find_updated_statuses(nodemap);
         self.update_status(nodemap, updated_statuses);
     }
