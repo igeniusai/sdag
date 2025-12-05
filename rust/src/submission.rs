@@ -245,6 +245,10 @@ mod tests {
         fn cache_task(&self, _fname: &str, _uid: &str) -> io::Result<u64> {
             Ok(1)
         }
+
+        fn copy_cache(&self, _fname: &str, _uid: &str) -> io::Result<u64> {
+            Ok(1)
+        }
     }
 
     /// Find the completed parent uid for the OneOf node submission.

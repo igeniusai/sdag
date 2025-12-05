@@ -54,11 +54,12 @@ fn get_task_caching_status<T: StateManager>(
     match &node.behavior {
         NodeBehavior::TaskNode {
             caching,
+            fname,
             input_kwargs,
             ..
         } => Some((
             key.to_string(),
-            check_task_caching(node, caching, input_kwargs, state),
+            check_task_caching(node, caching, fname, input_kwargs, state),
         )),
         _ => None,
     }
@@ -86,11 +87,12 @@ fn set_caching_and_status(node: &mut Node, result: Result<bool, Box<dyn Error>>)
 fn check_task_caching<T: StateManager>(
     node: &Node,
     caching: &bool,
+    fname: &str,
     input_kwargs: &Vec<InputKwarg>,
     state: &T,
 ) -> Result<bool, Box<dyn Error>> {
     let input = read_input_data(node, input_kwargs, state)?;
-    if !*caching || !output_exists(&node.uid, state) {
+    if !*caching | state.copy_cache(fname, &node.uid).is_err() {
         return treat_as_uncached(&node.uid, &input, state);
     }
 
@@ -111,13 +113,6 @@ fn check_task_caching<T: StateManager>(
         }
     }
     Ok(true)
-}
-
-fn output_exists<T: StateManager>(uid: &str, state: &T) -> bool {
-    match state.read_output(uid) {
-        Err(_) => false,
-        Ok(_) => true,
-    }
 }
 
 /// Uncache task
@@ -253,6 +248,9 @@ mod tests {
             Ok(())
         }
         fn cache_task(&self, _fname: &str, _uid: &str) -> io::Result<u64> {
+            Ok(1)
+        }
+        fn copy_cache(&self, _fname: &str, _uid: &str) -> io::Result<u64> {
             Ok(1)
         }
     }
@@ -408,6 +406,7 @@ mod tests {
             value: Value::Bool(true),
         }];
         let caching = true;
+        let fname = String::from("fname");
         let node = Node {
             uid: String::from("1"),
             output_used: false,
@@ -416,7 +415,7 @@ mod tests {
             children: Vec::new(),
             status: JobStatus::ReadyForSubmission,
             behavior: NodeBehavior::TaskNode {
-                fname: String::from("fname"),
+                fname: fname.clone(),
                 caching: caching,
                 try_num: 0,
                 retries: 0,
@@ -425,7 +424,7 @@ mod tests {
             },
         };
 
-        assert!(check_task_caching(&node, &caching, &input_kwargs, &state).unwrap());
+        assert!(check_task_caching(&node, &caching, &fname, &input_kwargs, &state).unwrap());
     }
 
     /// Task not marked as cachable.
@@ -437,6 +436,7 @@ mod tests {
             value: Value::Bool(true),
         }];
         let caching = false;
+        let fname = String::from("fname");
         let node = Node {
             uid: String::from("1"),
             output_used: false,
@@ -445,7 +445,7 @@ mod tests {
             children: Vec::new(),
             status: JobStatus::ReadyForSubmission,
             behavior: NodeBehavior::TaskNode {
-                fname: String::from("fname"),
+                fname: fname.clone(),
                 caching: caching,
                 try_num: 0,
                 retries: 0,
@@ -454,7 +454,7 @@ mod tests {
             },
         };
 
-        assert!(!check_task_caching(&node, &caching, &input_kwargs, &state).unwrap());
+        assert!(!check_task_caching(&node, &caching, &fname, &input_kwargs, &state).unwrap());
     }
 
     /// Artifact exists, task is cached
@@ -469,6 +469,7 @@ mod tests {
             value: Value::Bool(true),
         }];
         let caching = true;
+        let fname = String::from("fname");
         let node = Node {
             uid: String::from("1"),
             output_used: false,
@@ -480,7 +481,7 @@ mod tests {
             children: Vec::new(),
             status: JobStatus::ReadyForSubmission,
             behavior: NodeBehavior::TaskNode {
-                fname: String::from("fname"),
+                fname: fname.clone(),
                 caching: caching,
                 try_num: 0,
                 retries: 0,
@@ -489,7 +490,7 @@ mod tests {
             },
         };
 
-        assert!(check_task_caching(&node, &caching, &input_kwargs, &state).unwrap());
+        assert!(check_task_caching(&node, &caching, &fname, &input_kwargs, &state).unwrap());
     }
 
     /// Artifact does not exist, output is not cached
@@ -501,6 +502,7 @@ mod tests {
             value: Value::Bool(true),
         }];
         let caching = true;
+        let fname = String::from("fname");
         let node = Node {
             uid: String::from("1"),
             output_used: false,
@@ -512,7 +514,7 @@ mod tests {
             children: Vec::new(),
             status: JobStatus::ReadyForSubmission,
             behavior: NodeBehavior::TaskNode {
-                fname: String::from("fname"),
+                fname: fname.clone(),
                 caching: caching,
                 try_num: 0,
                 retries: 0,
@@ -521,7 +523,7 @@ mod tests {
             },
         };
 
-        assert!(!check_task_caching(&node, &caching, &input_kwargs, &state).unwrap());
+        assert!(!check_task_caching(&node, &caching, &fname, &input_kwargs, &state).unwrap());
     }
 
     /// Full caching test

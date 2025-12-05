@@ -1,6 +1,7 @@
 //! Recursive status update and retry management.
 
 use crate::backend::Backend;
+use crate::limiters;
 use crate::model::{JobStatus, Node, NodeBehavior};
 use crate::state::StateManager;
 use log;
@@ -48,6 +49,8 @@ pub fn update_status(
         let updated_node = nodemap.get_mut(&k).unwrap();
         updated_node.status = v;
     }
+
+    limiters::limit_cached_tasks_same_name(nodemap);
 }
 
 /// Recursively update the status of children.
