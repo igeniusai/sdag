@@ -282,7 +282,7 @@ class Pipeline:
         for parent in args:
             root.add_logical_edge(parent.uid)
 
-        return output if output is not None else graph.get_end()
+        return output if output is not None else self._get_end(graph)
 
     def compile(self, input_kwargs: dict[str, Any] | None = None) -> Graph:
         """Compile the current pipeline.
@@ -300,6 +300,24 @@ class Pipeline:
         graph = self.get_graph()
         self._mark_nodes_requiring_output(graph)
         return graph
+
+    def _get_end(self, graph: Graph) -> Node:
+        """Get the end node.
+
+        It has all the artifacts of its pipeline. If multiple
+        artifacts share the same name, they are overwritten.
+
+        Args:
+            graph (Graph): Graph.
+
+        Returns:
+            Node: End node.
+        """
+        end = graph.get_end()
+        for node in graph.nodes:
+            end.join_artifact_containers(node.artifacts)
+
+        return end
 
     def _mark_nodes_requiring_output(self, graph: Graph) -> None:
         """Nodes requiring output are tagged.

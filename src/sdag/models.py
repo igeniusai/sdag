@@ -343,6 +343,19 @@ class Node(BaseModel, Generic[T]):
         parent = Parent(uid=parent_uid, parent_type=BranchType(branch=branch))
         self.parents.append(parent)
 
+    def join_artifact_containers(
+        self, artifacts: dict[str, ArtifactContainer]
+    ) -> None:
+        """Join artifact containers without setting an edge.
+
+        Used to make all artifacts available to the pipeline end node.
+
+        Args:
+            artifacts (dict[str, ArtifactContainer]):
+                Artifact containers.
+        """
+        self._artifact_containers |= artifacts
+
 
 BehaviorUnion = Annotated[
     TaskNode | IfNode | EndNode | RootNode | OneOfNode,

@@ -480,3 +480,35 @@ class TestPipeline:
 
         output = pipeline()
         assert isinstance(output, Node)
+
+    def test_get_end(self) -> None:
+        """Check the end node retrieval.+
+
+        It must contain the artifacts of all nodes in the graph.
+        """
+        node = Node(
+            uid="1",
+            behavior=TaskNode(
+                fname="fname",
+                launch_script=Path("submit.sh"),
+                caching=True,
+                retries=0,
+            ),
+        )
+        node.register_artifact(key="key", path=Path())
+        end = Node(uid="2", behavior=EndNode())
+        end.add_logical_edge(node.uid)
+        graph = Graph(meta=GraphMetadata(name="graph"))
+        graph.nodes = [node, end]
+
+        sdag = MockSDAG()
+        pipeline = Pipeline(
+            fn=lambda: ..., set_dag=sdag.set_dag, get_graph=sdag.get_graph
+        )
+
+        endnode = pipeline._get_end(graph)
+
+        assert endnode is end
+        assert endnode.artifacts["key"].key == "key"
+        assert endnode.artifacts["key"].node is node
+        assert endnode.artifacts["key"].path == Path()
