@@ -1,5 +1,6 @@
 """Model tests."""
 
+import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -97,6 +98,43 @@ class TestNode:
         assert node.parents == [
             Parent(uid="1", parent_type=BranchType(branch=False))
         ]
+
+    def test_join_artifact_containers(self, node: Node[RootNode]) -> None:
+        """Test the artifact container join.
+
+        Args:
+            node (Node[RootNode]): Node.
+        """
+        end = Node(uid="1", behavior=EndNode())
+        end.register_artifact(key="a", path=Path())
+        node.join_artifact_containers(end._artifact_containers)
+
+        assert "a" in node._artifact_containers
+        assert not node.output_artifacts
+
+    def test_join_overlapping_artifact_containers(
+        self, node: Node[RootNode], caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test the merge of overlapping artifacts.
+
+        A log must be thrown if artifacts with the same
+        name are merged in the end node.
+
+        Args:
+            node (Node[RootNode]): Node.
+            caplog (pytest.LogCaptureFixture): Fixture to capture logs.
+        """
+        node.register_artifact(key="a", path=Path())
+        end = Node(uid="1", behavior=EndNode())
+        end.register_artifact(key="a", path=Path())
+
+        caplog.set_level(logging.INFO)
+        node.join_artifact_containers(end._artifact_containers)
+
+        assert len(caplog.records) == 1
+        for record in caplog.records:
+            assert record.levelname == "INFO"
+        assert "duplicate artifact" in caplog.text
 
 
 class TestGraph:

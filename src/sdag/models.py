@@ -1,5 +1,6 @@
 """DAG model."""
 
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any, Generic, Literal, TypeVar
@@ -7,6 +8,8 @@ from typing import Annotated, Any, Generic, Literal, TypeVar
 from pydantic import BaseModel, Field, PrivateAttr
 
 from sdag.exceptions import EndNotFoundError, RootNotFoundError
+
+logger = logging.getLogger(__name__)
 
 
 class Artifact(BaseModel):
@@ -354,7 +357,16 @@ class Node(BaseModel, Generic[T]):
             artifacts (dict[str, ArtifactContainer]):
                 Artifact containers.
         """
-        self._artifact_containers |= artifacts
+        for name, artifact in artifacts.items():
+            if name in self._artifact_containers:
+                logger.info(
+                    "Detected duplicate artifact name '%s'. This is fine"
+                    " in most cases but it will be overwritten if accessed"
+                    " through the pipeline task.",
+                    name,
+                )
+
+            self._artifact_containers[name] = artifact
 
 
 BehaviorUnion = Annotated[
