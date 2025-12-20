@@ -1,5 +1,7 @@
 """DAGs."""
 
+import json
+import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -13,6 +15,7 @@ from sdag.exceptions import (
 )
 from sdag.io import IOManager
 from sdag.models import (
+    Artifact,
     EndNode,
     Graph,
     GraphMetadata,
@@ -22,6 +25,8 @@ from sdag.models import (
     RootNode,
 )
 from sdag.wrappers import IfWrapper, Pipeline, Task
+
+logger = logging.getLogger(__name__)
 
 
 class DAG:
@@ -188,11 +193,20 @@ class SDAG:
         manager = IOManager()
         node = manager.find_node_to_be_executed()
         fn = self.taskdict[node.behavior.fname]
+        logger.info("Running task '%s'", node.behavior.fname)
+
         input_kwargs = manager.get_input(fn)
+        logger.info("Input values:\n%s", json.dumps(input_kwargs, indent=4))
+
         artifacts = manager.get_artifacts(fn, input_kwargs)
+        logger.info("Artifacts:\n%s", self._serialize_artifacts(artifacts))
+
         input_kwargs |= artifacts
         output = fn(**input_kwargs)
+        logger.info("Output values:\n%s", json.dumps(output, indent=4))
+
         manager.serialize_output(output, artifacts)
+        logger.info("Task '%s' completed", node.behavior.fname)
 
     def set_current_dag(self, name: str) -> None:
         """Mark a new DAG as the current under compilation.
@@ -452,3 +466,17 @@ class SDAG:
     def _reset_uid(self) -> None:
         """Rest sdag starting uid to get deterministic uids."""
         self.uid = 0
+
+    def _serialize_artifacts(self, artifacts: dict[str, Artifact]) -> str:
+        """Serialize artifacts as string for logging.
+
+        Args:
+            artifacts (dict[str, Artifact]): Artifacts
+
+        Returns:
+            str: Serialized artifacts
+        """
+        return "\n".join(
+            artifact.model_dump_json(indent=4)
+            for artifact in artifacts.values()
+        )

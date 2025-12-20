@@ -13,6 +13,7 @@ from sdag.exceptions import (
     TaskNotUniqueError,
 )
 from sdag.models import (
+    Artifact,
     BranchType,
     Graph,
     GraphMetadata,
@@ -281,6 +282,30 @@ class TestSDAG:
             SDAG: sdag object.
         """
         return SDAG()
+
+    def test_serialize_artifacts(self, sdag: SDAG) -> None:
+        """Test the artifact serialization for logging.
+
+        Arguments:
+            sdag (SDAG): sdag object.
+        """
+        artifacts = {
+            "a": Artifact(name="a", path=Path("a/path")),
+            "b": Artifact(name="b", path=Path("a/path")),
+        }
+
+        seralized = sdag._serialize_artifacts(artifacts)
+        s = r"""
+{
+    "name": "a",
+    "path": "a/path"
+}
+{
+    "name": "b",
+    "path": "a/path"
+}
+"""
+        assert seralized == s.strip()
 
     def test_get_uid(self, sdag: SDAG) -> None:
         """Test the UID retrieval.
