@@ -18,7 +18,6 @@ mod summary;
 use std::time;
 mod parser;
 use checkpoint::Checkpointer;
-use clap::Parser;
 mod limiters;
 mod state;
 use state::LocalDirState;
@@ -40,7 +39,7 @@ mod startup;
 /// - The JSON file cannot be copied into the working directory.
 #[pyfunction]
 fn sscheduler_start(argv: Vec<String>) {
-    let args = parser::CLI::parse_from(argv);
+    let args = parser::parse_args(argv);
     startup::configure_logging(&args.log_level);
 
     let home_dir = startup::find_home_dir()

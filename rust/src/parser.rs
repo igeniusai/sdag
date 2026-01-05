@@ -47,13 +47,25 @@ pub struct CLI {
     pub local: bool,
 }
 
+/// Parse input arguments
+///
+/// The poll time is set to 0 if the pipeline is local
+pub fn parse_args(argv: Vec<String>) -> CLI {
+    let mut args = CLI::parse_from(argv);
+    if args.local && args.wait_seconds > 0 {
+        log::warn!("Local execution detected, setting poll time to 0s.");
+        args.wait_seconds = 0;
+    }
+    args
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     /// Arguments are parsed correctly.
     #[test]
-    fn parse_args() {
+    fn parse_from_args() {
         let iter = ["sscheduler", "--pipeline=pipeline.json", "--wait-seconds=2"].iter();
         let cli = CLI::try_parse_from(iter).unwrap();
         assert_eq!(cli.pipeline, PathBuf::from("pipeline.json"));
@@ -110,5 +122,19 @@ mod tests {
         let iter = ["sscheduler", "--pipeline=pipeline.json", "--local"].iter();
         let cli = CLI::try_parse_from(iter).unwrap();
         assert!(cli.local);
+    }
+
+    /// Check the restart flag is correctly parsed.
+    #[test]
+    fn parse_args_with_local() {
+        let argv = vec![
+            "sscheduler".to_string(),
+            "--pipeline=pipeline.json".to_string(),
+            "--local".to_string(),
+            "--wait-seconds=5".to_string(),
+        ];
+        let args = parse_args(argv);
+        assert!(args.local);
+        assert_eq!(args.wait_seconds, 0);
     }
 }
