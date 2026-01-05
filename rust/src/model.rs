@@ -35,6 +35,8 @@ pub struct TaskOutput {
 pub enum NodeResult {
     /// Node completed, no special info carried.
     Node,
+    /// Cached task
+    Cached,
     /// Completed task. It carries the successful jobid.
     Task(String),
     /// Result of a branch. It carries the selected branch.
@@ -50,6 +52,7 @@ impl fmt::Display for NodeResult {
             Self::If(branch) => format!("Completed ({branch})"),
             Self::OneOf(uid) => format!("Completed ({uid})"),
             Self::Task(job_id) => format!("Completed ({job_id})"),
+            Self::Cached => String::from("Completed (Cached)"),
         };
         write!(f, "{repr}")
     }

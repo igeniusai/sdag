@@ -77,7 +77,7 @@ fn set_caching_and_status(node: &mut Node, result: Result<bool, Box<dyn Error>>)
         Ok(cached) => {
             if cached {
                 log::info!("Task '{}' is cached", node.uid);
-                node.status = JobStatus::Completed(NodeResult::Node);
+                node.status = JobStatus::Completed(NodeResult::Cached);
             }
         }
     }
