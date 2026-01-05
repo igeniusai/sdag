@@ -31,19 +31,6 @@ class DynamicArtifactError(SDAGError):
         super().__init__(msg)
 
 
-class NodeNotFoundError(SDAGError):
-    """Node not found in the compiled JSON."""
-
-    def __init__(self, uid: str):
-        """Raise the error.
-
-        Args:
-            uid (str): Unique id of the missing node.
-        """
-        msg = f"Node '{uid}' is not found in the compiled pipeline."
-        super().__init__(msg)
-
-
 class RootNotFoundError(SDAGError):
     """Root node not found."""
 
@@ -59,19 +46,6 @@ class EndNotFoundError(SDAGError):
     def __init__(self):
         """Raise the exception."""
         msg = "End node not found."
-        super().__init__(msg)
-
-
-class NotATaskError(SDAGError):
-    """The node is not a task, so it cannot be executed."""
-
-    def __init__(self, uid: str):
-        """Raise the error.
-
-        Args:
-            uid (str): Unique id of the node that is not a task.
-        """
-        msg = f"Node {uid} is not a task!"
         super().__init__(msg)
 
 

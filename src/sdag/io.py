@@ -8,12 +8,9 @@ from typing import Any
 
 from pydantic_settings import BaseSettings
 
-from sdag.exceptions import NodeNotFoundError, NotATaskError
 from sdag.models import (
     Artifact,
     Graph,
-    Node,
-    TaskNode,
     TaskOutput,
 )
 from sdag.wrappers import validate_kwargs
@@ -25,11 +22,13 @@ class Settings(BaseSettings):
     Attributes:
         sdag_pipeline (str): Pipeline name.
         sdag_uid (str): Node unique id.
+        sdag_task (str): Task function name.
         sdag_try_num: Number of times the task has been executed.
     """
 
     sdag_pipeline: Path
     sdag_uid: str
+    sdag_task: str
     sdag_try_num: int
 
 
@@ -112,22 +111,6 @@ class IOManager:
         with p.open("w") as f:
             f.write(data)
 
-    def find_node_to_be_executed(self) -> Node[TaskNode]:
-        """Find the task node in the DAG JSON file.
-
-        Raises:
-            NotATaskError: The node is not a task.
-
-        Returns:
-            Node[TaskNode]: Node that is going to be executed.
-        """
-        dag = self._read_dag()
-        node = self._find_this_node(dag)
-        if not isinstance(node.behavior, TaskNode):
-            raise NotATaskError(uid=node.uid)
-
-        return node
-
     def _validate_input_data(
         self, input_data: dict[str, Any], fn: Callable
     ) -> None:
@@ -150,21 +133,3 @@ class IOManager:
         with (p / self._pipeline_fname).open() as f:
             data = json.load(f)
         return Graph.model_validate(data)
-
-    def _find_this_node(self, dag: Graph) -> Node:
-        """Find the node to be executed within the DAG.
-
-        Args:
-            dag (Graph): Parsed DAG.
-
-        Raises:
-            NodeNotFoundError: The node is not found in the DAG.
-
-        Returns:
-            Node: Node to be executed.
-        """
-        for node in dag.nodes:
-            if self.settings.sdag_uid == node.uid:
-                return node
-
-        raise NodeNotFoundError(uid=self.settings.sdag_uid)

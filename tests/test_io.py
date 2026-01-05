@@ -9,8 +9,6 @@ import pytest
 
 from sdag.exceptions import (
     KwargNotFoundError,
-    NodeNotFoundError,
-    NotATaskError,
 )
 from sdag.io import IOManager
 from sdag.models import Graph
@@ -32,6 +30,7 @@ class TestIOManager:
         os.environ["SDAG_PIPELINE"] = str(tmp_path)
         os.environ["SDAG_UID"] = "0"
         os.environ["SDAG_TRY_NUM"] = "1"
+        os.environ["SDAG_TASK"] = "task"
 
         return IOManager()
 
@@ -115,73 +114,6 @@ class TestIOManager:
 
         graph = io_manager._read_dag()
         assert isinstance(graph, Graph)
-
-    def test_find_this_node(
-        self, io_manager: IOManager, graph_dict: dict[str, Any]
-    ) -> None:
-        """Check the node identification in the graph.
-
-        Args:
-            io_manager (IOManager): I/O manager.
-            graph_dict (dict[str, Any]): Graph dictionary.
-        """
-        graph = Graph.model_validate(graph_dict)
-        node = io_manager._find_this_node(graph)
-        assert node.uid == "0"
-
-    def test_node_not_found(
-        self, io_manager: IOManager, graph_dict: dict[str, Any]
-    ) -> None:
-        """Check the exception raise if the node is not found.
-
-        Args:
-            io_manager (IOManager): I/O manager.
-            graph_dict (dict[str, Any]): Graph dictionary.
-        """
-        io_manager.settings.sdag_uid = "-1"
-        graph = Graph.model_validate(graph_dict)
-        with pytest.raises(NodeNotFoundError):
-            io_manager._find_this_node(graph)
-
-    def test_find_node_to_be_executed(
-        self, io_manager: IOManager, graph_dict: dict[str, Any]
-    ) -> None:
-        """Test the node identification.
-
-        Args:
-            io_manager (IOManager): I/O manager.
-            graph_dict (dict[str, Any]): Graph dictionary.
-        """
-        pipeline_dir = io_manager.settings.sdag_pipeline
-        pipeline_dir.mkdir(parents=True, exist_ok=True)
-        path = pipeline_dir / io_manager._pipeline_fname
-        with path.open("w") as f:
-            json.dump(graph_dict, f)
-
-        node = io_manager.find_node_to_be_executed()
-        assert node.uid == "0"
-
-    def test_node_to_be_executed_is_not_a_task(
-        self, io_manager: IOManager, graph_dict: dict[str, Any]
-    ) -> None:
-        """Check the node nature.
-
-        Only tasks can be executed, other nodes must raise
-        an exception.
-
-        Args:
-            io_manager (IOManager): I/O manager.
-            graph_dict (dict[str, Any]): Graph dictionary.
-        """
-        io_manager.settings.sdag_uid = "1"
-        pipeline_dir = io_manager.settings.sdag_pipeline
-        pipeline_dir.mkdir(parents=True, exist_ok=True)
-        path = pipeline_dir / io_manager._pipeline_fname
-        with path.open("w") as f:
-            json.dump(graph_dict, f)
-
-        with pytest.raises(NotATaskError):
-            io_manager.find_node_to_be_executed()
 
     def test_get_input(self, io_manager: IOManager) -> None:
         """Test the input value retrieval.

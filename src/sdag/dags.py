@@ -191,9 +191,12 @@ class SDAG:
         This object will then dispatch the call to the correct task.
         """
         manager = IOManager()
-        node = manager.find_node_to_be_executed()
-        fn = self.taskdict[node.behavior.fname]
-        logger.info("Running task '%s'", node.behavior.fname)
+        fn = self.taskdict[manager.settings.sdag_task]
+        logger.info(
+            "Running task '%s' of node '%s'",
+            manager.settings.sdag_task,
+            manager.settings.sdag_uid,
+        )
 
         input_kwargs = manager.get_input(fn)
         logger.info("Input values:\n%s", json.dumps(input_kwargs, indent=4))
@@ -206,7 +209,7 @@ class SDAG:
         logger.info("Output values:\n%s", json.dumps(output, indent=4))
 
         manager.serialize_output(output, artifacts)
-        logger.info("Task '%s' completed", node.behavior.fname)
+        logger.info("Task '%s' completed", manager.settings.sdag_task)
 
     def set_current_dag(self, name: str) -> None:
         """Mark a new DAG as the current under compilation.

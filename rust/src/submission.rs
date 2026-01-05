@@ -102,13 +102,14 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
             NodeBehavior::TaskNode {
                 launch_script,
                 try_num,
+                fname,
                 ..
             } => {
                 if self.max_concurrency > 0 && self.nrunning >= self.max_concurrency {
                     return JobStatus::NotSubmitted;
                 }
 
-                let status = self.submit_tasknode(&node.uid, launch_script, try_num);
+                let status = self.submit_tasknode(&node.uid, fname, launch_script, try_num);
                 if let JobStatus::Running(_) = status {
                     self.nrunning += 1;
                 }
@@ -126,12 +127,18 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     }
 
     /// Submit a task.
-    fn submit_tasknode(&self, uid: &str, launch_script: &str, try_num: &u32) -> JobStatus {
-        log::debug!("Submitting Task {uid}");
+    fn submit_tasknode(
+        &self,
+        uid: &str,
+        fname: &str,
+        launch_script: &str,
+        try_num: &u32,
+    ) -> JobStatus {
+        log::debug!("Submitting task '{fname}' of node '{uid}'");
         let pipeline_dir = self.state.get_pipeline_dir();
         let res = self
             .backend
-            .submit(launch_script, uid, pipeline_dir, try_num);
+            .submit(launch_script, uid, fname, pipeline_dir, try_num);
         match res {
             Ok(job_id) => JobStatus::Running(job_id),
             Err(e) => {
@@ -191,6 +198,7 @@ mod tests {
             &self,
             _launch_script: &str,
             _uid: &str,
+            _fname: &str,
             _pipeline_dir: &PathBuf,
             _try_num: &u32,
         ) -> Result<String, Box<dyn Error>> {

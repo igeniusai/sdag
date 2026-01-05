@@ -31,12 +31,17 @@ impl Backend for ProcessBackend {
         &self,
         launch_script: &str,
         uid: &str,
+        fname: &str,
         pipeline_dir: &PathBuf,
         try_num: &u32,
     ) -> Result<String, Box<dyn Error>> {
         match self {
-            Self::Local(backend) => backend.submit(launch_script, uid, pipeline_dir, try_num),
-            Self::Slurm(backend) => backend.submit(launch_script, uid, pipeline_dir, try_num),
+            Self::Local(backend) => {
+                backend.submit(launch_script, uid, fname, pipeline_dir, try_num)
+            }
+            Self::Slurm(backend) => {
+                backend.submit(launch_script, uid, fname, pipeline_dir, try_num)
+            }
         }
     }
 }
@@ -56,6 +61,7 @@ pub trait Backend {
         &self,
         launch_script: &str,
         uid: &str,
+        fname: &str,
         pipeline_dir: &PathBuf,
         try_num: &u32,
     ) -> Result<String, Box<dyn Error>>;
@@ -191,6 +197,7 @@ impl Backend for SlurmBackend {
         &self,
         launch_script: &str,
         uid: &str,
+        fname: &str,
         pipeline_dir: &PathBuf,
         try_num: &u32,
     ) -> Result<String, Box<dyn Error>> {
@@ -199,6 +206,7 @@ impl Backend for SlurmBackend {
             .env("SDAG_TRY_NUM", &try_num_str)
             .env("SDAG_PIPELINE", pipeline_dir)
             .env("SDAG_UID", uid)
+            .env("SDAG_TASK", fname)
             .arg(&launch_script)
             .output()?;
 
@@ -225,6 +233,7 @@ impl Backend for LocalBackend {
         &self,
         launch_script: &str,
         uid: &str,
+        fname: &str,
         pipeline_dir: &PathBuf,
         try_num: &u32,
     ) -> Result<String, Box<dyn Error>> {
@@ -235,6 +244,7 @@ impl Backend for LocalBackend {
             .env("SDAG_TRY_NUM", &try_num_str)
             .env("SDAG_PIPELINE", pipeline_dir)
             .env("SDAG_UID", uid)
+            .env("SDAG_TASK", fname)
             .arg(launch_script)
             .spawn()?;
 
@@ -456,8 +466,9 @@ mod tests {
         let backend = SlurmBackend;
         let pipeline_dir = PathBuf::from("./sdag");
         let try_num = 1;
+        let fname = "task";
         backend
-            .submit("_wrong_", "1", &pipeline_dir, &try_num)
+            .submit("_wrong_", "1", fname, &pipeline_dir, &try_num)
             .unwrap();
     }
 
@@ -502,6 +513,8 @@ mod tests {
         fs::write(&path, contents).unwrap();
         let backend = LocalBackend;
         let launch_script = path.to_str().unwrap();
-        backend.submit(launch_script, "1", &tmp_dir, &1).unwrap();
+        backend
+            .submit(launch_script, "1", "task", &tmp_dir, &1)
+            .unwrap();
     }
 }
