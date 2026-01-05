@@ -14,8 +14,8 @@ use crate::model::JobStatus;
 struct Summary<'a> {
     /// Node unique id.
     uid: &'a str,
-    /// Stage function name.
-    stage: &'a str,
+    /// Task name.
+    task: &'a str,
     /// Node status.
     status: &'a JobStatus,
     /// Number of tries.
@@ -29,7 +29,7 @@ pub fn get_summary_table<'a>(nodemap: &'a HashMap<String, Node>) -> Table {
         if let NodeBehavior::TaskNode { fname, try_num, .. } = &node.behavior {
             records.push(Summary {
                 uid: &node.uid,
-                stage: fname,
+                task: fname,
                 status: &node.status,
                 num_tries: *try_num,
             });
@@ -46,6 +46,7 @@ pub fn get_summary_table<'a>(nodemap: &'a HashMap<String, Node>) -> Table {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::NodeFailure;
     use tabled::assert::assert_table;
 
     /// Check the summary table is correct.
@@ -66,7 +67,7 @@ mod tests {
                         launch_script: String::from("script"),
                         input_kwargs: Vec::new(),
                     },
-                    status: JobStatus::Failed,
+                    status: JobStatus::Failed(NodeFailure::Task("1234".to_string())),
                     parents: Vec::new(),
                     children: Vec::new(),
                 },
@@ -93,13 +94,13 @@ mod tests {
         ]);
         let table = get_summary_table(&nodemap);
         assert_table!(table,
-        "┌─────┬────────┬─────────┬───────────┐"
-        "│ uid │ stage  │ status  │ num_tries │"
-        "├─────┼────────┼─────────┼───────────┤"
-        "│   2 │ stage1 │ Failed  │ 1         │"
-        "├─────┼────────┼─────────┼───────────┤"
-        "│  10 │ stage2 │ Skipped │ 2         │"
-        "└─────┴────────┴─────────┴───────────┘"
+        "┌─────┬────────┬───────────────┬───────────┐"
+        "│ uid │ task   │ status        │ num_tries │"
+        "├─────┼────────┼───────────────┼───────────┤"
+        "│   2 │ stage1 │ Failed (1234) │ 1         │"
+        "├─────┼────────┼───────────────┼───────────┤"
+        "│  10 │ stage2 │ Skipped       │ 2         │"
+        "└─────┴────────┴───────────────┴───────────┘"
         );
     }
 }

@@ -3,7 +3,7 @@
 //! The backend executes jobs and polls the status.
 
 use crate::caching;
-use crate::model::{JobStatus, Node, NodeResult};
+use crate::model::{JobStatus, Node, NodeFailure, NodeResult};
 use crate::state::StateManager;
 use log;
 use regex::Regex;
@@ -113,10 +113,10 @@ impl SlurmBackend {
                     let job = String::from(job_id);
                     JobStatus::Running(job)
                 }
-                _ => JobStatus::Failed,
+                _ => JobStatus::Failed(NodeFailure::Task(job_id.to_string())),
             };
         }
-        JobStatus::Failed
+        JobStatus::Failed(NodeFailure::Task(job_id.to_string()))
     }
 
     fn ask_status_to_slurm(&self, job_ids: Vec<&str>) -> io::Result<Output> {
@@ -160,7 +160,15 @@ impl SlurmBackend {
                 .collect(),
             Err(_) => {
                 log::error!("Failed to contact Slurm, marking all running jobs as failed");
-                job_map.keys().map(|uid| (uid, JobStatus::Failed)).collect()
+                job_map
+                    .iter()
+                    .map(|(uid, job_id)| {
+                        (
+                            uid,
+                            JobStatus::Failed(NodeFailure::Task(job_id.to_string())),
+                        )
+                    })
+                    .collect()
             }
         }
     }
@@ -389,8 +397,9 @@ mod tests {
             20836188.ba+  COMPLETED
             20836188.ex+  COMPLETED
             ";
-        let output = backend.extract_status("20836188", slurm_status);
-        assert!(matches!(output, JobStatus::Failed));
+        let job_id = String::from("20836188");
+        let output = backend.extract_status(&job_id, slurm_status);
+        assert!(matches!(output, JobStatus::Failed(NodeFailure::Task(_))));
     }
 
     #[test]
@@ -402,8 +411,9 @@ mod tests {
             20836188.ba+  COMPLETED
             20836188.ex+  COMPLETED
             ";
-        let output = backend.extract_status("20836188", slurm_status);
-        assert!(matches!(output, JobStatus::Failed));
+        let job_id = String::from("20836188");
+        let output = backend.extract_status(&job_id, slurm_status);
+        assert!(matches!(output, JobStatus::Failed(NodeFailure::Task(_))));
     }
 
     #[test]

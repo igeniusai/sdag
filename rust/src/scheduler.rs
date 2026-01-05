@@ -70,7 +70,7 @@ impl<T: StateManager, U: Backend> Scheduler<T, U> {
     fn is_simulation_completed(&self, nodemap: &HashMap<String, Node>) -> bool {
         nodemap.values().all(|n| {
             matches!(n.status, JobStatus::Completed { .. })
-                | matches!(n.status, JobStatus::Failed)
+                | matches!(n.status, JobStatus::Failed(_))
                 | matches!(n.status, JobStatus::Skipped)
         })
     }

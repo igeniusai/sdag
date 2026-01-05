@@ -1,7 +1,7 @@
 //! Recursive status update and retry management.
 
 use crate::backend::Backend;
-use crate::model::{JobStatus, Node, NodeBehavior};
+use crate::model::{JobStatus, Node, NodeBehavior, NodeFailure};
 use crate::state::StateManager;
 use log;
 use std::collections::HashMap;
@@ -26,7 +26,7 @@ fn set_retry_if_possible(node: &mut Node) {
 /// Manage retries
 fn schedule_retries(nodemap: &mut HashMap<String, Node>) {
     for node in nodemap.values_mut() {
-        if let JobStatus::Failed = node.status {
+        if let JobStatus::Failed(_) = node.status {
             set_retry_if_possible(node);
         }
     }
@@ -121,7 +121,7 @@ impl StatusSelector {
         if self.all_parents_completed() {
             JobStatus::ReadyForSubmission
         } else if self.some_parents_failed() {
-            JobStatus::Failed
+            JobStatus::Failed(NodeFailure::Node)
         } else if self.some_parents_skipped() {
             JobStatus::Skipped
         } else {
@@ -137,7 +137,7 @@ impl StatusSelector {
         } else if self.all_parents_skipped() {
             JobStatus::Skipped
         } else if self.all_parents_failed_or_skipped() {
-            JobStatus::Failed
+            JobStatus::Failed(NodeFailure::Node)
         } else {
             JobStatus::NotSubmitted
         }
@@ -161,7 +161,7 @@ impl StatusSelector {
     fn some_parents_failed(&self) -> bool {
         self.parent_statuses
             .iter()
-            .any(|x| matches!(x, JobStatus::Failed))
+            .any(|x| matches!(x, JobStatus::Failed(_)))
     }
 
     /// Check if all parents have been skipped.
@@ -182,7 +182,7 @@ impl StatusSelector {
     fn all_parents_failed_or_skipped(&self) -> bool {
         self.parent_statuses
             .iter()
-            .all(|x| matches!(x, JobStatus::Failed) | matches!(x, JobStatus::Skipped))
+            .all(|x| matches!(x, JobStatus::Failed(_)) | matches!(x, JobStatus::Skipped))
     }
 }
 
@@ -220,7 +220,7 @@ mod tests {
         ),
         oneof_test_1: (
             vec![
-                JobStatus::Failed,
+                JobStatus::Failed(NodeFailure::Node),
                 JobStatus::Completed(NodeResult::Node),
             ],
             JobStatus::ReadyForSubmission
@@ -241,10 +241,10 @@ mod tests {
         ),
         oneof_test_4: (
             vec![
-                JobStatus::Failed,
-                JobStatus::Failed
+                JobStatus::Failed(NodeFailure::Node),
+                JobStatus::Failed(NodeFailure::Node)
             ],
-            JobStatus::Failed
+            JobStatus::Failed(NodeFailure::Node)
         ),
         oneof_test_5: (
             vec![
@@ -256,9 +256,9 @@ mod tests {
         oneof_test_6: (
             vec![
                 JobStatus::Skipped,
-                JobStatus::Failed
+                JobStatus::Failed(NodeFailure::Node)
             ],
-            JobStatus::Failed
+            JobStatus::Failed(NodeFailure::Node)
         ),
         oneof_test_7: (
             vec![
@@ -294,17 +294,17 @@ mod tests {
             JobStatus::ReadyForSubmission),
         node_test_1: (
             vec![
-                JobStatus::Failed,
+                JobStatus::Failed(NodeFailure::Node),
                 JobStatus::Completed(NodeResult::OneOf("0".to_string())),
             ],
-            JobStatus::Failed,
+            JobStatus::Failed(NodeFailure::Node),
         ),
         node_test_2: (
             vec![
                 JobStatus::Skipped,
                 JobStatus::Completed(NodeResult::Node),
             ],
-            JobStatus::Failed),
+            JobStatus::Failed(NodeFailure::Node)),
         node_test_3: (
             vec![
                 JobStatus::Running(String::from("..")),
@@ -314,10 +314,10 @@ mod tests {
         ),
         node_test_4: (
             vec![
-                JobStatus::Failed,
-                JobStatus::Failed,
+                JobStatus::Failed(NodeFailure::Node),
+                JobStatus::Failed(NodeFailure::Node),
             ],
-            JobStatus::Failed
+            JobStatus::Failed(NodeFailure::Node)
         ),
         node_test_5: (
             vec![
@@ -329,9 +329,9 @@ mod tests {
         node_test_6: (
             vec![
                 JobStatus::Skipped,
-                JobStatus::Failed
+                JobStatus::Failed(NodeFailure::Node)
             ],
-            JobStatus::Failed
+            JobStatus::Failed(NodeFailure::Node)
         ),
         node_test_7: (
             vec![
@@ -346,7 +346,10 @@ mod tests {
     #[test]
     fn get_oneof_updated_status() {
         let selector = StatusSelector {
-            parent_statuses: vec![JobStatus::Failed, JobStatus::Completed(NodeResult::Node)],
+            parent_statuses: vec![
+                JobStatus::Failed(NodeFailure::Node),
+                JobStatus::Completed(NodeResult::Node),
+            ],
         };
         let node_behavior = NodeBehavior::OneOfNode;
         matches!(
@@ -360,14 +363,14 @@ mod tests {
     fn get_default_updated_status() {
         let selector = StatusSelector {
             parent_statuses: vec![
-                JobStatus::Failed,
+                JobStatus::Failed(NodeFailure::Node),
                 JobStatus::Completed(NodeResult::If(true)),
             ],
         };
         let node_behavior = NodeBehavior::RootNode;
         matches!(
             selector.get_updated_status(&node_behavior),
-            JobStatus::Failed
+            JobStatus::Failed(NodeFailure::Node)
         );
     }
 
@@ -433,9 +436,13 @@ mod tests {
     #[test]
     fn get_selector_creation() {
         let nodemap = get_test_nodemap();
-        let updated_statuses = HashMap::from([("p2".to_string(), JobStatus::Failed)]);
+        let updated_statuses =
+            HashMap::from([("p2".to_string(), JobStatus::Failed(NodeFailure::Node))]);
         let selector = StatusSelector::new("c", &nodemap, &updated_statuses);
-        assert_eq!(selector.parent_statuses, vec![JobStatus::Failed]);
+        assert_eq!(
+            selector.parent_statuses,
+            vec![JobStatus::Failed(NodeFailure::Node)]
+        );
     }
 
     /// Test the status recursive update.

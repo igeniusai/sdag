@@ -43,6 +43,36 @@ pub enum NodeResult {
     OneOf(String),
 }
 
+impl fmt::Display for NodeResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let repr = match self {
+            Self::Node => String::from("Completed"),
+            Self::If(branch) => format!("Completed ({branch})"),
+            Self::OneOf(uid) => format!("Completed ({uid})"),
+            Self::Task(job_id) => format!("Completed ({job_id})"),
+        };
+        write!(f, "{repr}")
+    }
+}
+
+/// Possible successful statuses.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum NodeFailure {
+    /// Generic node failure.
+    Node,
+    /// Failed task. It carries the failed jobid.
+    Task(String),
+}
+impl fmt::Display for NodeFailure {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let repr = match self {
+            Self::Node => String::from("Failed"),
+            Self::Task(job_id) => format!("Failed ({job_id})"),
+        };
+        write!(f, "{repr}")
+    }
+}
+
 /// Node statuses:
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum JobStatus {
@@ -57,7 +87,7 @@ pub enum JobStatus {
     /// Node skipped (e.g., because of a branch).
     Skipped,
     /// Node execution failed.
-    Failed,
+    Failed(NodeFailure),
 }
 
 /// Used to display the status in the log table
@@ -67,9 +97,9 @@ impl fmt::Display for JobStatus {
             Self::NotSubmitted => String::from("Not Submitted"),
             Self::ReadyForSubmission => String::from("Ready for Submission"),
             Self::Running(job_id) => format!("Running ({job_id})"),
-            Self::Completed(_) => String::from("Completed"),
+            Self::Completed(completed) => completed.to_string(),
             Self::Skipped => String::from("Skipped"),
-            Self::Failed => String::from("Failed"),
+            Self::Failed(failed) => failed.to_string(),
         };
         write!(f, "{repr}")
     }
@@ -296,12 +326,15 @@ mod tests {
             output_artifacts: Vec::new(),
             output_used: false,
             behavior: NodeBehavior::IfNode,
-            status: JobStatus::Failed,
+            status: JobStatus::Failed(NodeFailure::Node),
             parents: Vec::new(),
             children: vec![String::from("c1"), String::from("c2")],
         };
         let ptype = ParentType::Branch { branch: false };
-        assert!(matches!(n.get_status_for_child(&ptype), JobStatus::Failed))
+        assert!(matches!(
+            n.get_status_for_child(&ptype),
+            JobStatus::Failed(_)
+        ))
     }
 
     #[test]

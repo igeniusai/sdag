@@ -8,7 +8,8 @@
 //!     be compatible for caching to occur.
 
 use crate::model::{
-    InputKwarg, JobStatus, Node, NodeBehavior, NodeResult, Parent, ParentType, TaskOutput,
+    InputKwarg, JobStatus, Node, NodeBehavior, NodeFailure, NodeResult, Parent, ParentType,
+    TaskOutput,
 };
 use crate::state::StateManager;
 use log;
@@ -71,7 +72,7 @@ fn set_caching_and_status(node: &mut Node, result: Result<bool, Box<dyn Error>>)
     match result {
         Err(_) => {
             log::error!("Failed to check input for task '{}'", node.uid);
-            node.status = JobStatus::Failed;
+            node.status = JobStatus::Failed(NodeFailure::Node);
         }
         Ok(cached) => {
             if cached {

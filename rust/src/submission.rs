@@ -6,7 +6,7 @@
 use crate::backend::Backend;
 use crate::caching;
 use crate::limiters;
-use crate::model::{BooleanOutput, JobStatus, Node, NodeBehavior, NodeResult};
+use crate::model::{BooleanOutput, JobStatus, Node, NodeBehavior, NodeFailure, NodeResult};
 use crate::state::StateManager;
 use crate::status_management::StatusSelector;
 use serde_json;
@@ -86,7 +86,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     fn update_try_count(&self, node: &mut Node) {
         if let NodeBehavior::TaskNode { try_num, .. } = &mut node.behavior {
             match node.status {
-                JobStatus::Running(_) | JobStatus::Failed => *try_num += 1,
+                JobStatus::Running(_) | JobStatus::Failed(_) => *try_num += 1,
                 _ => {}
             }
         }
@@ -116,10 +116,10 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
             }
             NodeBehavior::OneOfNode { .. } => match self.submit_oneofnode(&node.uid, &nodemap) {
                 Ok(uid) => JobStatus::Completed(NodeResult::OneOf(uid)),
-                Err(_) => JobStatus::Failed,
+                Err(_) => JobStatus::Failed(NodeFailure::Node),
             },
             NodeBehavior::IfNode { .. } => match self.submit_ifnode(&node.uid, &nodemap) {
-                Err(_) => JobStatus::Failed,
+                Err(_) => JobStatus::Failed(NodeFailure::Node),
                 Ok(branch) => JobStatus::Completed(NodeResult::If(branch)),
             },
         }
@@ -136,7 +136,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
             Ok(job_id) => JobStatus::Running(job_id),
             Err(e) => {
                 log::error!("Failed task {uid} submission: {e}");
-                JobStatus::Failed
+                JobStatus::Failed(NodeFailure::Node)
             }
         }
     }
@@ -261,7 +261,7 @@ mod tests {
         let parent_statuses = HashMap::from([
             (String::from("a"), JobStatus::NotSubmitted),
             (String::from("b"), JobStatus::Completed(NodeResult::Node)),
-            (String::from("c"), JobStatus::Failed),
+            (String::from("c"), JobStatus::Failed(NodeFailure::Node)),
         ]);
 
         let uid = submitter.find_completed_parent_uid(&parent_statuses);
@@ -436,7 +436,7 @@ mod tests {
             output_artifacts: Vec::new(),
             output_used: false,
             behavior: NodeBehavior::RootNode,
-            status: JobStatus::Failed,
+            status: JobStatus::Failed(NodeFailure::Node),
             parents: Vec::new(),
             children: vec!["c".to_string()],
         };
@@ -504,11 +504,12 @@ mod tests {
         let submitter = Submitter::new(&MockBackend, &state, 0);
 
         let mut nodemap = HashMap::from([("c".to_string(), node)]);
-        let updated_statuses = HashMap::from([("c".to_string(), JobStatus::Failed)]);
+        let updated_statuses =
+            HashMap::from([("c".to_string(), JobStatus::Failed(NodeFailure::Node))]);
 
         submitter.update_status(&mut nodemap, updated_statuses);
         let child = nodemap.get("c").unwrap();
-        assert!(matches!(child.status, JobStatus::Failed))
+        assert!(matches!(child.status, JobStatus::Failed(NodeFailure::Node)))
     }
 
     /// Update the status of a task.
@@ -535,11 +536,12 @@ mod tests {
         let submitter = Submitter::new(&MockBackend, &state, 0);
 
         let mut nodemap = HashMap::from([("c".to_string(), node)]);
-        let updated_statuses = HashMap::from([("c".to_string(), JobStatus::Failed)]);
+        let updated_statuses =
+            HashMap::from([("c".to_string(), JobStatus::Failed(NodeFailure::Node))]);
 
         submitter.update_status(&mut nodemap, updated_statuses);
         let child = nodemap.get("c").unwrap();
-        assert!(matches!(child.status, JobStatus::Failed));
+        assert!(matches!(child.status, JobStatus::Failed(NodeFailure::Node)));
         assert!(matches!(
             child.behavior,
             NodeBehavior::TaskNode { try_num: 1, .. }
