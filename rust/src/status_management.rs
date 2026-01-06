@@ -382,7 +382,6 @@ mod tests {
             Node {
                 uid: String::from("p1"),
                 output_artifacts: Vec::new(),
-                output_used: false,
                 behavior: NodeBehavior::RootNode,
                 status: JobStatus::NotSubmitted,
                 parents: Vec::new(),
@@ -394,7 +393,6 @@ mod tests {
             Node {
                 uid: String::from("p2"),
                 output_artifacts: Vec::new(),
-                output_used: false,
                 behavior: NodeBehavior::RootNode,
                 status: JobStatus::NotSubmitted,
                 parents: Vec::new(),
@@ -406,7 +404,6 @@ mod tests {
             Node {
                 uid: String::from("c"),
                 output_artifacts: Vec::new(),
-                output_used: false,
                 behavior: NodeBehavior::RootNode,
                 status: JobStatus::NotSubmitted,
                 parents: vec![Parent {
@@ -454,7 +451,6 @@ mod tests {
             Node {
                 uid: String::from("p"),
                 output_artifacts: Vec::new(),
-                output_used: false,
                 behavior: NodeBehavior::RootNode,
                 status: JobStatus::Completed(NodeResult::Node),
                 parents: Vec::new(),
@@ -467,7 +463,6 @@ mod tests {
             Node {
                 uid: String::from("c"),
                 output_artifacts: Vec::new(),
-                output_used: false,
                 behavior: NodeBehavior::RootNode,
                 status: JobStatus::NotSubmitted,
                 parents: vec![Parent {
@@ -495,7 +490,6 @@ mod tests {
             Node {
                 uid: String::from("p"),
                 output_artifacts: Vec::new(),
-                output_used: false,
                 behavior: NodeBehavior::RootNode,
                 status: JobStatus::Completed(NodeResult::Node),
                 parents: Vec::new(),
@@ -508,7 +502,6 @@ mod tests {
             Node {
                 uid: String::from("c"),
                 output_artifacts: Vec::new(),
-                output_used: false,
                 behavior: NodeBehavior::RootNode,
                 status: JobStatus::NotSubmitted,
                 parents: vec![Parent {

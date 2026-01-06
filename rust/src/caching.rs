@@ -260,7 +260,6 @@ mod tests {
     fn test_replace_cache() {
         let node = Node {
             uid: String::from("1"),
-            output_used: false,
             output_artifacts: Vec::new(),
             parents: Vec::new(),
             children: Vec::new(),
@@ -368,7 +367,6 @@ mod tests {
         }];
         let node = Node {
             uid: String::from("1"),
-            output_used: true,
             output_artifacts: Vec::new(),
             parents: vec![Parent {
                 uid: "0".to_string(),
@@ -410,7 +408,6 @@ mod tests {
         let fname = String::from("fname");
         let node = Node {
             uid: String::from("1"),
-            output_used: false,
             output_artifacts: Vec::new(),
             parents: Vec::new(),
             children: Vec::new(),
@@ -440,7 +437,6 @@ mod tests {
         let fname = String::from("fname");
         let node = Node {
             uid: String::from("1"),
-            output_used: false,
             output_artifacts: Vec::new(),
             parents: Vec::new(),
             children: Vec::new(),
@@ -473,7 +469,6 @@ mod tests {
         let fname = String::from("fname");
         let node = Node {
             uid: String::from("1"),
-            output_used: false,
             output_artifacts: vec![Artifact {
                 name: "existing".to_string(),
                 path: path.clone(),
@@ -506,7 +501,6 @@ mod tests {
         let fname = String::from("fname");
         let node = Node {
             uid: String::from("1"),
-            output_used: false,
             output_artifacts: vec![Artifact {
                 name: "missing".to_string(),
                 path: PathBuf::from("/a/missing/path"),
@@ -532,7 +526,6 @@ mod tests {
     fn test_e2e() {
         let node = Node {
             uid: String::from("1"),
-            output_used: false,
             output_artifacts: Vec::new(),
             parents: Vec::new(),
             children: Vec::new(),

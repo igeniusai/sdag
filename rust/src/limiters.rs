@@ -54,7 +54,6 @@ mod tests {
                 Node {
                     uid: String::from("0"),
                     output_artifacts: Vec::new(),
-                    output_used: false,
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::ReadyForSubmission,
@@ -73,7 +72,6 @@ mod tests {
                 Node {
                     uid: String::from("1"),
                     output_artifacts: Vec::new(),
-                    output_used: false,
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::ReadyForSubmission,
@@ -106,7 +104,6 @@ mod tests {
                 Node {
                     uid: String::from("0"),
                     output_artifacts: Vec::new(),
-                    output_used: false,
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::ReadyForSubmission,
@@ -125,7 +122,6 @@ mod tests {
                 Node {
                     uid: String::from("1"),
                     output_artifacts: Vec::new(),
-                    output_used: false,
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::Running("123".to_string()),
@@ -158,7 +154,6 @@ mod tests {
                 Node {
                     uid: String::from("0"),
                     output_artifacts: Vec::new(),
-                    output_used: false,
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::Running("1".to_string()),
@@ -177,7 +172,6 @@ mod tests {
                 Node {
                     uid: String::from("1"),
                     output_artifacts: Vec::new(),
-                    output_used: false,
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::ReadyForSubmission,

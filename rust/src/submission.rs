@@ -282,7 +282,6 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
@@ -308,7 +307,6 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::EndNode,
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
@@ -334,7 +332,6 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::IfNode,
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
@@ -349,7 +346,6 @@ mod tests {
         let parent = Node {
             uid: String::from("p"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
@@ -374,7 +370,6 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::TaskNode {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
@@ -396,7 +391,6 @@ mod tests {
         let parent = Node {
             uid: String::from("p"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
@@ -419,7 +413,6 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::OneOfNode,
             status: JobStatus::ReadyForSubmission,
             parents: vec![
@@ -442,7 +435,6 @@ mod tests {
         let p1 = Node {
             uid: String::from("p1"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::Failed(NodeFailure::Node),
             parents: Vec::new(),
@@ -452,7 +444,6 @@ mod tests {
         let p2 = Node {
             uid: String::from("p2"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
@@ -477,7 +468,6 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
@@ -501,7 +491,6 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
@@ -526,7 +515,6 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::TaskNode {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
@@ -562,7 +550,6 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::TaskNode {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
@@ -597,7 +584,6 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
@@ -625,7 +611,6 @@ mod tests {
                 Node {
                     uid: String::from("1"),
                     output_artifacts: Vec::new(),
-                    output_used: false,
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::Running(String::from("1234")),
@@ -644,7 +629,6 @@ mod tests {
                 Node {
                     uid: String::from("2"),
                     output_artifacts: Vec::new(),
-                    output_used: false,
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::ReadyForSubmission,
@@ -672,7 +656,6 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::TaskNode {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
@@ -694,7 +677,6 @@ mod tests {
         let parent = Node {
             uid: String::from("p"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),

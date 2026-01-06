@@ -57,7 +57,6 @@ mod tests {
                 String::from("2"),
                 Node {
                     uid: String::from("2"),
-                    output_used: false,
                     output_artifacts: Vec::new(),
                     behavior: NodeBehavior::TaskNode {
                         fname: String::from("stage1"),
@@ -76,7 +75,6 @@ mod tests {
                 String::from("10"),
                 Node {
                     uid: String::from("10"),
-                    output_used: false,
                     output_artifacts: Vec::new(),
                     behavior: NodeBehavior::TaskNode {
                         fname: String::from("stage2"),

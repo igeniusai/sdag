@@ -276,7 +276,6 @@ pub mod tests {
             nodes: vec![Node {
                 uid: String::from("0"),
                 output_artifacts: Vec::new(),
-                output_used: false,
                 parents: Vec::new(),
                 children: Vec::new(),
                 status: JobStatus::NotSubmitted,
@@ -336,7 +335,6 @@ pub mod tests {
             nodes: vec![Node {
                 uid: String::from("0"),
                 output_artifacts: Vec::new(),
-                output_used: false,
                 behavior: NodeBehavior::RootNode,
                 status: JobStatus::NotSubmitted,
                 parents: Vec::new(),
@@ -483,7 +481,6 @@ pub mod tests {
                 Node {
                     uid: String::from("0"),
                     output_artifacts: Vec::new(),
-                    output_used: false,
                     behavior: NodeBehavior::RootNode,
                     status: JobStatus::NotSubmitted,
                     parents: Vec::new(),
@@ -492,7 +489,6 @@ pub mod tests {
                 Node {
                     uid: String::from("1"),
                     output_artifacts: Vec::new(),
-                    output_used: false,
                     behavior: NodeBehavior::TaskNode {
                         fname: String::from(fname),
                         caching: true,
@@ -525,7 +521,6 @@ pub mod tests {
             nodes: vec![Node {
                 uid: String::from("0"),
                 output_artifacts: Vec::new(),
-                output_used: false,
                 parents: Vec::new(),
                 children: Vec::new(),
                 status: JobStatus::NotSubmitted,
@@ -605,7 +600,6 @@ pub mod tests {
         let node = Node {
             uid: String::from("0"),
             output_artifacts: Vec::new(),
-            output_used: false,
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::Running(String::from("1234")),
@@ -634,7 +628,6 @@ pub mod tests {
         let node = Node {
             uid: String::from("0"),
             output_artifacts: Vec::new(),
-            output_used: false,
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::Completed(NodeResult::Task(String::from("1234"))),
@@ -666,7 +659,6 @@ pub mod tests {
         let node = Node {
             uid: String::from("0"),
             output_artifacts: Vec::new(),
-            output_used: false,
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::Completed(NodeResult::Task(String::from("1234"))),
@@ -700,7 +692,6 @@ pub mod tests {
         let node = Node {
             uid: String::from("0"),
             output_artifacts: Vec::new(),
-            output_used: false,
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::Completed(NodeResult::Task(String::from("1234"))),

@@ -257,7 +257,6 @@ class Node(BaseModel, Generic[T]):
 
     Attributes:
         uid (str): Node unique id.
-        output_used (bool): True if the output is used.
         parents (list[Parent]): Node parents.
         behavior (BaseNodeType): Node type.
         _artifacts (dict[str, ArtifactContainer]): Artifact
@@ -265,7 +264,6 @@ class Node(BaseModel, Generic[T]):
     """
 
     uid: str
-    output_used: bool = False
     parents: list[ParentUnion] = Field(default_factory=list)
     behavior: T
     output_artifacts: list[Artifact] = Field(default_factory=list)

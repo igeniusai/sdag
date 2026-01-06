@@ -276,7 +276,6 @@ class Pipeline:
         self.set_dag(self.fn.__name__)
         output = self.fn(**input_kwargs)
         graph = self.get_graph()
-        self._mark_nodes_requiring_output(graph)
 
         root = graph.get_root()
         for parent in args:
@@ -297,9 +296,7 @@ class Pipeline:
         input_kwargs = {} if input_kwargs is None else input_kwargs
         self.set_dag(self.fn.__name__)
         self.fn(**input_kwargs)
-        graph = self.get_graph()
-        self._mark_nodes_requiring_output(graph)
-        return graph
+        return self.get_graph()
 
     def _get_end(self, graph: Graph) -> Node:
         """Get the end node.
@@ -318,31 +315,3 @@ class Pipeline:
             end.join_artifact_containers(node.artifacts)
 
         return end
-
-    def _mark_nodes_requiring_output(self, graph: Graph) -> None:
-        """Nodes requiring output are tagged.
-
-        Args:
-            graph (Graph): Compiled graph.
-        """
-        uids = set()
-        for node in graph.nodes:
-            uids.update(
-                p.uid for p in node.parents if p.parent_type.type == "Output"
-            )
-
-        self._bubbles_up_oneof(uids, graph)
-
-    def _bubbles_up_oneof(self, uids: set[str], graph: Graph) -> None:
-        """Assign output used flag and propagate OneOf nodes.
-
-        Args:
-            uids (set[str]): Nodes that require the output.
-            graph (Graph): Compiled graph.
-        """
-        nodemap = {node.uid: node for node in graph.nodes}
-        while uids:
-            node = nodemap[uids.pop()]
-            node.output_used = True
-            if node.behavior.type == "OneOfNode":
-                uids.update(p.uid for p in node.parents)

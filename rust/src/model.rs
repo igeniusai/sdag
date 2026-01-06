@@ -197,8 +197,6 @@ pub enum NodeBehavior {
 pub struct Node {
     // Node unique id.
     pub uid: String,
-    // Output used by other nodes.
-    pub output_used: bool,
     // Output artifacts.
     pub output_artifacts: Vec<Artifact>,
     // Node type.
@@ -271,7 +269,6 @@ mod tests {
         let n = Node {
             uid: String::from("p"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::RootNode,
             status: JobStatus::Completed(NodeResult::Node),
             parents: Vec::new(),
@@ -292,7 +289,6 @@ mod tests {
         let n = Node {
             uid: String::from("p"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::IfNode,
             status: JobStatus::Completed(NodeResult::If(true)),
             parents: Vec::new(),
@@ -311,7 +307,6 @@ mod tests {
         let n = Node {
             uid: String::from("p"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::IfNode,
             status: JobStatus::Completed(NodeResult::If(true)),
             parents: Vec::new(),
@@ -327,7 +322,6 @@ mod tests {
         let n = Node {
             uid: String::from("p"),
             output_artifacts: Vec::new(),
-            output_used: false,
             behavior: NodeBehavior::IfNode,
             status: JobStatus::Failed(NodeFailure::Node),
             parents: Vec::new(),
@@ -347,7 +341,6 @@ mod tests {
             Node {
                 uid: String::from("0"),
                 output_artifacts: Vec::new(),
-                output_used: false,
                 parents: Vec::new(),
                 children: Vec::new(),
                 status: JobStatus::Running(String::from("1234")),
