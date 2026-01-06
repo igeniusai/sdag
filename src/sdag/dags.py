@@ -24,6 +24,7 @@ from sdag.models import (
     OneOfNode,
     RootNode,
 )
+from sdag.optimizer import GraphJoiner
 from sdag.wrappers import IfWrapper, Pipeline, Task
 
 logger = logging.getLogger(__name__)
@@ -303,6 +304,7 @@ class SDAG:
         pipeline: Pipeline,
         dst_dir: str | Path | None = None,
         name: str | None = None,
+        optimize: bool = False,  # noqa: FBT002
         input_kwargs: dict[str, Any] | None = None,
     ) -> None:
         """Compile the pipeline to a JSON file.
@@ -311,13 +313,20 @@ class SDAG:
             pipeline (Pipeline): Pipeline to be compiled.
             dst_dir (str | Path | None, optional): Destination
                 directory. If none, it will be equal to the current one.
+                Defaults to None.
             name (str): File name. If None, it will be equal to the
                 pipeline function name. Defaults to None.
+            optimize (bool, optional): Optimize the compiled graph.
+                Defaults to False.
             input_kwargs (dict[str, Any] | None): Pipeline static input
                 arguments. Defaults to None.
         """
         self._reset_uid()
         graph = pipeline.compile(input_kwargs)
+        if optimize:
+            optimizer = GraphJoiner()
+            optimizer.join_nodes(graph)
+
         graph_json = graph.model_dump_json(indent=4, warnings="none")
 
         dst_dir = Path(dst_dir) if dst_dir is not None else Path()
