@@ -1,6 +1,8 @@
 """Model tests."""
 
 import logging
+import os
+from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
 
@@ -20,6 +22,7 @@ from sdag.models import (
     Parent,
     RootNode,
     TaskNode,
+    get_compile_settings,
 )
 
 
@@ -35,20 +38,65 @@ class TestNode:
         """
         return Node(uid="0", behavior=RootNode())
 
+    @pytest.fixture
+    def _set_sdag_base_path(self) -> Generator[None]:
+        """Safely set the base path.
+
+        Cache and environment variable are safely cleaned up.
+        """
+        get_compile_settings.cache_clear()
+        os.environ["SDAG_BASE_PATH"] = "data"
+        yield
+        del os.environ["SDAG_BASE_PATH"]
+        get_compile_settings.cache_clear()
+
     def test_register_artifact(self, node: Node[RootNode]) -> None:
         """Test the artifact registration.
 
         Args:
             node (Node[RootNode]): Node.
         """
+        # Otherwise we get inconsistent results
+        get_compile_settings.cache_clear()
         node.register_artifact(key="artifact", path=Path())
         artifacts = node.artifacts
+
         assert artifacts["artifact"].key == "artifact"
         assert artifacts["artifact"].path == Path()
         assert artifacts["artifact"].node is node
         assert node.output_artifacts == [
             Artifact(name="artifact", path=Path())
         ]
+
+    @pytest.mark.parametrize(
+        argnames=("original", "expected"),
+        argvalues=[
+            # Relative path, prepend base path
+            ("hello.txt", "data/hello.txt"),
+            # Absolute path, do not prepend
+            ("/hello.txt", "/hello.txt"),
+        ],
+    )
+    @pytest.mark.usefixtures("_set_sdag_base_path")
+    def test_register_artifact_with_base_path(
+        self,
+        original: str,
+        expected: str,
+        node: Node[RootNode],
+    ) -> None:
+        """Test the artifact registration with base path.
+
+        Args:
+            original (str): Original path.
+            expected (str): Expected artifact path.
+            node (Node[RootNode]): Node.
+        """
+        original_path = Path(original)
+        expected_path = Path(expected)
+
+        node.register_artifact(key="artifact", path=original_path)
+        artifacts = node.artifacts
+        assert artifacts["artifact"].path == expected_path
 
     def test_add_logical_edge(self, node: Node[RootNode]) -> None:
         """Test logical edge addition.

@@ -1,6 +1,8 @@
 """DAG tests."""
 
 import json
+import os
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -24,6 +26,7 @@ from sdag.models import (
     Parent,
     RootNode,
     TaskNode,
+    get_compile_settings,
 )
 from sdag.wrappers import IfWrapper, Pipeline
 
@@ -567,6 +570,51 @@ class TestSDAG:
 
         wrapper = sdag.Elif(elif_cond())
         assert isinstance(wrapper, IfWrapper)
+
+    @pytest.fixture
+    def _set_sdag_base_path(self) -> Generator[None]:
+        """Safely set the base path.
+
+        Cache and environment variable are safely cleaned up.
+        """
+        get_compile_settings.cache_clear()
+        os.environ["SDAG_BASE_PATH"] = "data"
+        yield
+        del os.environ["SDAG_BASE_PATH"]
+        get_compile_settings.cache_clear()
+
+    @pytest.mark.parametrize(
+        argnames=("original", "expected"),
+        argvalues=[
+            # Relative path, prepend base path
+            ("hello.txt", "data/hello.txt"),
+            # Absolute path, do not prepend
+            ("/hello.txt", "/hello.txt"),
+        ],
+    )
+    @pytest.mark.usefixtures("_set_sdag_base_path")
+    def test_pipeline_execution_with_base_path(
+        self, original: str, expected: str, sdag: SDAG
+    ) -> None:
+        """To verify the base path is handled correctly.
+
+        Args:
+            original (str): Artifact input path.
+            expected (str): Expected artifact path.
+            sdag (SDAG): sdag.
+        """
+        expected_path = Path(expected)
+
+        @sdag.task(launch_script="submit.sh")
+        def foo(artifact: Artifact): ...
+
+        @sdag.pipeline
+        def pipeline():
+            foo(artifact=original)
+
+        task = pipeline()
+
+        assert task.artifacts["artifact"].path == expected_path
 
     def test_compile(self, sdag: SDAG, tmp_path: Path) -> None:
         """Empty pipeline compilation

@@ -2,14 +2,36 @@
 
 import logging
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field, PrivateAttr
+from pydantic_settings import BaseSettings
 
 from sdag.exceptions import EndNotFoundError, RootNotFoundError
 
 logger = logging.getLogger(__name__)
+
+
+class CompileSettings(BaseSettings):
+    """Compilation environment variables.
+
+    Attributes:
+        sdag_base_path (Path | None): Base path. Defaults to None.
+    """
+
+    sdag_base_path: Path | None = None
+
+
+@lru_cache
+def get_compile_settings() -> CompileSettings:
+    """Get cached compilation settings.
+
+    Returns:
+        CompileSettings: Cached compilation settings.
+    """
+    return CompileSettings()
 
 
 class Artifact(BaseModel):
@@ -283,10 +305,18 @@ class Node(BaseModel, Generic[T]):
     def register_artifact(self, key: str, path: Path) -> None:
         """Register an artifact.
 
+        If the `SDAG_BASE_PATH` environment variable is set and
+        path is not absolute, the registered path is appended to
+        the base path.
+
         Args:
             key (str): Artifact key.
             path (Path): Artifact path.
         """
+        settings = get_compile_settings()
+        if not path.is_absolute() and settings.sdag_base_path is not None:
+            path = settings.sdag_base_path / path
+
         self.output_artifacts.append(Artifact(name=key, path=path))
         self._artifact_containers[key] = ArtifactContainer(key, path, self)
 
