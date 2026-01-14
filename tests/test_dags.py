@@ -622,6 +622,10 @@ class TestSDAG:
         """Empty pipeline compilation
 
         There are only root and end nodes.
+
+        Args:
+            sdag (SDAG): sdag.
+            tmp_path (Path): Temporary path fixture.
         """
 
         @sdag.pipeline
@@ -635,3 +639,26 @@ class TestSDAG:
 
         assert graph.meta.name == "pipeline"
         assert len(graph.nodes) == 2
+
+    def test_compile_with_extra_metadata(
+        self, sdag: SDAG, tmp_path: Path
+    ) -> None:
+        """Check extra metadata are kept.
+
+        There are only root and end nodes.
+
+        Args:
+            sdag (SDAG): sdag.
+            tmp_path (Path): Temporary path fixture.
+        """
+
+        @sdag.pipeline
+        def pipeline(): ...
+
+        extra_metadata = {"a": "extra"}
+        sdag.compile(pipeline, tmp_path, extra_metadata=extra_metadata)
+        with (tmp_path / "pipeline.json").open() as f:
+            data = json.load(f)
+
+        graph = Graph.model_validate(data)
+        assert graph.meta.extra == extra_metadata

@@ -306,6 +306,7 @@ class SDAG:
         name: str | None = None,
         optimize: bool = False,  # noqa: FBT002
         input_kwargs: dict[str, Any] | None = None,
+        extra_metadata: Any = None,
     ) -> None:
         """Compile the pipeline to a JSON file.
 
@@ -320,9 +321,13 @@ class SDAG:
                 Defaults to False.
             input_kwargs (dict[str, Any] | None): Pipeline static input
                 arguments. Defaults to None.
+            extra_metadata (Any): Extra metadata added to the pipeline.
+                Defaults to None.
         """
         self._reset_uid()
         graph = pipeline.compile(input_kwargs)
+        graph.meta.extra = extra_metadata
+
         if optimize:
             optimizer = GraphJoiner()
             optimizer.join_nodes(graph)

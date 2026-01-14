@@ -404,10 +404,12 @@ class GraphMetadata(BaseModel):
 
     Attributes:
         name (str): Pipeline name.
+        extra (Any, optional): extra metadata. Defaults to None.
         creation_dt (datetime): Pipeline compilation datetime.
     """
 
     name: str
+    extra: Any = None
     creation_dt: datetime = Field(default_factory=datetime.now)
 
 
