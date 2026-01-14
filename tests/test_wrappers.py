@@ -1,7 +1,8 @@
 """Wrapper tests."""
 
 import inspect
-from collections.abc import Callable
+import os
+from collections.abc import Callable, Generator
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,7 @@ from sdag.models import (
     Parent,
     RootNode,
     TaskNode,
+    get_compile_settings,
 )
 from sdag.wrappers import IfWrapper, Pipeline, Task, validate_kwargs
 
@@ -154,6 +156,18 @@ class MockSDAG:
 class TestTask:
     """Task tests."""
 
+    @pytest.fixture
+    def _set_sdag_base_path(self) -> Generator[None]:
+        """Safely set the base path.
+
+        Cache and environment variable are safely cleaned up.
+        """
+        get_compile_settings.cache_clear()
+        os.environ["SDAG_BASE_PATH"] = "data"
+        yield
+        del os.environ["SDAG_BASE_PATH"]
+        get_compile_settings.cache_clear()
+
     def mock_stage(self) -> None:
         """Mocked stage function."""
 
@@ -215,6 +229,70 @@ class TestTask:
         assert node.output_artifacts == [
             Artifact(name="b", path=Path("/path"))
         ]
+
+    @pytest.mark.parametrize(
+        argnames=("original", "expected"),
+        argvalues=[
+            # Relative path, prepend base path
+            ("hello.txt", "data/hello.txt"),
+            # Absolute path, do not prepend
+            ("/hello.txt", "/hello.txt"),
+        ],
+    )
+    @pytest.mark.usefixtures("_set_sdag_base_path")
+    def test_prepend_base_path_when_set(
+        self,
+        original: str,
+        expected: str,
+    ) -> None:
+        """Test the artifact registration with base path.
+
+        Args:
+            original (str): Original path.
+            expected (str): Expected artifact path.
+        """
+
+        def fn(a: Artifact) -> None:
+            """Mocked task with artifact."""
+
+        sdag = MockSDAG()
+        task = Task(
+            fn=fn,
+            caching=True,
+            retries=2,
+            launch_script=Path(),
+            register=sdag.register,
+            get_uid=sdag.get_uid,
+        )
+
+        kwargs = {"a": original}
+        sig = inspect.signature(fn)
+
+        task._prepend_base_path_if_set(kwargs, sig)
+        assert kwargs["a"] == expected
+
+    def test_do_not_prepend_base_path(self) -> None:
+        """SDAG home is not set, do not prepend."""
+
+        def fn(a: Artifact) -> None:
+            """Mocked task with artifact."""
+
+        sdag = MockSDAG()
+        task = Task(
+            fn=fn,
+            caching=True,
+            retries=2,
+            launch_script=Path(),
+            register=sdag.register,
+            get_uid=sdag.get_uid,
+        )
+
+        original = "hello.txt"
+        kwargs = {"a": original}
+        sig = inspect.signature(fn)
+
+        task._prepend_base_path_if_set(kwargs, sig)
+        assert kwargs["a"] == original
 
     def test_call(self) -> None:
         """Test the task call."""

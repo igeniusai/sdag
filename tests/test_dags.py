@@ -610,7 +610,9 @@ class TestSDAG:
 
         @sdag.pipeline
         def pipeline():
-            foo(artifact=original)
+            task = foo(artifact=original)
+            # The input value must be modified accordingly
+            assert task.behavior.input_kwargs[0].value == expected
 
         task = pipeline()
 

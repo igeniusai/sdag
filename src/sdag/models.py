@@ -305,18 +305,10 @@ class Node(BaseModel, Generic[T]):
     def register_artifact(self, key: str, path: Path) -> None:
         """Register an artifact.
 
-        If the `SDAG_BASE_PATH` environment variable is set and
-        path is not absolute, the registered path is appended to
-        the base path.
-
         Args:
             key (str): Artifact key.
             path (Path): Artifact path.
         """
-        settings = get_compile_settings()
-        if not path.is_absolute() and settings.sdag_base_path is not None:
-            path = settings.sdag_base_path / path
-
         self.output_artifacts.append(Artifact(name=key, path=path))
         self._artifact_containers[key] = ArtifactContainer(key, path, self)
 

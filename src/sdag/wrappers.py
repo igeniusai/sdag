@@ -1,6 +1,7 @@
 """Wrappers."""
 
 import inspect
+import logging
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -20,7 +21,10 @@ from sdag.models import (
     InputKwarg,
     Node,
     TaskNode,
+    get_compile_settings,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def validate_kwargs(sig: inspect.Signature, kwargs: dict[str, Any]) -> None:
@@ -126,13 +130,41 @@ class Task:
         sig = inspect.signature(self.fn)
         self._add_default_values(sig, kwargs)
         validate_kwargs(sig, kwargs)
+        self._prepend_base_path_if_set(kwargs, sig)
 
         for key, val in kwargs.items():
             param = sig.parameters.get(key)
             if param is not None and param.annotation == Artifact:
                 self._set_output_artifact(node, key, val)
 
+            val = kwargs[key]
             self._handle_input_kwarg(node, key, val)
+
+    def _prepend_base_path_if_set(
+        self, kwargs: dict[str, Any], sig: inspect.Signature
+    ) -> None:
+        """Prepend the base path if required.
+
+        If the `SDAG_BASE_PATH` environment variable is set and
+        path is not absolute, the registered path is appended to
+        the base path.
+
+        Args:
+            kwargs (dict[str, Any]): Input kwargs.
+            sig (inspect.Signature): Task signature.
+        """
+        settings = get_compile_settings()
+        if settings.sdag_base_path is None:
+            return
+
+        logger.debug("sdag base path: '%s'", settings.sdag_base_path)
+
+        for key in kwargs:
+            param = sig.parameters.get(key)
+            if param is not None and param.annotation == Artifact:
+                path = Path(kwargs[key])
+                if not path.is_absolute():
+                    kwargs[key] = str(settings.sdag_base_path / path)
 
     def _add_default_values(
         self, sig: inspect.Signature, kwargs: dict[str, Any]
