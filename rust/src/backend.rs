@@ -213,8 +213,8 @@ impl Backend for SlurmBackend {
             .env("SDAG_UID", uid)
             .env("SDAG_TASK", fname)
             .arg(format!("--job-name={fname}"))
-            .arg(format!("--error=./logs/{pipeline_name}/{fname}/%x.%j.err"))
-            .arg(format!("--output=./logs/{pipeline_name}/{fname}/%x.%j.out"))
+            .arg(format!("--error=./logs/{pipeline_name}/%x.%j.err"))
+            .arg(format!("--output=./logs/{pipeline_name}/%x.%j.out"))
             .arg(&launch_script)
             .output()?;
 
