@@ -202,11 +202,19 @@ impl Backend for SlurmBackend {
         try_num: &u32,
     ) -> Result<String, Box<dyn Error>> {
         let try_num_str = try_num.to_string();
+        let pipeline_name = pipeline_dir
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or("Failed to identify the pipeline name")?;
+
         let output = Command::new("sbatch")
             .env("SDAG_TRY_NUM", &try_num_str)
             .env("SDAG_PIPELINE", pipeline_dir)
             .env("SDAG_UID", uid)
             .env("SDAG_TASK", fname)
+            .arg(format!("--job-name={fname}"))
+            .arg(format!("--error=./logs/{pipeline_name}/{fname}/%x.%j.err"))
+            .arg(format!("--output=./logs/{pipeline_name}/{fname}/%x.%j.out"))
             .arg(&launch_script)
             .output()?;
 
