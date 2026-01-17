@@ -103,13 +103,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
                 if self.max_concurrency > 0 && self.nrunning >= self.max_concurrency {
                     return JobStatus::NotSubmitted;
                 }
-
-                let status = self.submit_tasknode(&task, &node.uid);
-
-                if let JobStatus::Running(_) = status {
-                    self.nrunning += 1;
-                }
-                status
+                self.submit_tasknode(&task, &node.uid)
             }
             NodeBehavior::OneOfNode { .. } => match self.submit_oneofnode(&node.uid, &nodemap) {
                 Ok(uid) => JobStatus::Completed(NodeResult::OneOf(uid)),
@@ -123,7 +117,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     }
 
     /// Submit a task.
-    fn submit_tasknode(&self, task: &Task, uid: &str) -> JobStatus {
+    fn submit_tasknode(&mut self, task: &Task, uid: &str) -> JobStatus {
         log::debug!("Submitting task '{}' of node '{}'", task.fname, uid);
         let pipeline_dir = self.state.get_pipeline_dir();
         let res = self.backend.submit(
@@ -134,7 +128,10 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
             &task.try_num,
         );
         match res {
-            Ok(job_id) => JobStatus::Running(job_id),
+            Ok(job_id) => {
+                self.nrunning += 1;
+                JobStatus::Running(job_id)
+            }
             Err(e) => {
                 log::error!("Failed task {uid} submission: {e}");
                 JobStatus::Failed(NodeFailure::Node)
