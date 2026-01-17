@@ -3,7 +3,7 @@
 //! The backend executes jobs and polls the status.
 
 use crate::caching;
-use crate::model::{JobStatus, Node, NodeFailure, NodeResult};
+use crate::model::{ExecMode, JobStatus, Node, NodeFailure, NodeResult, Task};
 use crate::state::StateManager;
 use log;
 use regex::Regex;
@@ -29,19 +29,13 @@ impl Backend for ProcessBackend {
 
     fn submit(
         &self,
-        launch_script: &str,
+        task: &Task,
         uid: &str,
-        fname: &str,
         pipeline_dir: &PathBuf,
-        try_num: &u32,
     ) -> Result<String, Box<dyn Error>> {
         match self {
-            Self::Local(backend) => {
-                backend.submit(launch_script, uid, fname, pipeline_dir, try_num)
-            }
-            Self::Slurm(backend) => {
-                backend.submit(launch_script, uid, fname, pipeline_dir, try_num)
-            }
+            Self::Local(backend) => backend.submit(task, uid, pipeline_dir),
+            Self::Slurm(backend) => backend.submit(task, uid, pipeline_dir),
         }
     }
 }
@@ -59,11 +53,9 @@ pub trait Backend {
     fn update_status(&self, nodemap: &mut HashMap<String, Node>, state: &impl StateManager);
     fn submit(
         &self,
-        launch_script: &str,
+        task: &Task,
         uid: &str,
-        fname: &str,
         pipeline_dir: &PathBuf,
-        try_num: &u32,
     ) -> Result<String, Box<dyn Error>>;
 
     fn get_running_job_ids(&self, nodemap: &HashMap<String, Node>) -> HashMap<String, String> {
@@ -195,13 +187,11 @@ impl Backend for SlurmBackend {
 
     fn submit(
         &self,
-        launch_script: &str,
+        task: &Task,
         uid: &str,
-        fname: &str,
         pipeline_dir: &PathBuf,
-        try_num: &u32,
     ) -> Result<String, Box<dyn Error>> {
-        let try_num_str = try_num.to_string();
+        let try_num_str = task.try_num.to_string();
         let pipeline_name = pipeline_dir
             .file_name()
             .and_then(|name| name.to_str())
@@ -211,11 +201,11 @@ impl Backend for SlurmBackend {
             .env("SDAG_TRY_NUM", &try_num_str)
             .env("SDAG_PIPELINE", pipeline_dir)
             .env("SDAG_UID", uid)
-            .env("SDAG_TASK", fname)
-            .arg(format!("--job-name={fname}"))
+            .env("SDAG_TASK", &task.fname)
+            .arg(format!("--job-name={}", task.fname))
             .arg(format!("--error=./logs/{pipeline_name}/%x.%j.err"))
             .arg(format!("--output=./logs/{pipeline_name}/%x.%j.out"))
-            .arg(&launch_script)
+            .arg(&task.launch_script)
             .output()?;
 
         if let Ok(stderr) = String::from_utf8(output.stderr) {
@@ -239,21 +229,19 @@ impl Backend for LocalBackend {
     // The scheduler waits until their completion.
     fn submit(
         &self,
-        launch_script: &str,
+        task: &Task,
         uid: &str,
-        fname: &str,
         pipeline_dir: &PathBuf,
-        try_num: &u32,
     ) -> Result<String, Box<dyn Error>> {
         log::info!("Running task '{uid}' locally");
 
-        let try_num_str = try_num.to_string();
+        let try_num_str = task.try_num.to_string();
         let mut command = Command::new("bash")
             .env("SDAG_TRY_NUM", &try_num_str)
             .env("SDAG_PIPELINE", pipeline_dir)
             .env("SDAG_UID", uid)
-            .env("SDAG_TASK", fname)
-            .arg(launch_script)
+            .env("SDAG_TASK", &task.fname)
+            .arg(&task.launch_script)
             .spawn()?;
 
         let pid = command.id();
@@ -468,11 +456,16 @@ mod tests {
     fn submit_wrong_file() {
         let backend = SlurmBackend;
         let pipeline_dir = PathBuf::from("./sdag");
-        let try_num = 1;
-        let fname = "task";
-        backend
-            .submit("_wrong_", "1", fname, &pipeline_dir, &try_num)
-            .unwrap();
+        let task = Task {
+            fname: String::from("fname"),
+            caching: false,
+            mode: ExecMode::Wrap,
+            try_num: 0,
+            retries: 0,
+            launch_script: String::from("_wrong_"),
+            input_kwargs: Vec::new(),
+        };
+        backend.submit(&task, "1", &pipeline_dir).unwrap();
     }
 
     #[test]
@@ -514,9 +507,16 @@ mod tests {
         let contents = "echo hello";
         fs::write(&path, contents).unwrap();
         let backend = LocalBackend;
-        let launch_script = path.to_str().unwrap();
-        backend
-            .submit(launch_script, "1", "task", &tmp_dir, &1)
-            .unwrap();
+        let launch_script = path.to_string_lossy().into_owned();
+        let task = Task {
+            fname: String::from("fname"),
+            caching: false,
+            mode: ExecMode::Wrap,
+            try_num: 0,
+            retries: 0,
+            launch_script,
+            input_kwargs: Vec::new(),
+        };
+        backend.submit(&task, "1", &tmp_dir).unwrap();
     }
 }

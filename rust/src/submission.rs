@@ -120,13 +120,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     fn submit_tasknode(&mut self, task: &Task, uid: &str) -> JobStatus {
         log::debug!("Submitting task '{}' of node '{}'", task.fname, uid);
         let pipeline_dir = self.state.get_pipeline_dir();
-        let res = self.backend.submit(
-            &task.launch_script,
-            &uid,
-            &task.fname,
-            pipeline_dir,
-            &task.try_num,
-        );
+        let res = self.backend.submit(task, uid, pipeline_dir);
         match res {
             Ok(job_id) => {
                 self.nrunning += 1;
@@ -187,11 +181,9 @@ mod tests {
         fn update_status(&self, _nodemap: &mut HashMap<String, Node>, _state: &impl StateManager) {}
         fn submit(
             &self,
-            _launch_script: &str,
+            _task: &Task,
             _uid: &str,
-            _fname: &str,
             _pipeline_dir: &PathBuf,
-            _try_num: &u32,
         ) -> Result<String, Box<dyn Error>> {
             Ok(String::from("1234"))
         }
