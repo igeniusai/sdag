@@ -12,13 +12,13 @@ pub fn limit_cached_tasks_same_name(nodemap: &mut HashMap<String, Node>) {
     let mut submitted_with_caching = find_running_cacheable_jobs(nodemap);
     for node in nodemap.values_mut() {
         if let JobStatus::ReadyForSubmission = node.status
-            && let NodeBehavior::TaskNode { caching, fname, .. } = &node.behavior
-            && *caching
+            && let NodeBehavior::TaskNode(task) = &node.behavior
+            && task.caching
         {
-            if submitted_with_caching.contains(fname) {
+            if submitted_with_caching.contains(&task.fname) {
                 node.status = JobStatus::NotSubmitted;
             } else {
-                submitted_with_caching.insert(fname.to_string());
+                submitted_with_caching.insert(task.fname.to_string());
             }
         }
     }
@@ -30,10 +30,10 @@ fn find_running_cacheable_jobs(nodemap: &HashMap<String, Node>) -> HashSet<Strin
         .values()
         .filter(|n| matches!(n.status, JobStatus::Running(_)))
         .filter_map(|n| {
-            if let NodeBehavior::TaskNode { caching, fname, .. } = &n.behavior
-                && *caching
+            if let NodeBehavior::TaskNode(task) = &n.behavior
+                && task.caching
             {
-                Some(fname.to_string())
+                Some(task.fname.to_string())
             } else {
                 None
             }
@@ -44,6 +44,7 @@ fn find_running_cacheable_jobs(nodemap: &HashMap<String, Node>) -> HashSet<Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::{ExecMode, Task};
 
     // Two cacheable tasks with the same name, only one survives.
     #[test]
@@ -57,14 +58,15 @@ mod tests {
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::ReadyForSubmission,
-                    behavior: NodeBehavior::TaskNode {
+                    behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("fname"),
                         caching: true,
+                        mode: ExecMode::Wrap,
                         try_num: 0,
                         retries: 0,
                         launch_script: String::from("lauch.sh"),
                         input_kwargs: Vec::new(),
-                    },
+                    }),
                 },
             ),
             (
@@ -75,14 +77,15 @@ mod tests {
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::ReadyForSubmission,
-                    behavior: NodeBehavior::TaskNode {
+                    behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("fname"),
                         caching: true,
+                        mode: ExecMode::Wrap,
                         try_num: 0,
                         retries: 0,
                         launch_script: String::from("lauch.sh"),
                         input_kwargs: Vec::new(),
-                    },
+                    }),
                 },
             ),
         ]);
@@ -107,14 +110,15 @@ mod tests {
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::ReadyForSubmission,
-                    behavior: NodeBehavior::TaskNode {
+                    behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("fname"),
                         caching: true,
+                        mode: ExecMode::Wrap,
                         try_num: 0,
                         retries: 0,
                         launch_script: String::from("lauch.sh"),
                         input_kwargs: Vec::new(),
-                    },
+                    }),
                 },
             ),
             (
@@ -125,14 +129,15 @@ mod tests {
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::Running("123".to_string()),
-                    behavior: NodeBehavior::TaskNode {
+                    behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("fname"),
                         caching: true,
+                        mode: ExecMode::Wrap,
                         try_num: 0,
                         retries: 0,
                         launch_script: String::from("lauch.sh"),
                         input_kwargs: Vec::new(),
-                    },
+                    }),
                 },
             ),
         ]);
@@ -157,14 +162,15 @@ mod tests {
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::Running("1".to_string()),
-                    behavior: NodeBehavior::TaskNode {
+                    behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("fname"),
                         caching: true,
+                        mode: ExecMode::Wrap,
                         try_num: 0,
                         retries: 0,
                         launch_script: String::from("lauch.sh"),
                         input_kwargs: Vec::new(),
-                    },
+                    }),
                 },
             ),
             (
@@ -175,14 +181,15 @@ mod tests {
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::ReadyForSubmission,
-                    behavior: NodeBehavior::TaskNode {
+                    behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("not-running"),
                         caching: true,
+                        mode: ExecMode::Wrap,
                         try_num: 0,
                         retries: 0,
                         launch_script: String::from("lauch.sh"),
                         input_kwargs: Vec::new(),
-                    },
+                    }),
                 },
             ),
         ]);

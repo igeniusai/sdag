@@ -21,13 +21,13 @@ use std::io;
 pub fn replace_cache<T: StateManager>(node: &Node, state: &T) {
     log::debug!("Checking task '{}' cache", node.uid);
     if let JobStatus::Completed(NodeResult::Task(_)) = node.status
-        && let NodeBehavior::TaskNode { caching, fname, .. } = &node.behavior
-        && *caching
+        && let NodeBehavior::TaskNode(task) = &node.behavior
+        && task.caching
     {
-        log::info!("Saving task '{fname}' cache");
+        log::info!("Saving task '{}' cache", task.fname);
         state
-            .cache_task(fname, &node.uid)
-            .map_err(|e| log::error!("Failed to save cache for task '{fname}': {e}"))
+            .cache_task(&task.fname, &node.uid)
+            .map_err(|e| log::error!("Failed to save task '{}' cache: {}", task.fname, e))
             .ok();
     }
 }
@@ -53,14 +53,9 @@ fn get_task_caching_status<T: StateManager>(
     state: &T,
 ) -> Option<(String, Result<bool, Box<dyn Error>>)> {
     match &node.behavior {
-        NodeBehavior::TaskNode {
-            caching,
-            fname,
-            input_kwargs,
-            ..
-        } => Some((
+        NodeBehavior::TaskNode(task) => Some((
             key.to_string(),
-            check_task_caching(node, caching, fname, input_kwargs, state),
+            check_task_caching(node, &task.caching, &task.fname, &task.input_kwargs, state),
         )),
         _ => None,
     }
@@ -194,7 +189,8 @@ fn save_input<T: StateManager>(
 mod tests {
     use super::*;
     use crate::model::{
-        Artifact, DAG, InputKwarg, JobStatus, Node, NodeBehavior, Parent, ParentType,
+        Artifact, DAG, ExecMode, InputKwarg, JobStatus, Node, NodeBehavior, Parent, ParentType,
+        Task,
     };
     use crate::state::{LocalDirState, tests::get_tmp_dir};
     use std::{env, fs, path::PathBuf};
@@ -264,14 +260,15 @@ mod tests {
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::Completed(NodeResult::Task("1234".to_string())),
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
                 caching: true,
+                mode: ExecMode::Wrap,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),
                 input_kwargs: Vec::new(),
-            },
+            }),
         };
 
         let home_dir = get_tmp_dir();
@@ -376,14 +373,15 @@ mod tests {
             }],
             children: Vec::new(),
             status: JobStatus::ReadyForSubmission,
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
                 caching: true,
+                mode: ExecMode::Wrap,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),
                 input_kwargs: input_kwargs.clone(),
-            },
+            }),
         };
 
         let input_data = read_input_data(&node, &input_kwargs, &state).unwrap();
@@ -412,14 +410,15 @@ mod tests {
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::ReadyForSubmission,
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: fname.clone(),
                 caching: caching,
+                mode: ExecMode::Wrap,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),
                 input_kwargs: input_kwargs.clone(),
-            },
+            }),
         };
 
         assert!(check_task_caching(&node, &caching, &fname, &input_kwargs, &state).unwrap());
@@ -441,14 +440,15 @@ mod tests {
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::ReadyForSubmission,
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: fname.clone(),
                 caching: caching,
+                mode: ExecMode::Wrap,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),
                 input_kwargs: input_kwargs.clone(),
-            },
+            }),
         };
 
         assert!(!check_task_caching(&node, &caching, &fname, &input_kwargs, &state).unwrap());
@@ -476,14 +476,15 @@ mod tests {
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::ReadyForSubmission,
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: fname.clone(),
                 caching: caching,
+                mode: ExecMode::Wrap,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),
                 input_kwargs: input_kwargs.clone(),
-            },
+            }),
         };
 
         assert!(check_task_caching(&node, &caching, &fname, &input_kwargs, &state).unwrap());
@@ -508,14 +509,15 @@ mod tests {
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::ReadyForSubmission,
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: fname.clone(),
                 caching: caching,
+                mode: ExecMode::Wrap,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),
                 input_kwargs: input_kwargs.clone(),
-            },
+            }),
         };
 
         assert!(!check_task_caching(&node, &caching, &fname, &input_kwargs, &state).unwrap());
@@ -530,9 +532,10 @@ mod tests {
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::ReadyForSubmission,
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
                 caching: true,
+                mode: ExecMode::Wrap,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),
@@ -540,7 +543,7 @@ mod tests {
                     key: "a".to_string(),
                     value: Value::Bool(true),
                 }],
-            },
+            }),
         };
 
         let mut nodemap = HashMap::from([("0".to_string(), node)]);

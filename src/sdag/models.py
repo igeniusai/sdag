@@ -94,6 +94,7 @@ class TaskNode(BaseNodeType):
     type: Literal["TaskNode"] = "TaskNode"
     fname: str
     launch_script: Path
+    mode: Literal["wrap", "ext"] = "wrap"
     caching: bool
     retries: int
     input_kwargs: list[InputKwarg] = Field(default_factory=list)

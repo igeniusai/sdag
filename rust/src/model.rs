@@ -158,6 +158,37 @@ pub struct InputKwarg {
     pub value: Value,
 }
 
+// Task execution mode
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum ExecMode {
+    /// Wrap an existing task
+    #[serde(rename = "wrap")]
+    Wrap,
+    /// External script
+    #[serde(rename = "ext")]
+    Ext,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Task {
+    /// Task function name.
+    pub fname: String,
+    /// Caching.
+    pub caching: bool,
+    /// Execution mode
+    pub mode: ExecMode,
+    /// Try number.
+    #[serde(default = "initial_try_num")]
+    pub try_num: u32,
+    /// Number of retries.
+    pub retries: u32,
+    /// Slurm sbatch script.
+    pub launch_script: String,
+    /// Static input kwargs.
+    #[serde(default = "Vec::new")]
+    pub input_kwargs: Vec<InputKwarg>,
+}
+
 // Node types.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(tag = "type")]
@@ -173,23 +204,8 @@ pub enum NodeBehavior {
     IfNode,
     /// OneOf node.
     OneOfNode,
-    /// User-defined tasks.
-    TaskNode {
-        /// Task function name.
-        fname: String,
-        /// Caching.
-        caching: bool,
-        /// Try number.
-        #[serde(default = "initial_try_num")]
-        try_num: u32,
-        /// Number of retries.
-        retries: u32,
-        /// Slurm sbatch script.
-        launch_script: String,
-        #[serde(default = "Vec::new")]
-        /// Static input kwargs.
-        input_kwargs: Vec<InputKwarg>,
-    },
+    /// User-defined task.
+    TaskNode(Task),
 }
 
 /// Graph node.
@@ -344,14 +360,15 @@ mod tests {
                 parents: Vec::new(),
                 children: Vec::new(),
                 status: JobStatus::Running(String::from("1234")),
-                behavior: NodeBehavior::TaskNode {
+                behavior: NodeBehavior::TaskNode(Task {
                     fname: String::from("fname"),
                     caching: false,
+                    mode: ExecMode::Wrap,
                     try_num: 0,
                     retries: 0,
                     launch_script: String::from("lauch.sh"),
                     input_kwargs: Vec::new(),
-                },
+                }),
             },
         )]);
 

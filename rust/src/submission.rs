@@ -6,7 +6,7 @@
 use crate::backend::Backend;
 use crate::caching;
 use crate::limiters;
-use crate::model::{BooleanOutput, JobStatus, Node, NodeBehavior, NodeFailure, NodeResult};
+use crate::model::{BooleanOutput, JobStatus, Node, NodeBehavior, NodeFailure, NodeResult, Task};
 use crate::state::StateManager;
 use crate::status_management::StatusSelector;
 use serde_json;
@@ -84,9 +84,9 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
 
     /// Update the retry count for rescheduled tasks.
     fn update_try_count(&self, node: &mut Node) {
-        if let NodeBehavior::TaskNode { try_num, .. } = &mut node.behavior {
+        if let NodeBehavior::TaskNode(task) = &mut node.behavior {
             match node.status {
-                JobStatus::Running(_) | JobStatus::Failed(_) => *try_num += 1,
+                JobStatus::Running(_) | JobStatus::Failed(_) => task.try_num += 1,
                 _ => {}
             }
         }
@@ -99,17 +99,13 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
             NodeBehavior::RootNode { .. } | NodeBehavior::EndNode { .. } => {
                 JobStatus::Completed(NodeResult::Node)
             }
-            NodeBehavior::TaskNode {
-                launch_script,
-                try_num,
-                fname,
-                ..
-            } => {
+            NodeBehavior::TaskNode(task) => {
                 if self.max_concurrency > 0 && self.nrunning >= self.max_concurrency {
                     return JobStatus::NotSubmitted;
                 }
 
-                let status = self.submit_tasknode(&node.uid, fname, launch_script, try_num);
+                let status = self.submit_tasknode(&task, &node.uid);
+
                 if let JobStatus::Running(_) = status {
                     self.nrunning += 1;
                 }
@@ -127,18 +123,16 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     }
 
     /// Submit a task.
-    fn submit_tasknode(
-        &self,
-        uid: &str,
-        fname: &str,
-        launch_script: &str,
-        try_num: &u32,
-    ) -> JobStatus {
-        log::debug!("Submitting task '{fname}' of node '{uid}'");
+    fn submit_tasknode(&self, task: &Task, uid: &str) -> JobStatus {
+        log::debug!("Submitting task '{}' of node '{}'", task.fname, uid);
         let pipeline_dir = self.state.get_pipeline_dir();
-        let res = self
-            .backend
-            .submit(launch_script, uid, fname, pipeline_dir, try_num);
+        let res = self.backend.submit(
+            &task.launch_script,
+            &uid,
+            &task.fname,
+            pipeline_dir,
+            &task.try_num,
+        );
         match res {
             Ok(job_id) => JobStatus::Running(job_id),
             Err(e) => {
@@ -185,7 +179,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
 
 #[cfg(test)]
 mod tests {
-    use crate::model::{DAG, Parent, ParentType};
+    use crate::model::{DAG, ExecMode, Parent, ParentType};
 
     use super::*;
     use std::path::PathBuf;
@@ -370,14 +364,15 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
                 caching: false,
+                mode: ExecMode::Wrap,
                 retries: 0,
                 try_num: 0,
                 input_kwargs: Vec::new(),
-            },
+            }),
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
                 parent_type: ParentType::Output {
@@ -515,14 +510,15 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
                 caching: false,
+                mode: ExecMode::Wrap,
                 retries: 0,
                 try_num: 0,
                 input_kwargs: Vec::new(),
-            },
+            }),
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
             children: Vec::new(),
@@ -540,7 +536,7 @@ mod tests {
         assert!(matches!(child.status, JobStatus::Failed(NodeFailure::Node)));
         assert!(matches!(
             child.behavior,
-            NodeBehavior::TaskNode { try_num: 1, .. }
+            NodeBehavior::TaskNode(ref task) if task.try_num == 1
         ));
     }
 
@@ -550,14 +546,15 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
                 caching: false,
+                mode: ExecMode::Wrap,
                 retries: 0,
                 try_num: 0,
                 input_kwargs: Vec::new(),
-            },
+            }),
             status: JobStatus::ReadyForSubmission,
             parents: Vec::new(),
             children: Vec::new(),
@@ -574,7 +571,7 @@ mod tests {
         assert!(matches!(child.status, JobStatus::NotSubmitted));
         assert!(matches!(
             child.behavior,
-            NodeBehavior::TaskNode { try_num: 0, .. }
+            NodeBehavior::TaskNode(ref task) if task.try_num == 0
         ));
     }
 
@@ -614,14 +611,15 @@ mod tests {
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::Running(String::from("1234")),
-                    behavior: NodeBehavior::TaskNode {
+                    behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("function"),
                         launch_script: String::from("script"),
                         caching: false,
+                        mode: ExecMode::Wrap,
                         retries: 0,
                         try_num: 0,
                         input_kwargs: Vec::new(),
-                    },
+                    }),
                 },
             ),
             (
@@ -632,14 +630,15 @@ mod tests {
                     parents: Vec::new(),
                     children: Vec::new(),
                     status: JobStatus::ReadyForSubmission,
-                    behavior: NodeBehavior::TaskNode {
+                    behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("function"),
                         launch_script: String::from("script"),
                         caching: false,
+                        mode: ExecMode::Wrap,
                         retries: 0,
                         try_num: 0,
                         input_kwargs: Vec::new(),
-                    },
+                    }),
                 },
             ),
         ]);
@@ -656,14 +655,15 @@ mod tests {
         let node = Node {
             uid: String::from("c"),
             output_artifacts: Vec::new(),
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("function"),
                 launch_script: String::from("script"),
                 caching: false,
+                mode: ExecMode::Wrap,
                 retries: 0,
                 try_num: 0,
                 input_kwargs: Vec::new(),
-            },
+            }),
             status: JobStatus::ReadyForSubmission,
             parents: vec![Parent {
                 parent_type: ParentType::Output {

@@ -1,6 +1,6 @@
 //! Create the summary table out of the nodemap.
 
-use crate::model::{Node, NodeBehavior};
+use crate::model::{Node, NodeBehavior, Task};
 use std::collections::HashMap;
 use tabled::{
     Table, Tabled,
@@ -26,12 +26,12 @@ struct Summary<'a> {
 pub fn get_summary_table<'a>(nodemap: &'a HashMap<String, Node>) -> Table {
     let mut records = Vec::new();
     for node in nodemap.values() {
-        if let NodeBehavior::TaskNode { fname, try_num, .. } = &node.behavior {
+        if let NodeBehavior::TaskNode(task) = &node.behavior {
             records.push(Summary {
                 uid: &node.uid,
-                task: fname,
+                task: &task.fname,
                 status: &node.status,
-                num_tries: *try_num,
+                num_tries: task.try_num,
             });
         }
     }
@@ -46,7 +46,7 @@ pub fn get_summary_table<'a>(nodemap: &'a HashMap<String, Node>) -> Table {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::NodeFailure;
+    use crate::model::{ExecMode, NodeFailure};
     use tabled::assert::assert_table;
 
     /// Check the summary table is correct.
@@ -58,14 +58,15 @@ mod tests {
                 Node {
                     uid: String::from("2"),
                     output_artifacts: Vec::new(),
-                    behavior: NodeBehavior::TaskNode {
+                    behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("stage1"),
                         caching: false,
+                        mode: ExecMode::Wrap,
                         try_num: 1,
                         retries: 2,
                         launch_script: String::from("script"),
                         input_kwargs: Vec::new(),
-                    },
+                    }),
                     status: JobStatus::Failed(NodeFailure::Task("1234".to_string())),
                     parents: Vec::new(),
                     children: Vec::new(),
@@ -76,14 +77,15 @@ mod tests {
                 Node {
                     uid: String::from("10"),
                     output_artifacts: Vec::new(),
-                    behavior: NodeBehavior::TaskNode {
+                    behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("stage2"),
                         caching: false,
+                        mode: ExecMode::Wrap,
                         try_num: 2,
                         retries: 2,
                         launch_script: String::from("script"),
                         input_kwargs: Vec::new(),
-                    },
+                    }),
                     status: JobStatus::Skipped,
                     parents: Vec::new(),
                     children: Vec::new(),

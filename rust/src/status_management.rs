@@ -12,11 +12,8 @@ use std::collections::HashMap;
 /// - Must be a task
 /// - The number of retries must be lower than the user-selected ones
 fn set_retry_if_possible(node: &mut Node) {
-    if let NodeBehavior::TaskNode {
-        try_num, retries, ..
-    } = &mut node.behavior
-    {
-        if *try_num > 0 && try_num <= retries {
+    if let NodeBehavior::TaskNode(task) = &mut node.behavior {
+        if task.try_num > 0 && task.try_num <= task.retries {
             log::info!("Node {} scheduled for resubmission", node.uid);
             node.status = JobStatus::ReadyForSubmission;
         }

@@ -102,10 +102,10 @@ impl LocalDirState {
         fs::create_dir(&self.pipeline_dir)?;
 
         for node in &dag.nodes {
-            if let NodeBehavior::TaskNode { fname, .. } = &node.behavior {
+            if let NodeBehavior::TaskNode(task) = &node.behavior {
                 let path = self.pipeline_dir.join(&node.uid);
                 fs::create_dir(&path)?;
-                self.write_meta(&path, fname)?;
+                self.write_meta(&path, &task.fname)?;
             }
         }
         Ok(())
@@ -257,7 +257,7 @@ impl StateManager for LocalDirState {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::model::{DAGMetadata, JobStatus, Node, NodeBehavior};
+    use crate::model::{DAGMetadata, ExecMode, JobStatus, Node, NodeBehavior, Task};
     use std::env;
     use uuid::Uuid;
 
@@ -279,14 +279,15 @@ pub mod tests {
                 parents: Vec::new(),
                 children: Vec::new(),
                 status: JobStatus::NotSubmitted,
-                behavior: NodeBehavior::TaskNode {
+                behavior: NodeBehavior::TaskNode(Task {
                     fname: String::from("fname"),
                     caching: false,
+                    mode: ExecMode::Wrap,
                     try_num: 0,
                     retries: 0,
                     launch_script: String::from("lauch.sh"),
                     input_kwargs: Vec::new(),
-                },
+                }),
             }],
         };
 
@@ -489,14 +490,15 @@ pub mod tests {
                 Node {
                     uid: String::from("1"),
                     output_artifacts: Vec::new(),
-                    behavior: NodeBehavior::TaskNode {
+                    behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from(fname),
                         caching: true,
+                        mode: ExecMode::Wrap,
                         retries: 0,
                         try_num: 0,
                         launch_script: String::from("script"),
                         input_kwargs: Vec::new(),
-                    },
+                    }),
                     status: JobStatus::NotSubmitted,
                     parents: Vec::new(),
                     children: Vec::new(),
@@ -524,14 +526,15 @@ pub mod tests {
                 parents: Vec::new(),
                 children: Vec::new(),
                 status: JobStatus::NotSubmitted,
-                behavior: NodeBehavior::TaskNode {
+                behavior: NodeBehavior::TaskNode(Task {
                     fname: String::from("fname"),
                     caching: false,
+                    mode: ExecMode::Wrap,
                     try_num: 0,
                     retries: 0,
                     launch_script: String::from("lauch.sh"),
                     input_kwargs: Vec::new(),
-                },
+                }),
             }],
         };
 
@@ -603,14 +606,15 @@ pub mod tests {
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::Running(String::from("1234")),
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
                 caching: false,
+                mode: ExecMode::Wrap,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("lauch.sh"),
                 input_kwargs: Vec::new(),
-            },
+            }),
         };
 
         state.validate_node_from_checkpoint(&node).unwrap();
@@ -631,14 +635,15 @@ pub mod tests {
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::Completed(NodeResult::Task(String::from("1234"))),
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
                 caching: false,
+                mode: ExecMode::Wrap,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("lauch.sh"),
                 input_kwargs: Vec::new(),
-            },
+            }),
         };
 
         state.validate_node_from_checkpoint(&node).unwrap();
@@ -662,14 +667,15 @@ pub mod tests {
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::Completed(NodeResult::Task(String::from("1234"))),
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
                 caching: false,
+                mode: ExecMode::Wrap,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("lauch.sh"),
                 input_kwargs: Vec::new(),
-            },
+            }),
         };
 
         state.validate_node_from_checkpoint(&node).unwrap();
@@ -695,14 +701,15 @@ pub mod tests {
             parents: Vec::new(),
             children: Vec::new(),
             status: JobStatus::Completed(NodeResult::Task(String::from("1234"))),
-            behavior: NodeBehavior::TaskNode {
+            behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
                 caching: false,
+                mode: ExecMode::Wrap,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("lauch.sh"),
                 input_kwargs: Vec::new(),
-            },
+            }),
         };
 
         state.validate_node_from_checkpoint(&node).unwrap();
