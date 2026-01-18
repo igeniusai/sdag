@@ -46,6 +46,8 @@ class TestGraphJoiner:
                     uid="0",
                     behavior=TaskNode(
                         fname="foo",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path("script.sh"),
                         caching=False,
                         retries=0,
@@ -60,6 +62,8 @@ class TestGraphJoiner:
                     parents=[Parent(uid="1", parent_type=OutputType(key="k"))],
                     behavior=TaskNode(
                         fname="foo",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path("script.sh"),
                         caching=True,
                         retries=0,
@@ -73,6 +77,8 @@ class TestGraphJoiner:
                     parents=[Parent(uid="1", parent_type=LogicalType())],
                     behavior=TaskNode(
                         fname="foo",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path("script.sh"),
                         caching=True,
                         retries=0,
@@ -108,6 +114,8 @@ class TestGraphJoiner:
             ],
             behavior=TaskNode(
                 fname="foo",
+                cmd="sbatch",
+                mode="wrap",
                 launch_script=Path("script.sh"),
                 caching=True,
                 retries=0,
@@ -188,6 +196,8 @@ class TestGraphJoiner:
             parents=node_parents,
             behavior=TaskNode(
                 fname="foo",
+                cmd="sbatch",
+                mode="wrap",
                 launch_script=Path("script.sh"),
                 caching=True,
                 retries=0,
@@ -198,6 +208,8 @@ class TestGraphJoiner:
             parents=swap_parents,
             behavior=TaskNode(
                 fname="foo",
+                cmd="sbatch",
+                mode="wrap",
                 launch_script=Path("script.sh"),
                 caching=True,
                 retries=0,
@@ -216,6 +228,8 @@ class TestGraphJoiner:
                     uid="0",
                     behavior=TaskNode(
                         fname="a",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path(),
                         caching=True,
                         retries=0,
@@ -225,6 +239,8 @@ class TestGraphJoiner:
                     uid="1",
                     behavior=TaskNode(
                         fname="b",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path(),
                         caching=True,
                         retries=0,
@@ -239,6 +255,8 @@ class TestGraphJoiner:
                     parents=[Parent(uid="1", parent_type=LogicalType())],
                     behavior=TaskNode(
                         fname="a",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path(),
                         caching=True,
                         retries=0,
@@ -248,6 +266,8 @@ class TestGraphJoiner:
                     uid="1",
                     behavior=TaskNode(
                         fname="a",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path(),
                         caching=True,
                         retries=0,
@@ -261,6 +281,8 @@ class TestGraphJoiner:
                     uid="0",
                     behavior=TaskNode(
                         fname="a",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path(),
                         caching=True,
                         retries=0,
@@ -271,6 +293,8 @@ class TestGraphJoiner:
                     parents=[Parent(uid="0", parent_type=LogicalType())],
                     behavior=TaskNode(
                         fname="a",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path(),
                         caching=True,
                         retries=0,
@@ -284,6 +308,8 @@ class TestGraphJoiner:
                     uid="0",
                     behavior=TaskNode(
                         fname="a",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path(),
                         caching=True,
                         retries=0,
@@ -294,6 +320,8 @@ class TestGraphJoiner:
                     uid="1",
                     behavior=TaskNode(
                         fname="a",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path(),
                         caching=True,
                         retries=0,
@@ -307,6 +335,8 @@ class TestGraphJoiner:
                     uid="0",
                     behavior=TaskNode(
                         fname="a",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path(),
                         caching=True,
                         retries=0,
@@ -317,6 +347,8 @@ class TestGraphJoiner:
                     uid="1",
                     behavior=TaskNode(
                         fname="a",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path(),
                         caching=True,
                         retries=0,
@@ -355,6 +387,8 @@ class TestGraphJoiner:
                 uid="0",
                 behavior=TaskNode(
                     fname="foo",
+                    cmd="sbatch",
+                    mode="wrap",
                     launch_script=Path("script.sh"),
                     caching=True,
                     retries=0,
@@ -365,6 +399,8 @@ class TestGraphJoiner:
                 uid="1",
                 behavior=TaskNode(
                     fname="foo",
+                    cmd="sbatch",
+                    mode="wrap",
                     launch_script=Path("script.sh"),
                     caching=True,
                     retries=0,
@@ -375,6 +411,8 @@ class TestGraphJoiner:
                 uid="2",
                 behavior=TaskNode(
                     fname="foo",
+                    cmd="sbatch",
+                    mode="wrap",
                     launch_script=Path("script.sh"),
                     caching=True,
                     retries=0,
@@ -398,6 +436,8 @@ class TestGraphJoiner:
                 uid="0",
                 behavior=TaskNode(
                     fname="foo",
+                    cmd="sbatch",
+                    mode="wrap",
                     launch_script=Path("script.sh"),
                     caching=True,
                     retries=0,
@@ -408,6 +448,8 @@ class TestGraphJoiner:
                 uid="1",
                 behavior=TaskNode(
                     fname="foo",
+                    cmd="sbatch",
+                    mode="wrap",
                     launch_script=Path("script.sh"),
                     caching=True,
                     retries=0,
@@ -419,6 +461,8 @@ class TestGraphJoiner:
                 parents=[Parent(uid="1", parent_type=LogicalType())],
                 behavior=TaskNode(
                     fname="foo",
+                    cmd="sbatch",
+                    mode="wrap",
                     launch_script=Path("script.sh"),
                     caching=True,
                     retries=0,
@@ -435,6 +479,8 @@ class TestGraphJoiner:
                 uid="0",
                 behavior=TaskNode(
                     fname="foo",
+                    cmd="sbatch",
+                    mode="wrap",
                     launch_script=Path("script.sh"),
                     caching=True,
                     retries=0,
@@ -446,6 +492,8 @@ class TestGraphJoiner:
                 parents=[Parent(uid="0", parent_type=LogicalType())],
                 behavior=TaskNode(
                     fname="foo",
+                    cmd="sbatch",
+                    mode="wrap",
                     launch_script=Path("script.sh"),
                     caching=True,
                     retries=0,
@@ -469,6 +517,8 @@ class TestGraphJoiner:
                     uid="0",
                     behavior=TaskNode(
                         fname="foo",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path("script.sh"),
                         caching=True,
                         retries=0,
@@ -480,6 +530,8 @@ class TestGraphJoiner:
                     parents=[Parent(uid="3", parent_type=LogicalType())],
                     behavior=TaskNode(
                         fname="foo",
+                        cmd="sbatch",
+                        mode="wrap",
                         launch_script=Path("script.sh"),
                         caching=True,
                         retries=0,
@@ -501,6 +553,8 @@ class TestGraphJoiner:
                 parents=[Parent(uid="3", parent_type=LogicalType())],
                 behavior=TaskNode(
                     fname="foo",
+                    cmd="sbatch",
+                    mode="wrap",
                     launch_script=Path("script.sh"),
                     caching=True,
                     retries=0,

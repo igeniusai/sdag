@@ -51,6 +51,8 @@ class TestIOManager:
                     "uid": "0",
                     "behavior": {
                         "type": "TaskNode",
+                        "cmd": "sbatch",
+                        "mode": "wrap",
                         "fname": "func",
                         "launch_script": "/",
                         "caching": False,

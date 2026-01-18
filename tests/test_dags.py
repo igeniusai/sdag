@@ -199,6 +199,8 @@ class TestDAG:
             uid="2",
             behavior=TaskNode(
                 fname="fname",
+                cmd="sbatch",
+                mode="wrap",
                 launch_script=Path("script.sh"),
                 caching=False,
                 retries=0,
@@ -219,6 +221,8 @@ class TestDAG:
             uid="2",
             behavior=TaskNode(
                 fname="fname",
+                cmd="sbatch",
+                mode="wrap",
                 launch_script=Path("script.sh"),
                 caching=False,
                 retries=0,
@@ -242,6 +246,8 @@ class TestDAG:
             uid="2",
             behavior=TaskNode(
                 fname="fname",
+                cmd="sbatch",
+                mode="wrap",
                 launch_script=Path("script.sh"),
                 caching=False,
                 retries=0,
@@ -265,6 +271,8 @@ class TestDAG:
             uid="2",
             behavior=TaskNode(
                 fname="fname",
+                cmd="sbatch",
+                mode="wrap",
                 launch_script=Path("script.sh"),
                 caching=False,
                 retries=0,
@@ -502,6 +510,8 @@ class TestSDAG:
             uid="1",
             behavior=TaskNode(
                 fname="fname",
+                cmd="sbatch",
+                mode="wrap",
                 launch_script=Path("submit.sh"),
                 caching=False,
                 retries=0,
@@ -525,6 +535,8 @@ class TestSDAG:
             uid="1",
             behavior=TaskNode(
                 fname="fname",
+                cmd="sbatch",
+                mode="wrap",
                 launch_script=Path("submit.sh"),
                 caching=False,
                 retries=0,
@@ -543,6 +555,8 @@ class TestSDAG:
             uid="1",
             behavior=TaskNode(
                 fname="fname",
+                cmd="sbatch",
+                mode="wrap",
                 launch_script=Path("submit.sh"),
                 caching=False,
                 retries=0,

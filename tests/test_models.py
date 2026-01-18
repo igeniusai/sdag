@@ -171,6 +171,8 @@ class TestGraph:
                         launch_script=Path(),
                         caching=False,
                         retries=0,
+                        mode="ext",
+                        cmd="bash",
                     ),
                 ),
             ],
