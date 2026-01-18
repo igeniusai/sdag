@@ -5,7 +5,7 @@ import logging
 import sys
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -53,6 +53,8 @@ class Task:
 
     Atrributes:
         fn (Callable): Decorated stage.
+        cmd (Literal["sbatch", "bash"]): Execution command.
+        mode (Literal["wrap", "ext"]): Execution mode.
         caching (bool): If True, stage caching is enabled.
         retries (int): Number of retries.
         launch_script (Path): Submit script path.
@@ -63,6 +65,8 @@ class Task:
     def __init__(
         self,
         fn: Callable[..., Any],
+        cmd: Literal["sbatch", "bash"],
+        mode: Literal["wrap", "ext"],
         caching: bool,
         retries: int,
         launch_script: Path,
@@ -73,6 +77,13 @@ class Task:
 
         Args:
             fn (Callable): Decorated stage.
+            cmd (Literal["sbatch", "bash"]): Execution command. Set
+                to 'sbatch' for slurm jobs, 'bash' for blocking jobs
+                executed within the scheduler process.
+            mode (Literal["wrap", "ext"]): Execution mode. Use 'wrap'
+                if the task will call the actual task function. Set to
+                'ext' if the task is an external script. Input values
+                will be set as environment variables.
             caching (bool): If True, stage caching is enabled.
             retries (int): Number of retries.
             launch_script (Path): Submit script path.
@@ -80,6 +91,8 @@ class Task:
             get_uid (Callable[[], str]): Hook to get a unique id.
         """
         self.fn = fn
+        self.cmd: Literal["sbatch", "bash"] = cmd
+        self.mode: Literal["wrap", "ext"] = mode
         self.caching = caching
         self.retries = retries
         self.launch_script = launch_script
@@ -95,11 +108,12 @@ class Task:
             Node[TaskNode]: Node associated to the task.
         """
         uid = self._get_uid()
-
         node = Node(
             uid=uid,
             behavior=TaskNode(
                 fname=self.fn.__name__,
+                cmd=self.cmd,
+                mode=self.mode,
                 caching=self.caching,
                 retries=self.retries,
                 launch_script=self.launch_script,

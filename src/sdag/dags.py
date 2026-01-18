@@ -4,7 +4,7 @@ import json
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from sdag.exceptions import (
     DAGNotSetError,
@@ -225,6 +225,8 @@ class SDAG:
     def task(
         self,
         launch_script: str | Path,
+        cmd: Literal["sbatch", "bash"] = "sbatch",
+        mode: Literal["wrap", "ext"] = "wrap",
         caching: bool = False,  # noqa: FBT002
         retries: int = 0,
     ) -> Callable[[Callable], Task]:
@@ -236,6 +238,15 @@ class SDAG:
         Args:
             launch_script (str | Path): Slurm script to execute
                 the task.
+            cmd (Literal["sbatch", "bash"]): Execution command. Set
+                to 'sbatch' for slurm jobs, 'bash' for blocking jobs
+                executed within the scheduler process. Defaults to
+                'sbatch'.
+            mode (Literal["wrap", "ext"]): Execution mode. Use 'wrap'
+                if the task will call the actual task function. Set to
+                'ext' if the task is an external script. Input values
+                will be set as environment variables. Defaults to
+                'wrap'.
             caching (bool, optional): If enabled, the task execution
                 will be skipped if the task result is available.
                 Defaults to False.
@@ -264,6 +275,8 @@ class SDAG:
             self.taskdict[fn.__name__] = fn
             return Task(
                 fn=fn,
+                cmd=cmd,
+                mode=mode,
                 caching=caching,
                 retries=retries,
                 launch_script=Path(launch_script).resolve(),

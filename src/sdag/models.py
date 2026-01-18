@@ -86,6 +86,13 @@ class TaskNode(BaseNodeType):
         type (Literal['TaskNode']): Node type.
         fname (str): Function associated to the task.
         launch_script (Path): Lauch script path.
+        cmd (Literal["sbatch", "bash"]): Execution command. Set to
+            'sbatch' for slurm jobs, 'bash' for blocking jobs
+            executed within the scheduler process.
+        mode (Literal["wrap", "ext"]): Execution mode. Use 'wrap' if
+            the task will call the actual task function. Set to 'ext'
+            if the task is an external script. Input values will be
+            set as environment variables.
         caching (bool): Set to True to enable output caching.
         retries (int): Number of retries.
         input_kwargs (list[InputKwarg]): Static input kwargs.
@@ -94,7 +101,8 @@ class TaskNode(BaseNodeType):
     type: Literal["TaskNode"] = "TaskNode"
     fname: str
     launch_script: Path
-    mode: Literal["wrap", "ext"] = "wrap"
+    cmd: Literal["sbatch", "bash"]
+    mode: Literal["wrap", "ext"]
     caching: bool
     retries: int
     input_kwargs: list[InputKwarg] = Field(default_factory=list)
