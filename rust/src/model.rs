@@ -170,6 +170,26 @@ pub enum ExecMode {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum Cmd {
+    /// Slurm
+    #[serde(rename = "sbatch")]
+    Sbatch,
+    /// Local execution
+    #[serde(rename = "bash")]
+    Bash,
+}
+impl fmt::Display for Cmd {
+    /// For getting the command argument
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let cmd = match self {
+            Self::Sbatch => "sbatch",
+            Self::Bash => "bash",
+        };
+        write!(f, "{cmd}")
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Task {
     /// Task function name.
     pub fname: String,
@@ -177,6 +197,8 @@ pub struct Task {
     pub caching: bool,
     /// Execution mode
     pub mode: ExecMode,
+    /// Command used
+    pub cmd: Cmd,
     /// Try number.
     #[serde(default = "initial_try_num")]
     pub try_num: u32,
@@ -364,6 +386,7 @@ mod tests {
                     fname: String::from("fname"),
                     caching: false,
                     mode: ExecMode::Wrap,
+                    cmd: Cmd::Sbatch,
                     try_num: 0,
                     retries: 0,
                     launch_script: String::from("lauch.sh"),

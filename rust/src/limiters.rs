@@ -44,7 +44,7 @@ fn find_running_cacheable_jobs(nodemap: &HashMap<String, Node>) -> HashSet<Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{ExecMode, Task};
+    use crate::model::{Cmd, ExecMode, Task};
 
     // Two cacheable tasks with the same name, only one survives.
     #[test]
@@ -62,6 +62,7 @@ mod tests {
                         fname: String::from("fname"),
                         caching: true,
                         mode: ExecMode::Wrap,
+                        cmd: Cmd::Sbatch,
                         try_num: 0,
                         retries: 0,
                         launch_script: String::from("lauch.sh"),
@@ -81,6 +82,7 @@ mod tests {
                         fname: String::from("fname"),
                         caching: true,
                         mode: ExecMode::Wrap,
+                        cmd: Cmd::Sbatch,
                         try_num: 0,
                         retries: 0,
                         launch_script: String::from("lauch.sh"),
@@ -114,6 +116,7 @@ mod tests {
                         fname: String::from("fname"),
                         caching: true,
                         mode: ExecMode::Wrap,
+                        cmd: Cmd::Sbatch,
                         try_num: 0,
                         retries: 0,
                         launch_script: String::from("lauch.sh"),
@@ -133,6 +136,7 @@ mod tests {
                         fname: String::from("fname"),
                         caching: true,
                         mode: ExecMode::Wrap,
+                        cmd: Cmd::Sbatch,
                         try_num: 0,
                         retries: 0,
                         launch_script: String::from("lauch.sh"),
@@ -166,6 +170,7 @@ mod tests {
                         fname: String::from("fname"),
                         caching: true,
                         mode: ExecMode::Wrap,
+                        cmd: Cmd::Sbatch,
                         try_num: 0,
                         retries: 0,
                         launch_script: String::from("lauch.sh"),
@@ -185,6 +190,7 @@ mod tests {
                         fname: String::from("not-running"),
                         caching: true,
                         mode: ExecMode::Wrap,
+                        cmd: Cmd::Sbatch,
                         try_num: 0,
                         retries: 0,
                         launch_script: String::from("lauch.sh"),

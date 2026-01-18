@@ -40,7 +40,7 @@ impl Checkpointer {
 mod tests {
     use std::fs;
 
-    use crate::model::{DAGMetadata, ExecMode, JobStatus, NodeBehavior, Task};
+    use crate::model::{Cmd, DAGMetadata, ExecMode, JobStatus, NodeBehavior, Task};
     use crate::state::LocalDirState;
 
     use super::*;
@@ -74,6 +74,7 @@ mod tests {
                     fname: String::from("fname"),
                     caching: false,
                     mode: ExecMode::Wrap,
+                    cmd: Cmd::Sbatch,
                     try_num: 0,
                     retries: 0,
                     launch_script: String::from("lauch.sh"),
@@ -116,6 +117,7 @@ mod tests {
                     fname: String::from("fname"),
                     caching: false,
                     mode: ExecMode::Wrap,
+                    cmd: Cmd::Sbatch,
                     try_num: 0,
                     retries: 0,
                     launch_script: String::from("lauch.sh"),

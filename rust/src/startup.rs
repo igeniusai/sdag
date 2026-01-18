@@ -1,7 +1,7 @@
 //! Functions executed during the scheduler startup.
 
 use crate::checkpoint::Checkpointer;
-use crate::model::{DAG, Node};
+use crate::model::{Cmd, DAG, Node, NodeBehavior};
 use crate::state::StateManager;
 use env_logger::Env;
 use log;
@@ -14,18 +14,34 @@ use std::path::PathBuf;
 
 pub fn prepare_dag<'a, T: StateManager>(
     dag: DAG<Node>,
+    local: &bool,
     path: &PathBuf,
     checkpointer: &Checkpointer,
     state: &T,
 ) -> Result<DAG<Node>, Box<dyn Error>> {
-    if !checkpointer.restart {
+    let mut dag = if !checkpointer.restart {
         state.prepare(&dag)?;
         state.copy_dag_into_working_dir(path)?;
-        return Ok(dag);
+        dag
+    } else {
+        log::info!("Loading checkpoint...");
+        checkpointer.load_checkpoint(state)?
+    };
+
+    if *local {
+        mark_all_tasks_as_local(&mut dag);
     }
 
-    log::info!("Loading checkpoint...");
-    checkpointer.load_checkpoint(state)
+    Ok(dag)
+}
+
+fn mark_all_tasks_as_local(dag: &mut DAG<Node>) {
+    log::info!("Marking all tasks as local");
+    for node in dag.nodes.iter_mut() {
+        if let NodeBehavior::TaskNode(task) = &mut node.behavior {
+            task.cmd = Cmd::Bash;
+        }
+    }
 }
 
 /// Parse the DAG from the input JSON.
@@ -63,6 +79,7 @@ pub fn configure_logging(log_level: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::{DAGMetadata, ExecMode, JobStatus, Task};
     use uuid::Uuid;
 
     /// Get a temporary directory for testing purposes.
@@ -99,5 +116,40 @@ mod tests {
 
         let dag = read_dag(&path).unwrap();
         assert_eq!(dag.meta.name, "pipeline");
+    }
+
+    #[test]
+    fn test_mark_all_tasks_as_local() {
+        let node = Node {
+            uid: "0".to_string(),
+            output_artifacts: Vec::new(),
+            behavior: NodeBehavior::TaskNode(Task {
+                fname: "fname".to_string(),
+                caching: false,
+                mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
+                try_num: 0,
+                retries: 0,
+                launch_script: "launch.sh".to_string(),
+                input_kwargs: Vec::new(),
+            }),
+            status: JobStatus::NotSubmitted,
+            parents: Vec::new(),
+            children: Vec::new(),
+        };
+
+        let mut dag = DAG {
+            meta: DAGMetadata {
+                name: "dag".to_string(),
+                creation_dt: "2020-01-01T09:10:10".to_string(),
+            },
+            nodes: vec![node],
+        };
+
+        mark_all_tasks_as_local(&mut dag);
+        assert!(matches!(
+            dag.nodes[0].behavior,
+            NodeBehavior::TaskNode(ref task) if matches!(task.cmd, Cmd::Bash)
+        ));
     }
 }

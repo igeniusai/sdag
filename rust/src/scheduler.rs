@@ -23,11 +23,11 @@ use std::time::Duration;
 
 /// Scheduler.
 #[derive(Debug, Clone)]
-pub struct Scheduler<T: StateManager, U: Backend> {
+pub struct Scheduler<'a, T: StateManager, U: Backend> {
     /// Time between subsequent Slurm polls (s).
     pub poll_time: Duration,
     /// State management.
-    pub state: T,
+    pub state: &'a T,
     /// Backend to submit and monitor jobs.
     pub backend: U,
     /// Checkpoint mgmt
@@ -35,21 +35,21 @@ pub struct Scheduler<T: StateManager, U: Backend> {
     /// Maximum number of concurrent tasks.
     pub max_concurrency: usize,
 }
-impl<T: StateManager, U: Backend> Scheduler<T, U> {
+impl<'a, T: StateManager, U: Backend> Scheduler<'a, T, U> {
     /// Run the scheduler.
     pub fn run(&self, dag: DAG<Node>) {
         let (root_id, mut nodemap) = graph::build_nodemap(dag)
             .ok_or_else(|| log::error!("Failed to identify the root node"))
             .unwrap();
 
-        let mut submitter = Submitter::new(&self.backend, &self.state, self.max_concurrency);
+        let mut submitter = Submitter::new(&self.backend, self.state, self.max_concurrency);
         log::debug!("Starting scheduling loop");
 
         loop {
-            status_management::update_status(&root_id, &mut nodemap, &self.backend, &self.state);
+            status_management::update_status(&root_id, &mut nodemap, &self.backend);
             submitter.submit(&mut nodemap);
 
-            let res = self.checkpointer.save_checkpoint(&nodemap, &self.state);
+            let res = self.checkpointer.save_checkpoint(&nodemap, self.state);
             if let Err(e) = res {
                 log::error!("Failed to save checkpoint: {e}");
             }

@@ -1,6 +1,6 @@
 //! Create the summary table out of the nodemap.
 
-use crate::model::{Node, NodeBehavior, Task};
+use crate::model::{Node, NodeBehavior};
 use std::collections::HashMap;
 use tabled::{
     Table, Tabled,
@@ -46,7 +46,7 @@ pub fn get_summary_table<'a>(nodemap: &'a HashMap<String, Node>) -> Table {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{ExecMode, NodeFailure};
+    use crate::model::{Cmd, ExecMode, NodeFailure, Task};
     use tabled::assert::assert_table;
 
     /// Check the summary table is correct.
@@ -62,6 +62,7 @@ mod tests {
                         fname: String::from("stage1"),
                         caching: false,
                         mode: ExecMode::Wrap,
+                        cmd: Cmd::Sbatch,
                         try_num: 1,
                         retries: 2,
                         launch_script: String::from("script"),
@@ -81,6 +82,7 @@ mod tests {
                         fname: String::from("stage2"),
                         caching: false,
                         mode: ExecMode::Wrap,
+                        cmd: Cmd::Sbatch,
                         try_num: 2,
                         retries: 2,
                         launch_script: String::from("script"),

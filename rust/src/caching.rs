@@ -189,8 +189,8 @@ fn save_input<T: StateManager>(
 mod tests {
     use super::*;
     use crate::model::{
-        Artifact, DAG, ExecMode, InputKwarg, JobStatus, Node, NodeBehavior, Parent, ParentType,
-        Task,
+        Artifact, Cmd, DAG, ExecMode, InputKwarg, JobStatus, Node, NodeBehavior, Parent,
+        ParentType, Task,
     };
     use crate::state::{LocalDirState, tests::get_tmp_dir};
     use std::{env, fs, path::PathBuf};
@@ -214,6 +214,9 @@ mod tests {
         }
         fn copy_output(&self, _src_uid: &str, _dst_uid: &str) -> std::io::Result<u64> {
             std::io::Result::Ok(1)
+        }
+        fn save_empty_output(&self, _uid: &str, _artifacts: &Vec<Artifact>) -> io::Result<()> {
+            Ok(())
         }
         fn read_output(&self, _uid: &str) -> std::io::Result<String> {
             std::io::Result::Ok(String::from(
@@ -264,6 +267,7 @@ mod tests {
                 fname: String::from("fname"),
                 caching: true,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),
@@ -377,6 +381,7 @@ mod tests {
                 fname: String::from("fname"),
                 caching: true,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),
@@ -414,6 +419,7 @@ mod tests {
                 fname: fname.clone(),
                 caching: caching,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),
@@ -444,6 +450,7 @@ mod tests {
                 fname: fname.clone(),
                 caching: caching,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),
@@ -480,6 +487,7 @@ mod tests {
                 fname: fname.clone(),
                 caching: caching,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),
@@ -513,6 +521,7 @@ mod tests {
                 fname: fname.clone(),
                 caching: caching,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),
@@ -536,6 +545,7 @@ mod tests {
                 fname: String::from("fname"),
                 caching: true,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("submit.sh"),

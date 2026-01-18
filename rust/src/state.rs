@@ -3,7 +3,7 @@
 //! Every interaction with the file system is segregated here.
 
 use crate::model::NodeResult;
-use crate::model::{DAG, JobStatus, Node, NodeBehavior, TaskMeta};
+use crate::model::{Artifact, DAG, JobStatus, Node, NodeBehavior, TaskMeta, TaskOutput};
 use log;
 use serde_json;
 use std::fs;
@@ -22,6 +22,8 @@ pub trait StateManager {
     fn copy_output(&self, src_uid: &str, dst_uid: &str) -> io::Result<u64>;
     /// Read the output of a node.
     fn read_output(&self, uid: &str) -> io::Result<String>;
+    /// Save the input of a node.
+    fn save_empty_output(&self, uid: &str, artifacts: &Vec<Artifact>) -> io::Result<()>;
     /// Save the input of a node.
     fn save_input(&self, uid: &str, input: &str) -> Result<(), io::Error>;
     /// Read the cached input of a node.
@@ -198,6 +200,18 @@ impl StateManager for LocalDirState {
         fs::read_to_string(path)
     }
 
+    /// Save the empty output of all external
+    fn save_empty_output(&self, uid: &str, artifacts: &Vec<Artifact>) -> io::Result<()> {
+        let path = self.pipeline_dir.join(uid).join(&self.output_fname);
+        let output = TaskOutput {
+            output: serde_json::Value::Null,
+            artifacts: artifacts.clone(),
+        };
+        let contents = serde_json::to_string(&output)?;
+        eprintln!("{path:?}");
+        fs::write(path, contents)
+    }
+
     /// Get the path to the pipeline folder.
     fn get_pipeline_dir(&self) -> &PathBuf {
         &self.pipeline_dir
@@ -257,7 +271,7 @@ impl StateManager for LocalDirState {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::model::{DAGMetadata, ExecMode, JobStatus, Node, NodeBehavior, Task};
+    use crate::model::{Cmd, DAGMetadata, ExecMode, JobStatus, Node, NodeBehavior, Task};
     use std::env;
     use uuid::Uuid;
 
@@ -283,6 +297,7 @@ pub mod tests {
                     fname: String::from("fname"),
                     caching: false,
                     mode: ExecMode::Wrap,
+                    cmd: Cmd::Sbatch,
                     try_num: 0,
                     retries: 0,
                     launch_script: String::from("lauch.sh"),
@@ -494,6 +509,7 @@ pub mod tests {
                         fname: String::from(fname),
                         caching: true,
                         mode: ExecMode::Wrap,
+                        cmd: Cmd::Sbatch,
                         retries: 0,
                         try_num: 0,
                         launch_script: String::from("script"),
@@ -530,6 +546,7 @@ pub mod tests {
                     fname: String::from("fname"),
                     caching: false,
                     mode: ExecMode::Wrap,
+                    cmd: Cmd::Sbatch,
                     try_num: 0,
                     retries: 0,
                     launch_script: String::from("lauch.sh"),
@@ -610,6 +627,7 @@ pub mod tests {
                 fname: String::from("fname"),
                 caching: false,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("lauch.sh"),
@@ -639,6 +657,7 @@ pub mod tests {
                 fname: String::from("fname"),
                 caching: false,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("lauch.sh"),
@@ -671,6 +690,7 @@ pub mod tests {
                 fname: String::from("fname"),
                 caching: false,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("lauch.sh"),
@@ -679,6 +699,27 @@ pub mod tests {
         };
 
         state.validate_node_from_checkpoint(&node).unwrap();
+    }
+
+    #[test]
+    fn test_save_emtpy_output() {
+        let home_dir = get_tmp_dir();
+        let uid = "0";
+        let pipeline_name = "pipeline";
+        let node_dir = home_dir.join(pipeline_name).join(&uid);
+        fs::create_dir_all(&node_dir).unwrap();
+
+        let state = LocalDirState::new(&home_dir, pipeline_name);
+        let artifacts = vec![Artifact {
+            name: "artifact".to_string(),
+            path: PathBuf::from("a/path"),
+        }];
+
+        state.save_empty_output(&uid, &artifacts).unwrap();
+        let s = fs::read_to_string(node_dir.join("output.json")).unwrap();
+        let output: TaskOutput = serde_json::from_str(&s).unwrap();
+        assert!(matches!(output.output, serde_json::Value::Null));
+        assert_eq!(output.artifacts, artifacts);
     }
 
     #[test]
@@ -705,6 +746,7 @@ pub mod tests {
                 fname: String::from("fname"),
                 caching: false,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 try_num: 0,
                 retries: 0,
                 launch_script: String::from("lauch.sh"),

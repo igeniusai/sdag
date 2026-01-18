@@ -2,7 +2,6 @@
 
 use crate::backend::Backend;
 use crate::model::{JobStatus, Node, NodeBehavior, NodeFailure};
-use crate::state::StateManager;
 use log;
 use std::collections::HashMap;
 
@@ -30,13 +29,8 @@ fn schedule_retries(nodemap: &mut HashMap<String, Node>) {
 }
 
 /// Update the status based on the backend output.
-pub fn update_status(
-    uid: &str,
-    nodemap: &mut HashMap<String, Node>,
-    backend: &impl Backend,
-    state: &impl StateManager,
-) {
-    backend.update_status(nodemap, state);
+pub fn update_status(uid: &str, nodemap: &mut HashMap<String, Node>, backend: &impl Backend) {
+    backend.update_status(nodemap);
     schedule_retries(nodemap);
 
     let mut updated_statuses: HashMap<String, JobStatus> = HashMap::new();
@@ -187,7 +181,7 @@ impl StatusSelector {
 mod tests {
 
     use super::*;
-    use crate::backend::SlurmBackend;
+    use crate::backend::SchedulerBackend;
     use crate::model::{NodeResult, Parent, ParentType};
     use crate::state::{LocalDirState, tests::get_tmp_dir};
 
@@ -512,10 +506,13 @@ mod tests {
         );
 
         let home_dir = get_tmp_dir();
-        let backend = SlurmBackend;
-        let state = LocalDirState::new(&home_dir, "pipeline");
-        update_status("p", &mut nodemap, &backend, &state);
-
+        let pipeline_name = "pipeline";
+        let state = LocalDirState::new(&home_dir, &pipeline_name);
+        let backend = SchedulerBackend {
+            pipeline_name,
+            state: &state,
+        };
+        update_status("p", &mut nodemap, &backend);
         let child = nodemap.get("c").unwrap();
         assert!(matches!(child.status, JobStatus::ReadyForSubmission))
     }

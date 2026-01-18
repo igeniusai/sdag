@@ -6,7 +6,10 @@
 use crate::backend::Backend;
 use crate::caching;
 use crate::limiters;
-use crate::model::{BooleanOutput, JobStatus, Node, NodeBehavior, NodeFailure, NodeResult, Task};
+use crate::model::Artifact;
+use crate::model::{
+    BooleanOutput, Cmd, JobStatus, Node, NodeBehavior, NodeFailure, NodeResult, Task,
+};
 use crate::state::StateManager;
 use crate::status_management::StatusSelector;
 use serde_json;
@@ -53,8 +56,10 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
 
     /// Set the number of running jobs.
     fn set_number_of_running_jobs(&mut self, nodemap: &HashMap<String, Node>) {
-        let job_ids = self.backend.get_running_job_ids(nodemap);
-        self.nrunning = job_ids.len();
+        self.nrunning = nodemap
+            .iter()
+            .filter(|(_, node)| matches!(node.status, JobStatus::Running(_)))
+            .count()
     }
 
     /// Find nodes ready for submission.
@@ -99,12 +104,10 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
             NodeBehavior::RootNode { .. } | NodeBehavior::EndNode { .. } => {
                 JobStatus::Completed(NodeResult::Node)
             }
-            NodeBehavior::TaskNode(task) => {
-                if self.max_concurrency > 0 && self.nrunning >= self.max_concurrency {
-                    return JobStatus::NotSubmitted;
-                }
-                self.submit_tasknode(&task, &node.uid)
-            }
+            NodeBehavior::TaskNode(task) => match task.cmd {
+                Cmd::Sbatch => self.submit_tasknode(&task, &node.uid),
+                Cmd::Bash => self.submit_local_task(&task, &node.uid, &node.output_artifacts),
+            },
             NodeBehavior::OneOfNode { .. } => match self.submit_oneofnode(&node.uid, &nodemap) {
                 Ok(uid) => JobStatus::Completed(NodeResult::OneOf(uid)),
                 Err(_) => JobStatus::Failed(NodeFailure::Node),
@@ -118,16 +121,30 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
 
     /// Submit a task.
     fn submit_tasknode(&mut self, task: &Task, uid: &str) -> JobStatus {
+        if self.max_concurrency > 0 && self.nrunning >= self.max_concurrency {
+            return JobStatus::NotSubmitted;
+        }
+
         log::debug!("Submitting task '{}' of node '{}'", task.fname, uid);
-        let pipeline_dir = self.state.get_pipeline_dir();
-        let res = self.backend.submit(task, uid, pipeline_dir);
-        match res {
+        match self.backend.submit(uid, task) {
             Ok(job_id) => {
                 self.nrunning += 1;
                 JobStatus::Running(job_id)
             }
             Err(e) => {
                 log::error!("Failed task {uid} submission: {e}");
+                JobStatus::Failed(NodeFailure::Node)
+            }
+        }
+    }
+
+    /// Submit a local task.
+    fn submit_local_task(&self, task: &Task, uid: &str, artifacts: &Vec<Artifact>) -> JobStatus {
+        log::debug!("Submitting local task '{}' of node '{}'", task.fname, uid);
+        match self.backend.submit_local(uid, task, artifacts) {
+            Ok(_) => JobStatus::Completed(NodeResult::Node),
+            Err(e) => {
+                log::error!("Failed local task {uid} submission: {e}");
                 JobStatus::Failed(NodeFailure::Node)
             }
         }
@@ -170,7 +187,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
 
 #[cfg(test)]
 mod tests {
-    use crate::model::{DAG, ExecMode, Parent, ParentType};
+    use crate::model::{Artifact, Cmd, DAG, ExecMode, Parent, ParentType};
 
     use super::*;
     use std::path::PathBuf;
@@ -178,13 +195,16 @@ mod tests {
     /// Mocked backend for testing purposes.
     struct MockBackend;
     impl Backend for MockBackend {
-        fn update_status(&self, _nodemap: &mut HashMap<String, Node>, _state: &impl StateManager) {}
-        fn submit(
+        fn update_status(&self, _nodemap: &mut HashMap<String, Node>) {}
+        fn submit_local(
             &self,
-            _task: &Task,
             _uid: &str,
-            _pipeline_dir: &PathBuf,
-        ) -> Result<String, Box<dyn Error>> {
+            _task: &Task,
+            _artifacts: &Vec<Artifact>,
+        ) -> Result<(), Box<dyn Error>> {
+            Ok(())
+        }
+        fn submit(&self, _uid: &str, _task: &Task) -> Result<String, Box<dyn Error>> {
             Ok(String::from("1234"))
         }
     }
@@ -207,6 +227,9 @@ mod tests {
         }
         fn copy_output(&self, _src_uid: &str, _dst_uid: &str) -> std::io::Result<u64> {
             std::io::Result::Ok(1)
+        }
+        fn save_empty_output(&self, _uid: &str, _artifacts: &Vec<Artifact>) -> io::Result<()> {
+            Ok(())
         }
         fn read_output(&self, _uid: &str) -> std::io::Result<String> {
             std::io::Result::Ok(String::from(r#"{"output":true}"#))
@@ -358,6 +381,7 @@ mod tests {
                 launch_script: String::from("script"),
                 caching: false,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 retries: 0,
                 try_num: 0,
                 input_kwargs: Vec::new(),
@@ -389,6 +413,50 @@ mod tests {
 
         assert!(matches!(new_status, JobStatus::Running(_)));
         assert_eq!(submitter.nrunning, 1);
+    }
+
+    #[test]
+    fn submit_local_task() {
+        let node = Node {
+            uid: String::from("c"),
+            output_artifacts: Vec::new(),
+            behavior: NodeBehavior::TaskNode(Task {
+                fname: String::from("function"),
+                launch_script: String::from("script"),
+                caching: false,
+                mode: ExecMode::Wrap,
+                cmd: Cmd::Bash,
+                retries: 0,
+                try_num: 0,
+                input_kwargs: Vec::new(),
+            }),
+            status: JobStatus::ReadyForSubmission,
+            parents: vec![Parent {
+                parent_type: ParentType::Output {
+                    key: String::from("p"),
+                },
+                uid: String::from("p"),
+            }],
+            children: Vec::new(),
+        };
+
+        let parent = Node {
+            uid: String::from("p"),
+            output_artifacts: Vec::new(),
+            behavior: NodeBehavior::RootNode,
+            status: JobStatus::ReadyForSubmission,
+            parents: Vec::new(),
+            children: vec!["c".to_string()],
+        };
+
+        let state = MockState::new();
+        let mut submitter = Submitter::new(&MockBackend, &state, 0);
+
+        let nodemap = HashMap::from([("c".to_string(), node), ("p".to_string(), parent)]);
+        let new_status = submitter.submit_node("c", &nodemap);
+
+        assert!(matches!(new_status, JobStatus::Completed(NodeResult::Node)));
+        assert_eq!(submitter.nrunning, 0);
     }
 
     /// Submit a OneOf node.
@@ -504,6 +572,7 @@ mod tests {
                 launch_script: String::from("script"),
                 caching: false,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 retries: 0,
                 try_num: 0,
                 input_kwargs: Vec::new(),
@@ -540,6 +609,7 @@ mod tests {
                 launch_script: String::from("script"),
                 caching: false,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 retries: 0,
                 try_num: 0,
                 input_kwargs: Vec::new(),
@@ -605,6 +675,7 @@ mod tests {
                         launch_script: String::from("script"),
                         caching: false,
                         mode: ExecMode::Wrap,
+                        cmd: Cmd::Sbatch,
                         retries: 0,
                         try_num: 0,
                         input_kwargs: Vec::new(),
@@ -624,6 +695,7 @@ mod tests {
                         launch_script: String::from("script"),
                         caching: false,
                         mode: ExecMode::Wrap,
+                        cmd: Cmd::Sbatch,
                         retries: 0,
                         try_num: 0,
                         input_kwargs: Vec::new(),
@@ -649,6 +721,7 @@ mod tests {
                 launch_script: String::from("script"),
                 caching: false,
                 mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
                 retries: 0,
                 try_num: 0,
                 input_kwargs: Vec::new(),
