@@ -208,7 +208,6 @@ impl StateManager for LocalDirState {
             artifacts: artifacts.clone(),
         };
         let contents = serde_json::to_string(&output)?;
-        eprintln!("{path:?}");
         fs::write(path, contents)
     }
 
