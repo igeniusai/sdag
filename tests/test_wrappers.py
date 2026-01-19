@@ -140,6 +140,8 @@ class MockSDAG:
                     behavior=TaskNode(
                         fname="test",
                         launch_script=Path(),
+                        mode="wrap",
+                        cmd="sbatch",
                         caching=False,
                         retries=0,
                     ),
@@ -179,6 +181,8 @@ class TestTask:
         sdag = MockSDAG()
         task = Task(
             fn=self.mock_stage,
+            mode="wrap",
+            cmd="sbatch",
             caching=True,
             retries=2,
             launch_script=Path(),
@@ -204,6 +208,8 @@ class TestTask:
         sdag = MockSDAG()
         task = Task(
             fn=fn,
+            mode="wrap",
+            cmd="sbatch",
             caching=True,
             retries=2,
             launch_script=Path(),
@@ -215,7 +221,12 @@ class TestTask:
         node = Node(
             uid="0",
             behavior=TaskNode(
-                fname="fn", caching=True, retries=2, launch_script=Path()
+                fname="fn",
+                caching=True,
+                mode="wrap",
+                cmd="sbatch",
+                retries=2,
+                launch_script=Path(),
             ),
         )
         task._add_kwargs(node, kwargs)
@@ -261,6 +272,8 @@ class TestTask:
             caching=True,
             retries=2,
             launch_script=Path(),
+            mode="wrap",
+            cmd="sbatch",
             register=sdag.register,
             get_uid=sdag.get_uid,
         )
@@ -283,6 +296,8 @@ class TestTask:
             caching=True,
             retries=2,
             launch_script=Path(),
+            mode="wrap",
+            cmd="sbatch",
             register=sdag.register,
             get_uid=sdag.get_uid,
         )
@@ -300,6 +315,8 @@ class TestTask:
         task = Task(
             fn=self.mock_stage,
             caching=True,
+            mode="wrap",
+            cmd="sbatch",
             retries=2,
             launch_script=Path(),
             register=sdag.register,
@@ -333,6 +350,8 @@ class TestTask:
             fn=self.mock_stage_artifact,
             caching=False,
             retries=1,
+            mode="wrap",
+            cmd="sbatch",
             launch_script=Path(),
             register=sdag.register,
             get_uid=sdag.get_uid,
@@ -488,6 +507,8 @@ class TestPipeline:
             uid="1",
             behavior=TaskNode(
                 fname="fname",
+                mode="wrap",
+                cmd="sbatch",
                 launch_script=Path("submit.sh"),
                 caching=True,
                 retries=0,
