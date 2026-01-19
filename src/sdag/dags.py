@@ -273,13 +273,17 @@ class SDAG:
                 raise TaskNotUniqueError(name=fn.__name__)
 
             self.taskdict[fn.__name__] = fn
+            script_path = Path(launch_script)
+            if not script_path.is_absolute():
+                script_path.expanduser()
+
             return Task(
                 fn=fn,
                 cmd=cmd,
                 mode=mode,
                 caching=caching,
                 retries=retries,
-                launch_script=Path(launch_script).resolve(),
+                launch_script=script_path,
                 register=self.register,
                 get_uid=self.get_uid,
             )
