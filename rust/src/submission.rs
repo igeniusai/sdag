@@ -201,7 +201,7 @@ mod tests {
             _uid: &str,
             _task: &Task,
             _artifacts: &Vec<Artifact>,
-        ) -> Result<(), Box<dyn Error>> {
+        ) -> io::Result<()> {
             Ok(())
         }
         fn submit(&self, _uid: &str, _task: &Task) -> Result<String, Box<dyn Error>> {

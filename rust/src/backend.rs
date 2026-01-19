@@ -2,7 +2,6 @@
 //!
 //! The backend executes jobs and polls the status.
 
-use crate::caching;
 use crate::model::{
     Artifact, ExecMode, JobStatus, Node, NodeBehavior, NodeFailure, NodeResult, Task,
 };
@@ -19,12 +18,7 @@ use std::process::{Command, Output, Stdio};
 pub trait Backend {
     fn update_status(&self, nodemap: &mut HashMap<String, Node>);
     fn submit(&self, uid: &str, task: &Task) -> Result<String, Box<dyn Error>>;
-    fn submit_local(
-        &self,
-        uid: &str,
-        task: &Task,
-        artifacts: &Vec<Artifact>,
-    ) -> Result<(), Box<dyn Error>>;
+    fn submit_local(&self, uid: &str, task: &Task, artifacts: &Vec<Artifact>) -> io::Result<()>;
 }
 
 pub struct SchedulerBackend<'a, T: StateManager> {
@@ -37,8 +31,7 @@ impl<'a, T: StateManager> Backend for SchedulerBackend<'a, T> {
         let status_map = self.get_slurm_status_map(&nodemap);
         for (uid, status) in status_map {
             let node = nodemap.get_mut(&uid).unwrap();
-            node.status = status;
-            caching::replace_cache(node, self.state);
+            self.assign_node_status(node, status);
         }
     }
 
@@ -61,28 +54,14 @@ impl<'a, T: StateManager> Backend for SchedulerBackend<'a, T> {
         Ok(job_id)
     }
 
-    fn submit_local(
-        &self,
-        uid: &str,
-        task: &Task,
-        artifacts: &Vec<Artifact>,
-    ) -> Result<(), Box<dyn Error>> {
+    fn submit_local(&self, uid: &str, task: &Task, artifacts: &Vec<Artifact>) -> io::Result<()> {
         self.build_command(uid, task)?
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .arg(&task.launch_script)
             .output()?;
 
-        if let ExecMode::Ext = task.mode {
-            self.state.save_empty_output(uid, artifacts)?
-        }
-
-        if task.caching
-            && let Err(e) = self.state.cache_task(&task.fname, uid)
-        {
-            log::error!("Failed to save task '{}' cache: {}", task.fname, e)
-        }
-        Ok(())
+        self.maybe_save_output_and_cache(uid, task, artifacts)
     }
 }
 
@@ -126,10 +105,16 @@ impl<'a, T: StateManager> SchedulerBackend<'a, T> {
     fn set_input_as_envs(&self, cmd: &mut Command, uid: &str) -> io::Result<()> {
         let input = self.state.read_cached_input(uid)?;
         let values: HashMap<String, Value> = serde_json::from_str(&input)?;
-        for (key, val) in values.iter() {
-            let value = serde_json::to_string(val)?;
+        for (key, value) in values.iter() {
+            let val = match value {
+                Value::Bool(v) => v.to_string(),
+                Value::String(v) => v.to_string(),
+                Value::Number(v) => v.to_string(),
+                Value::Null => String::new(),
+                _ => serde_json::to_string(value)?,
+            };
             let upper_key = key.to_uppercase();
-            cmd.env(upper_key, value);
+            cmd.env(upper_key, val);
         }
         Ok(())
     }
@@ -235,6 +220,39 @@ impl<'a, T: StateManager> SchedulerBackend<'a, T> {
             }
         }
         None
+    }
+
+    fn assign_node_status(&self, node: &mut Node, status: JobStatus) {
+        node.status = status;
+        let artifacts = &node.output_artifacts;
+        if let JobStatus::Completed(NodeResult::Task(job_id)) = &node.status
+            && let NodeBehavior::TaskNode(task) = &node.behavior
+            && self
+                .maybe_save_output_and_cache(&node.uid, task, &artifacts)
+                .is_err()
+        {
+            log::error!("Failed to save uid {} output", node.uid);
+            let failure = NodeFailure::Task(job_id.to_string());
+            node.status = JobStatus::Failed(failure);
+        }
+    }
+
+    fn maybe_save_output_and_cache(
+        &self,
+        uid: &str,
+        task: &Task,
+        artifacts: &Vec<Artifact>,
+    ) -> io::Result<()> {
+        if let ExecMode::Ext = task.mode {
+            self.state.save_empty_output(uid, artifacts)?
+        }
+
+        if task.caching
+            && let Err(e) = self.state.cache_task(&task.fname, uid)
+        {
+            log::error!("Failed to save task '{}' cache: {}", task.fname, e)
+        }
+        Ok(())
     }
 }
 
@@ -434,5 +452,41 @@ mod tests {
         backend.submit_local(&uid, &task, &artifacts).unwrap();
 
         assert!(pipeline_dir.join(&uid).join("output.json").exists());
+    }
+
+    #[test]
+    fn test_save_output_and_cache() {
+        let task = Task {
+            fname: String::from("fname"),
+            caching: true,
+            mode: ExecMode::Ext,
+            cmd: Cmd::Sbatch,
+            try_num: 0,
+            retries: 0,
+            launch_script: String::from("submit.sh"),
+            input_kwargs: Vec::new(),
+        };
+
+        let state = get_state();
+        let pipeline_dir = state.get_pipeline_dir();
+
+        let uid = "1";
+        let res_path = pipeline_dir.join(uid);
+        let home_dir = pipeline_dir.parent().unwrap();
+        let cache_path = home_dir.join(".cache").join("fname");
+
+        fs::create_dir_all(&res_path).unwrap();
+        fs::create_dir_all(&cache_path).unwrap();
+        fs::write(res_path.join("input.json"), "hello").unwrap();
+        fs::write(res_path.join("meta.json"), "hello").unwrap();
+
+        let backend = get_backend(&state);
+        backend
+            .maybe_save_output_and_cache(uid, &task, &Vec::new())
+            .unwrap();
+
+        assert!(cache_path.join("input.json").exists());
+        assert!(cache_path.join("output.json").exists());
+        assert!(cache_path.join("meta.json").exists());
     }
 }
