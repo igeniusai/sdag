@@ -72,8 +72,12 @@ pub fn configure_logging(log_level: &str) {
         .filter_or("SDAG_LOG_LEVEL", log_level)
         .write_style_or("SDAG_LOG_STYLE", "always");
 
-    env_logger::init_from_env(env);
-    log::debug!("Logging configured")
+    match env_logger::try_init_from_env(env) {
+        Ok(_) => log::debug!("Logging configured"),
+        Err(e) => {
+            println!("Failed to configure logging: {e}");
+        }
+    }
 }
 
 #[cfg(test)]
