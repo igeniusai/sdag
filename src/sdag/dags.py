@@ -324,7 +324,7 @@ class SDAG:
         optimize: bool = False,  # noqa: FBT002
         input_kwargs: dict[str, Any] | None = None,
         extra_metadata: Any = None,
-    ) -> None:
+    ) -> Path:
         """Compile the pipeline to a JSON file.
 
         Args:
@@ -340,15 +340,16 @@ class SDAG:
                 arguments. Defaults to None.
             extra_metadata (Any): Extra metadata added to the pipeline.
                 Defaults to None.
+
+        Returns:
+            Path: Path to the compiled pipeline.
         """
-        self._reset_uid()
-        graph = pipeline.compile(input_kwargs)
-        graph.meta.extra = extra_metadata
-
-        if optimize:
-            optimizer = GraphJoiner()
-            optimizer.join_nodes(graph)
-
+        graph = self.compile_graph(
+            pipeline=pipeline,
+            optimize=optimize,
+            input_kwargs=input_kwargs,
+            extra_metadata=extra_metadata,
+        )
         graph_json = graph.model_dump_json(indent=4, warnings="none")
 
         dst_dir = Path(dst_dir) if dst_dir is not None else Path()
@@ -357,6 +358,8 @@ class SDAG:
 
         with path.open("w") as f:
             f.write(graph_json)
+
+        return path
 
     def get_graph(self) -> Graph:
         """Get the compiled pipeline graph.
@@ -514,3 +517,34 @@ class SDAG:
             artifact.model_dump_json(indent=4)
             for artifact in artifacts.values()
         )
+
+    def compile_graph(
+        self,
+        pipeline: Pipeline,
+        optimize: bool = False,  # noqa: FBT002
+        input_kwargs: dict[str, Any] | None = None,
+        extra_metadata: Any = None,
+    ) -> Graph:
+        """Compile the pipeline and get the graph.
+
+        Args:
+            pipeline (Pipeline): Pipeline to be compiled.
+            optimize (bool, optional): Optimize the compiled graph.
+                Defaults to False.
+            input_kwargs (dict[str, Any] | None): Pipeline static input
+                arguments. Defaults to None.
+            extra_metadata (Any): Extra metadata added to the pipeline.
+                Defaults to None.
+
+        Returns:
+            Graph: Compiled graph.
+        """
+        self._reset_uid()
+        graph = pipeline.compile(input_kwargs)
+        graph.meta.extra = extra_metadata
+
+        if optimize:
+            optimizer = GraphJoiner()
+            optimizer.join_nodes(graph)
+
+        return graph
