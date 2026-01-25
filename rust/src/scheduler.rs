@@ -8,18 +8,66 @@
 //! The scheduler panics if the nodemap cannot be build out
 //! of the DAG.
 
-use crate::backend::Backend;
+use crate::backend::{Backend, SchedulerBackend};
 use crate::checkpoint::Checkpointer;
 use crate::graph;
 use crate::model::{DAG, JobStatus, Node};
-use crate::state::StateManager;
+use crate::startup;
+use crate::state::{LocalDirState, StateManager};
 use crate::status_management;
 use crate::submission::Submitter;
 use crate::summary;
 use log;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
+
+pub fn start_simulation(
+    pipeline: PathBuf,
+    wait_seconds: u64,
+    max_concurrency: usize,
+    local: bool,
+    restart: bool,
+) {
+    let home_dir = startup::find_home_dir()
+        .map_err(|e| log::error!("{e}"))
+        .unwrap();
+
+    log::debug!("SDAG home directory: {home_dir:?}");
+    let dag = startup::read_dag(&pipeline)
+        .map_err(|e| log::error!("Failed to read DAG: {e}"))
+        .unwrap();
+
+    let state = LocalDirState::new(&home_dir, &dag.meta.name);
+    log::info!("Working directory: '{:?}'", state.get_pipeline_dir());
+
+    let checkpointer = Checkpointer {
+        meta: dag.meta.clone(),
+        restart,
+    };
+
+    let dag = startup::prepare_dag(dag, &local, &pipeline, &checkpointer, &state)
+        .map_err(|e| log::error!("Failed to prepare DAG: {e}"))
+        .unwrap();
+
+    let backend = SchedulerBackend {
+        state: &state,
+        pipeline_name: &dag.meta.name.clone(),
+    };
+
+    let poll_time = Duration::from_secs(wait_seconds);
+    let scheduler = Scheduler {
+        poll_time,
+        state: &state,
+        backend,
+        checkpointer,
+        max_concurrency,
+    };
+
+    log::info!("Running pipeline '{}'", dag.meta.name);
+    scheduler.run(dag);
+}
 
 /// Scheduler.
 #[derive(Debug, Clone)]

@@ -4,7 +4,6 @@
 //! scheduler takes the JSON representation of the DAG as input and
 //! schedules task based on the graph structure.
 
-use crate::{backend::SchedulerBackend, state::StateManager};
 use pyo3::prelude::*;
 pub mod backend;
 mod caching;
@@ -12,19 +11,15 @@ mod checkpoint;
 pub mod graph;
 pub mod model;
 pub mod status_management;
+pub mod stop_simulation;
 pub mod submission;
 mod summary;
-
-use std::time;
-mod parser;
-use checkpoint::Checkpointer;
+use crate::state::{LocalDirState, StateManager};
+use std::path::PathBuf;
 mod limiters;
-mod state;
-use state::LocalDirState;
 mod scheduler;
-use log;
-use scheduler::Scheduler;
 mod startup;
+mod state;
 
 /// Start the scheduler.
 ///
@@ -38,54 +33,44 @@ mod startup;
 /// - The working directory cannot be built for any reason.
 /// - The JSON file cannot be copied into the working directory.
 #[pyfunction]
-fn sscheduler_start(argv: Vec<String>) {
-    let args = parser::parse_args(argv);
-    startup::configure_logging(&args.log_level);
+fn start_scheduler(
+    pipeline: PathBuf,
+    wait_seconds: u64,
+    max_concurrency: usize,
+    log_level: String,
+    local: bool,
+    restart: bool,
+) {
+    startup::configure_logging(&log_level);
+    scheduler::start_simulation(pipeline, wait_seconds, max_concurrency, local, restart);
+}
 
+#[pyfunction]
+fn kill_pipeline(pipeline: String, log_level: String) {
+    startup::configure_logging(&log_level);
+    stop_simulation::kill_running_jobs(pipeline);
+}
+
+#[pyfunction]
+fn prune_cache(task: String, log_level: String) {
+    startup::configure_logging(&log_level);
     let home_dir = startup::find_home_dir()
         .map_err(|e| log::error!("{e}"))
         .unwrap();
 
-    log::debug!("SDAG home directory: {home_dir:?}");
-
-    let dag = startup::read_dag(&args.pipeline)
-        .map_err(|e| log::error!("Failed to read DAG: {e}"))
+    LocalDirState::new(&home_dir, "")
+        .clear_cache(&task)
+        .map_err(|e| log::error!("Failed to delete cache: {e}"))
         .unwrap();
-
-    let state = LocalDirState::new(&home_dir, &dag.meta.name);
-    log::info!("Working directory: '{:?}'", state.get_pipeline_dir());
-
-    let checkpointer = Checkpointer {
-        meta: dag.meta.clone(),
-        restart: args.restart,
-    };
-
-    let dag = startup::prepare_dag(dag, &args.local, &args.pipeline, &checkpointer, &state)
-        .map_err(|e| log::error!("Failed to prepare DAG: {e}"))
-        .unwrap();
-
-    let backend = SchedulerBackend {
-        state: &state,
-        pipeline_name: &dag.meta.name.clone(),
-    };
-
-    let poll_time = time::Duration::from_secs(args.wait_seconds);
-    let scheduler = Scheduler {
-        poll_time,
-        state: &state,
-        backend,
-        checkpointer,
-        max_concurrency: args.max_concurrency,
-    };
-
-    log::info!("Running pipeline '{}'", dag.meta.name);
-    scheduler.run(dag);
 }
 
 /// Interface between Python and Rust.
 #[pymodule]
 // Function name must match `lib.name` in `Cargo.toml`
 fn sscheduler(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(sscheduler_start, m)?)?;
+    m.add_function(wrap_pyfunction!(start_scheduler, m)?)?;
+    m.add_function(wrap_pyfunction!(kill_pipeline, m)?)?;
+    m.add_function(wrap_pyfunction!(prune_cache, m)?)?;
+
     Ok(())
 }

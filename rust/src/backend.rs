@@ -19,6 +19,7 @@ pub trait Backend {
     fn update_status(&self, nodemap: &mut HashMap<String, Node>);
     fn submit(&self, uid: &str, task: &Task) -> Result<String, Box<dyn Error>>;
     fn submit_local(&self, uid: &str, task: &Task, artifacts: &Vec<Artifact>) -> io::Result<()>;
+    fn kill_jobs(&self, job_ids: &Vec<&str>) -> io::Result<()>;
 }
 
 pub struct SchedulerBackend<'a, T: StateManager> {
@@ -62,6 +63,24 @@ impl<'a, T: StateManager> Backend for SchedulerBackend<'a, T> {
             .output()?;
 
         self.maybe_save_output_and_cache(uid, task, artifacts)
+    }
+
+    fn kill_jobs(&self, job_ids: &Vec<&str>) -> io::Result<()> {
+        if job_ids.len() == 0 {
+            log::warn!("No running jobs found");
+            return Ok(());
+        }
+
+        let mut cmd = Command::new("scancel");
+        for job in job_ids {
+            cmd.arg(job);
+        }
+
+        cmd.stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()?;
+
+        Ok(())
     }
 }
 
@@ -243,7 +262,9 @@ impl<'a, T: StateManager> SchedulerBackend<'a, T> {
         task: &Task,
         artifacts: &Vec<Artifact>,
     ) -> io::Result<()> {
+        log::info!("Checking output and cache save");
         if let ExecMode::Ext = task.mode {
+            log::info!("Saving empty output");
             self.state.save_empty_output(uid, artifacts)?
         }
 
@@ -488,5 +509,13 @@ mod tests {
         assert!(cache_path.join("input.json").exists());
         assert!(cache_path.join("output.json").exists());
         assert!(cache_path.join("meta.json").exists());
+    }
+
+    #[test]
+    fn kill_no_jobs() {
+        let state = get_state();
+        let backend = get_backend(&state);
+        let job_ids = Vec::new();
+        backend.kill_jobs(&job_ids).unwrap();
     }
 }

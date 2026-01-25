@@ -38,6 +38,8 @@ pub trait StateManager {
     fn cache_task(&self, fname: &str, uid: &str) -> io::Result<u64>;
     /// Copy cache back to the input
     fn copy_cache(&self, fname: &str, uid: &str) -> io::Result<u64>;
+    /// Clear the cache
+    fn clear_cache(&self, task_name: &str) -> io::Result<()>;
 }
 
 /// Local directory state.
@@ -264,6 +266,25 @@ impl StateManager for LocalDirState {
         let cache = self.cache_dir.join(fname);
         let dst = self.pipeline_dir.join(uid);
         self.copy_task_data(&cache, &dst)
+    }
+
+    fn clear_cache(&self, task_name: &str) -> io::Result<()> {
+        let path = self.cache_dir.join(task_name);
+        if path.exists() {
+            log::info!("Removing cached task '{}'", path.display());
+            return fs::remove_dir_all(path);
+        }
+
+        if task_name == "all" {
+            log::info!("Removing the whole cache directory");
+            return fs::remove_dir_all(&self.cache_dir);
+        }
+
+        log::error!("Cache directory {} does not exist!", path.display());
+        Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Task cache not found",
+        ))
     }
 }
 
@@ -754,5 +775,42 @@ pub mod tests {
         };
 
         state.validate_node_from_checkpoint(&node).unwrap();
+    }
+
+    #[test]
+    fn clear_task_cache() {
+        let home_dir = get_tmp_dir();
+        let pipeline_name = "pipeline";
+        let task = "all";
+        let cached_dir = home_dir.join(".cache");
+        let cached_task = cached_dir.join(task);
+        fs::create_dir_all(&cached_task).unwrap();
+
+        let state = LocalDirState::new(&home_dir, pipeline_name);
+        state.clear_cache(task).unwrap();
+
+        assert!(cached_dir.exists());
+        assert!(!cached_task.exists());
+    }
+
+    #[test]
+    fn clear_whole_cache() {
+        let home_dir = get_tmp_dir();
+        let pipeline_name = "pipeline";
+        let cached_dir = home_dir.join(".cache");
+        fs::create_dir_all(&cached_dir).unwrap();
+
+        let state = LocalDirState::new(&home_dir, pipeline_name);
+        state.clear_cache("all").unwrap();
+        assert!(!cached_dir.exists());
+    }
+
+    #[test]
+    #[should_panic]
+    fn clear_missing_cache() {
+        let home_dir = get_tmp_dir();
+        let pipeline_name = "pipeline";
+        let state = LocalDirState::new(&home_dir, pipeline_name);
+        state.clear_cache("all").unwrap();
     }
 }

@@ -238,6 +238,10 @@ mod tests {
         fn copy_cache(&self, _fname: &str, _uid: &str) -> io::Result<u64> {
             Ok(1)
         }
+
+        fn clear_cache(&self, _task_name: &str) -> io::Result<()> {
+            Ok(())
+        }
     }
 
     /// Test the parent output retrieval.
