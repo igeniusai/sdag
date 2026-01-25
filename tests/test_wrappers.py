@@ -311,9 +311,13 @@ class TestTask:
 
     def test_call(self) -> None:
         """Test the task call."""
+
+        def fn(kwarg: Any, static_input: dict[str, int]) -> None:
+            """Mocked task with static and dynamic args."""
+
         sdag = MockSDAG()
         task = Task(
-            fn=self.mock_stage,
+            fn=fn,
             caching=True,
             mode="wrap",
             cmd="sbatch",
