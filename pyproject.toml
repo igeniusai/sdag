@@ -102,7 +102,13 @@ venvPath = "."
 venv = ".venv"
 
 [dependency-groups]
+dev = [
+    "ipykernel>=7.1.0",
+]
 test = [
     "pytest>=8.4.2",
     "pytest-mock>=3.15.1",
+]
+viz = [
+    "neo4j-viz>=1.0.0",
 ]
