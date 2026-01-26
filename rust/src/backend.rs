@@ -262,9 +262,8 @@ impl<'a, T: StateManager> SchedulerBackend<'a, T> {
         task: &Task,
         artifacts: &Vec<Artifact>,
     ) -> io::Result<()> {
-        log::info!("Checking output and cache save");
         if let ExecMode::Ext = task.mode {
-            log::info!("Saving empty output");
+            log::debug!("Saving node '{uid}' empty output");
             self.state.save_empty_output(uid, artifacts)?
         }
 
