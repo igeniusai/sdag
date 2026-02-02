@@ -50,6 +50,12 @@ impl<'a, T: StateManager> Backend for SchedulerBackend<'a, T> {
 
         let stdout = String::from_utf8(output.stdout)?;
         log::info!("Task {uid}: {stdout}");
+
+        if !output.status.success() {
+            log::error!("Task {} returned non-zero exit status", uid);
+            return Err("non-zero exit status".into());
+        }
+
         let job_id = self
             .find_submitted_job_id(&stdout)
             .ok_or("Job id not found")?;
@@ -58,11 +64,17 @@ impl<'a, T: StateManager> Backend for SchedulerBackend<'a, T> {
     }
 
     fn submit_local(&self, uid: &str, task: &Task, artifacts: &Vec<Artifact>) -> io::Result<()> {
-        self.build_command(uid, task)?
+        let output = self
+            .build_command(uid, task)?
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .arg(&task.launch_script)
             .output()?;
+
+        if !output.status.success() {
+            log::error!("Local task {} returned non-zero exit status", uid);
+            return Err(io::Error::other("non-zero exit status"));
+        }
 
         self.maybe_save_output_and_cache(uid, task, artifacts)
     }
@@ -576,5 +588,36 @@ mod tests {
         let mut status_map = backend.get_status_map(slurm_output, &jobmap);
         let status = status_map.remove("1").unwrap();
         assert!(matches!(status, JobStatus::Failed(_)));
+    }
+
+    #[test]
+    #[should_panic]
+    fn local_submission_must_fail_if_script_fails() {
+        let tmp_dir = get_tmp_dir();
+        fs::create_dir_all(&tmp_dir).unwrap();
+
+        // Simple script exiting with 1
+        let path = tmp_dir.join("submit.sh");
+        let contents = "false";
+        fs::write(&path, contents).unwrap();
+
+        let launch_script = path.to_string_lossy().into_owned();
+        let task = Task {
+            fname: String::from("fname"),
+            name: String::from("fname"),
+            caching: false,
+            mode: ExecMode::Wrap,
+            cmd: Cmd::Bash,
+            try_num: 0,
+            retries: 0,
+            launch_script,
+            input_kwargs: Vec::new(),
+        };
+
+        let artifacts: Vec<Artifact> = Vec::new();
+
+        let state = get_state();
+        let backend = get_backend(&state);
+        backend.submit_local("1", &task, &artifacts).unwrap();
     }
 }
