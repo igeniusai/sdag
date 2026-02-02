@@ -19,9 +19,7 @@ use std::io;
 
 /// Execute nodes.
 #[derive(Debug, Clone)]
-pub struct Submitter<'a, T: Backend, U: StateManager> {
-    /// Task submission backend.
-    pub backend: &'a T,
+pub struct Submitter<'a, U: StateManager> {
     /// File system interaction.
     pub state: &'a U,
     /// Maximum number of concurrent tasks.
@@ -30,15 +28,13 @@ pub struct Submitter<'a, T: Backend, U: StateManager> {
     pub nrunning: usize,
 }
 
-impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
+impl<'a, U: StateManager> Submitter<'a, U> {
     /// Set the initial number of running tasks to zero.
-    pub fn new(backend: &'a T, state: &'a U, max_concurrency: usize) -> Self
+    pub fn new(state: &'a U, max_concurrency: usize) -> Self
     where
-        T: Backend,
         U: StateManager,
     {
         Self {
-            backend,
             state,
             max_concurrency,
             nrunning: 0,
@@ -46,11 +42,11 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     }
 
     /// Execute nodes ready for submission.
-    pub fn submit(&mut self, nodemap: &mut HashMap<String, Node>) {
+    pub fn submit(&mut self, nodemap: &mut HashMap<String, Node>, backend: &impl Backend) {
         self.set_number_of_running_jobs(nodemap);
         caching::read_input_and_cache_tasks(nodemap, self.state);
         limiters::limit_cached_tasks_same_name(nodemap);
-        let updated_statuses = self.find_updated_statuses(nodemap);
+        let updated_statuses = self.find_updated_statuses(nodemap, backend);
         self.update_status(nodemap, updated_statuses);
     }
 
@@ -66,11 +62,12 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     fn find_updated_statuses(
         &mut self,
         nodemap: &HashMap<String, Node>,
+        backend: &impl Backend,
     ) -> HashMap<String, JobStatus> {
         nodemap
             .iter()
             .filter(|(_, node)| matches!(node.status, JobStatus::ReadyForSubmission))
-            .map(|(k, _)| (k.clone(), self.submit_node(k, nodemap)))
+            .map(|(k, _)| (k.clone(), self.submit_node(k, nodemap, backend)))
             .collect()
     }
 
@@ -98,15 +95,22 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     }
 
     /// Submit a node based on its behavior.
-    fn submit_node(&mut self, uid: &str, nodemap: &HashMap<String, Node>) -> JobStatus {
+    fn submit_node(
+        &mut self,
+        uid: &str,
+        nodemap: &HashMap<String, Node>,
+        backend: &impl Backend,
+    ) -> JobStatus {
         let node = nodemap.get(uid).unwrap();
         match &node.behavior {
             NodeBehavior::RootNode { .. } | NodeBehavior::EndNode { .. } => {
                 JobStatus::Completed(NodeResult::Node)
             }
             NodeBehavior::TaskNode(task) => match task.cmd {
-                Cmd::Sbatch => self.submit_tasknode(&task, &node.uid),
-                Cmd::Bash => self.submit_local_task(&task, &node.uid, &node.output_artifacts),
+                Cmd::Sbatch => self.submit_tasknode(&task, &node.uid, backend),
+                Cmd::Bash => {
+                    self.submit_local_task(&task, &node.uid, &node.output_artifacts, backend)
+                }
             },
             NodeBehavior::OneOfNode { .. } => match self.submit_oneofnode(&node.uid, &nodemap) {
                 Ok(uid) => JobStatus::Completed(NodeResult::OneOf(uid)),
@@ -120,13 +124,13 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     }
 
     /// Submit a task.
-    fn submit_tasknode(&mut self, task: &Task, uid: &str) -> JobStatus {
+    fn submit_tasknode(&mut self, task: &Task, uid: &str, backend: &impl Backend) -> JobStatus {
         if self.max_concurrency > 0 && self.nrunning >= self.max_concurrency {
             return JobStatus::NotSubmitted;
         }
 
         log::debug!("Submitting task '{}' of node '{}'", task.name, uid);
-        match self.backend.submit(uid, task) {
+        match backend.submit(uid, task) {
             Ok(job_id) => {
                 self.nrunning += 1;
                 JobStatus::Running(job_id)
@@ -139,9 +143,15 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
     }
 
     /// Submit a local task.
-    fn submit_local_task(&self, task: &Task, uid: &str, artifacts: &Vec<Artifact>) -> JobStatus {
+    fn submit_local_task(
+        &self,
+        task: &Task,
+        uid: &str,
+        artifacts: &Vec<Artifact>,
+        backend: &impl Backend,
+    ) -> JobStatus {
         log::debug!("Submitting local task '{}' of node '{}'", task.name, uid);
-        match self.backend.submit_local(uid, task, artifacts) {
+        match backend.submit_local(uid, task, artifacts) {
             Ok(_) => JobStatus::Completed(NodeResult::Node),
             Err(e) => {
                 log::error!("Failed local task {uid} submission: {e}");
@@ -195,7 +205,7 @@ mod tests {
     /// Mocked backend for testing purposes.
     struct MockBackend;
     impl Backend for MockBackend {
-        fn update_status(&self, _nodemap: &mut HashMap<String, Node>) {}
+        fn update_status(&mut self, _nodemap: &mut HashMap<String, Node>) {}
         fn submit_local(
             &self,
             _uid: &str,
@@ -277,7 +287,7 @@ mod tests {
     #[test]
     fn find_parent_uid_for_oneof() {
         let state = MockState::new();
-        let submitter = Submitter::new(&MockBackend, &state, 0);
+        let submitter = Submitter::new(&state, 0);
         let parent_statuses = HashMap::from([
             (String::from("a"), JobStatus::NotSubmitted),
             (String::from("b"), JobStatus::Completed(NodeResult::Node)),
@@ -306,10 +316,11 @@ mod tests {
         };
 
         let state = MockState::new();
-        let mut submitter = Submitter::new(&MockBackend, &state, 0);
+        let mut submitter = Submitter::new(&state, 0);
 
         let nodemap = HashMap::from([("c".to_string(), node)]);
-        let new_status = submitter.submit_node("c", &nodemap);
+        let backend = MockBackend;
+        let new_status = submitter.submit_node("c", &nodemap, &backend);
         assert!(matches!(new_status, JobStatus::Completed(NodeResult::Node)))
     }
 
@@ -331,10 +342,11 @@ mod tests {
         };
 
         let state = MockState::new();
-        let mut submitter = Submitter::new(&MockBackend, &state, 0);
+        let mut submitter = Submitter::new(&state, 0);
 
         let nodemap = HashMap::from([("c".to_string(), node)]);
-        let new_status = submitter.submit_node("c", &nodemap);
+        let backend = MockBackend;
+        let new_status = submitter.submit_node("c", &nodemap, &backend);
         assert!(matches!(new_status, JobStatus::Completed(NodeResult::Node)))
     }
 
@@ -365,10 +377,11 @@ mod tests {
         };
 
         let state = MockState::new();
-        let mut submitter = Submitter::new(&MockBackend, &state, 0);
+        let mut submitter = Submitter::new(&state, 0);
 
         let nodemap = HashMap::from([("c".to_string(), node), ("p".to_string(), parent)]);
-        let new_status = submitter.submit_node("c", &nodemap);
+        let backend = MockBackend;
+        let new_status = submitter.submit_node("c", &nodemap, &backend);
 
         assert!(matches!(
             new_status,
@@ -413,10 +426,11 @@ mod tests {
         };
 
         let state = MockState::new();
-        let mut submitter = Submitter::new(&MockBackend, &state, 0);
+        let mut submitter = Submitter::new(&state, 0);
 
         let nodemap = HashMap::from([("c".to_string(), node), ("p".to_string(), parent)]);
-        let new_status = submitter.submit_node("c", &nodemap);
+        let backend = MockBackend;
+        let new_status = submitter.submit_node("c", &nodemap, &backend);
 
         assert!(matches!(new_status, JobStatus::Running(_)));
         assert_eq!(submitter.nrunning, 1);
@@ -458,10 +472,11 @@ mod tests {
         };
 
         let state = MockState::new();
-        let mut submitter = Submitter::new(&MockBackend, &state, 0);
+        let mut submitter = Submitter::new(&state, 0);
 
         let nodemap = HashMap::from([("c".to_string(), node), ("p".to_string(), parent)]);
-        let new_status = submitter.submit_node("c", &nodemap);
+        let backend = MockBackend;
+        let new_status = submitter.submit_node("c", &nodemap, &backend);
 
         assert!(matches!(new_status, JobStatus::Completed(NodeResult::Node)));
         assert_eq!(submitter.nrunning, 0);
@@ -511,14 +526,16 @@ mod tests {
         };
 
         let state = MockState::new();
-        let mut submitter = Submitter::new(&MockBackend, &state, 0);
+        let mut submitter = Submitter::new(&state, 0);
 
         let nodemap = HashMap::from([
             ("c".to_string(), node),
             ("p1".to_string(), p1),
             ("p2".to_string(), p2),
         ]);
-        let new_status = submitter.submit_node("c", &nodemap);
+
+        let backend = MockBackend;
+        let new_status = submitter.submit_node("c", &nodemap, &backend);
         assert!(matches!(new_status, JobStatus::Completed(_)))
     }
 
@@ -535,10 +552,11 @@ mod tests {
         };
 
         let state = MockState::new();
-        let mut submitter = Submitter::new(&MockBackend, &state, 0);
+        let mut submitter = Submitter::new(&state, 0);
 
         let nodemap = HashMap::from([("c".to_string(), node)]);
-        let updated_statuses = submitter.find_updated_statuses(&nodemap);
+        let backend = MockBackend;
+        let updated_statuses = submitter.find_updated_statuses(&nodemap, &backend);
         assert_eq!(
             updated_statuses,
             HashMap::from([("c".to_string(), JobStatus::Completed(NodeResult::Node))])
@@ -558,7 +576,7 @@ mod tests {
         };
 
         let state = MockState::new();
-        let submitter = Submitter::new(&MockBackend, &state, 0);
+        let submitter = Submitter::new(&state, 0);
 
         let mut nodemap = HashMap::from([("c".to_string(), node)]);
         let updated_statuses =
@@ -592,7 +610,7 @@ mod tests {
         };
 
         let state = MockState::new();
-        let submitter = Submitter::new(&MockBackend, &state, 0);
+        let submitter = Submitter::new(&state, 0);
 
         let mut nodemap = HashMap::from([("c".to_string(), node)]);
         let updated_statuses =
@@ -630,7 +648,7 @@ mod tests {
         };
 
         let state = MockState::new();
-        let submitter = Submitter::new(&MockBackend, &state, 0);
+        let submitter = Submitter::new(&state, 0);
 
         let mut nodemap = HashMap::from([("c".to_string(), node)]);
         let updated_statuses = HashMap::from([("c".to_string(), JobStatus::NotSubmitted)]);
@@ -657,10 +675,10 @@ mod tests {
         };
 
         let state = MockState::new();
-        let mut submitter = Submitter::new(&MockBackend, &state, 0);
+        let mut submitter = Submitter::new(&state, 0);
         let mut nodemap = HashMap::from([("c".to_string(), node)]);
-
-        submitter.submit(&mut nodemap);
+        let backend = MockBackend;
+        submitter.submit(&mut nodemap, &backend);
         let child = nodemap.get("c").unwrap();
         assert!(matches!(
             child.status,
@@ -717,7 +735,7 @@ mod tests {
         ]);
 
         let state = MockState::new();
-        let mut submitter = Submitter::new(&MockBackend, &state, 2);
+        let mut submitter = Submitter::new(&state, 2);
         submitter.set_number_of_running_jobs(&nodemap);
         assert_eq!(submitter.nrunning, 1);
     }
@@ -760,14 +778,14 @@ mod tests {
 
         let state = MockState::new();
         let mut submitter = Submitter {
-            backend: &MockBackend,
             state: &state,
             max_concurrency: 1,
             nrunning: 1,
         };
 
         let nodemap = HashMap::from([("c".to_string(), node), ("p".to_string(), parent)]);
-        let new_status = submitter.submit_node("c", &nodemap);
+        let backend = MockBackend;
+        let new_status = submitter.submit_node("c", &nodemap, &backend);
         assert!(matches!(new_status, JobStatus::NotSubmitted));
         assert_eq!(submitter.nrunning, 1);
     }

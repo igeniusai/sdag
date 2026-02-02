@@ -16,7 +16,7 @@ use std::process::{Command, Output, Stdio};
 
 /// Backend trait.
 pub trait Backend {
-    fn update_status(&self, nodemap: &mut HashMap<String, Node>);
+    fn update_status(&mut self, nodemap: &mut HashMap<String, Node>);
     fn submit(&self, uid: &str, task: &Task) -> Result<String, Box<dyn Error>>;
     fn submit_local(&self, uid: &str, task: &Task, artifacts: &Vec<Artifact>) -> io::Result<()>;
     fn kill_jobs(&self, job_ids: &Vec<&str>) -> io::Result<()>;
@@ -25,10 +25,12 @@ pub trait Backend {
 pub struct SchedulerBackend<'a, T: StateManager> {
     pub pipeline_name: &'a str,
     pub state: &'a T,
+    pub nfailed: i32,
+    pub grace_period: i32,
 }
 
 impl<'a, T: StateManager> Backend for SchedulerBackend<'a, T> {
-    fn update_status(&self, nodemap: &mut HashMap<String, Node>) {
+    fn update_status(&mut self, nodemap: &mut HashMap<String, Node>) {
         let status_map = self.get_slurm_status_map(&nodemap);
         for (uid, status) in status_map {
             let node = nodemap.get_mut(&uid).unwrap();
@@ -85,7 +87,19 @@ impl<'a, T: StateManager> Backend for SchedulerBackend<'a, T> {
 }
 
 impl<'a, T: StateManager> SchedulerBackend<'a, T> {
-    fn get_slurm_status_map(&self, nodemap: &HashMap<String, Node>) -> HashMap<String, JobStatus> {
+    pub fn new(pipeline_name: &'a str, state: &'a T) -> Self {
+        Self {
+            pipeline_name,
+            state,
+            nfailed: 0,
+            grace_period: 5,
+        }
+    }
+
+    fn get_slurm_status_map(
+        &mut self,
+        nodemap: &HashMap<String, Node>,
+    ) -> HashMap<String, JobStatus> {
         let mut jobmap: HashMap<&str, &str> = HashMap::new();
         for (uid, node) in nodemap.iter() {
             if let JobStatus::Running(job_id) = &node.status
@@ -176,22 +190,37 @@ impl<'a, T: StateManager> SchedulerBackend<'a, T> {
     }
 
     fn get_status_map(
-        &self,
+        &mut self,
         slurm_output: Result<String, Box<dyn Error>>,
         jobmap: &HashMap<&str, &str>,
     ) -> HashMap<String, JobStatus> {
         match slurm_output {
-            Ok(slurm_status) => jobmap
-                .iter()
-                .map(|(uid, job_id)| {
-                    let status = self.extract_status(job_id, &slurm_status);
-                    (uid.to_string(), status)
-                })
-                .collect(),
+            Ok(slurm_status) => {
+                self.nfailed = 0;
+                jobmap
+                    .iter()
+                    .map(|(uid, job_id)| {
+                        let status = self.extract_status(job_id, &slurm_status);
+                        (uid.to_string(), status)
+                    })
+                    .collect()
+            }
 
             Err(e) => {
-                log::error!("Failed to contact Slurm: {e}");
-                self.mark_all_jobs_as_failed(jobmap)
+                self.nfailed += 1;
+                log::warn!(
+                    "Failed to contact Slurm: {e}\nContact \
+                    failure n '{}', maximum tolerated is: '{}'",
+                    self.nfailed,
+                    self.grace_period
+                );
+
+                if self.nfailed >= self.grace_period {
+                    log::error!("Maximum number of failures reached");
+                    return self.mark_all_jobs_as_failed(jobmap);
+                }
+
+                HashMap::new()
             }
         }
     }
@@ -294,6 +323,8 @@ mod tests {
         SchedulerBackend {
             pipeline_name: "pipeline",
             state: &state,
+            nfailed: 0,
+            grace_period: 3,
         }
     }
 
@@ -521,5 +552,29 @@ mod tests {
         let backend = get_backend(&state);
         let job_ids = Vec::new();
         backend.kill_jobs(&job_ids).unwrap();
+    }
+
+    #[test]
+    fn test_failed_concat_slurm_within_grace() {
+        let state = get_state();
+        let mut backend = get_backend(&state);
+        let slurm_output = Err("failure".into());
+        let jobmap = HashMap::from([("1", "1234")]);
+        let status_map = backend.get_status_map(slurm_output, &jobmap);
+        assert_eq!(status_map.len(), 0);
+        assert_eq!(backend.nfailed, 1);
+    }
+
+    #[test]
+    fn test_failed_concat_slurm_reaching_grace() {
+        let state = get_state();
+        let mut backend = get_backend(&state);
+        backend.nfailed = backend.grace_period - 1;
+
+        let slurm_output = Err("failure".into());
+        let jobmap = HashMap::from([("1", "1234")]);
+        let mut status_map = backend.get_status_map(slurm_output, &jobmap);
+        let status = status_map.remove("1").unwrap();
+        assert!(matches!(status, JobStatus::Failed(_)));
     }
 }

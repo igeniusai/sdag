@@ -27,11 +27,8 @@ pub fn kill_running_jobs(pipeline_name: String) {
         .map_err(|e| log::error!("Failed load checkpoint: {e}"))
         .unwrap();
 
-    let backend = SchedulerBackend {
-        state: &state,
-        pipeline_name: &pipeline_name.clone(),
-    };
-
+    let pipeline_name = pipeline_name.clone();
+    let backend = SchedulerBackend::new(&pipeline_name, &state);
     let jobs = find_running_jobs(&dag);
     backend
         .kill_jobs(&jobs)

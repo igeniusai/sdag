@@ -1,6 +1,5 @@
 //! Recursive status update and retry management.
 
-use crate::backend::Backend;
 use crate::model::{JobStatus, Node, NodeBehavior, NodeFailure};
 use log;
 use std::collections::HashMap;
@@ -29,11 +28,9 @@ fn schedule_retries(nodemap: &mut HashMap<String, Node>) {
 }
 
 /// Update the status based on the backend output.
-pub fn update_status(uid: &str, nodemap: &mut HashMap<String, Node>, backend: &impl Backend) {
-    backend.update_status(nodemap);
-    schedule_retries(nodemap);
-
+pub fn update_status(uid: &str, nodemap: &mut HashMap<String, Node>) {
     let mut updated_statuses: HashMap<String, JobStatus> = HashMap::new();
+    schedule_retries(nodemap);
     recoursively_update_status(uid, nodemap, &mut updated_statuses);
     for (k, v) in updated_statuses.into_iter() {
         let updated_node = nodemap.get_mut(&k).unwrap();
@@ -181,9 +178,7 @@ impl StatusSelector {
 mod tests {
 
     use super::*;
-    use crate::backend::SchedulerBackend;
     use crate::model::{NodeResult, Parent, ParentType};
-    use crate::state::{LocalDirState, tests::get_tmp_dir};
 
     /// Verify the correct OneOf status update.
     macro_rules! oneof_tests {
@@ -505,14 +500,7 @@ mod tests {
             },
         );
 
-        let home_dir = get_tmp_dir();
-        let pipeline_name = "pipeline";
-        let state = LocalDirState::new(&home_dir, &pipeline_name);
-        let backend = SchedulerBackend {
-            pipeline_name,
-            state: &state,
-        };
-        update_status("p", &mut nodemap, &backend);
+        update_status("p", &mut nodemap);
         let child = nodemap.get("c").unwrap();
         assert!(matches!(child.status, JobStatus::ReadyForSubmission))
     }

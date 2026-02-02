@@ -51,51 +51,46 @@ pub fn start_simulation(
         .map_err(|e| log::error!("Failed to prepare DAG: {e}"))
         .unwrap();
 
-    let backend = SchedulerBackend {
-        state: &state,
-        pipeline_name: &dag.meta.name.clone(),
-    };
-
+    let pipeline_name = dag.meta.name.clone();
+    let backend = SchedulerBackend::new(&pipeline_name, &state);
     let poll_time = Duration::from_secs(wait_seconds);
-    let scheduler = Scheduler {
+    let mut scheduler = Scheduler {
         poll_time,
         state: &state,
-        backend,
         checkpointer,
         max_concurrency,
     };
 
     log::info!("Running pipeline '{}'", dag.meta.name);
-    scheduler.run(dag);
+    scheduler.run(dag, backend);
 }
 
 /// Scheduler.
 #[derive(Debug, Clone)]
-pub struct Scheduler<'a, T: StateManager, U: Backend> {
+pub struct Scheduler<'a, T: StateManager> {
     /// Time between subsequent Slurm polls (s).
     pub poll_time: Duration,
     /// State management.
     pub state: &'a T,
-    /// Backend to submit and monitor jobs.
-    pub backend: U,
     /// Checkpoint mgmt
     pub checkpointer: Checkpointer,
     /// Maximum number of concurrent tasks.
     pub max_concurrency: usize,
 }
-impl<'a, T: StateManager, U: Backend> Scheduler<'a, T, U> {
+impl<'a, T: StateManager> Scheduler<'a, T> {
     /// Run the scheduler.
-    pub fn run(&self, dag: DAG<Node>) {
+    pub fn run(&mut self, dag: DAG<Node>, mut backend: impl Backend) {
         let (root_id, mut nodemap) = graph::build_nodemap(dag)
             .ok_or_else(|| log::error!("Failed to identify the root node"))
             .unwrap();
 
-        let mut submitter = Submitter::new(&self.backend, self.state, self.max_concurrency);
+        let mut submitter = Submitter::new(self.state, self.max_concurrency);
         log::debug!("Starting scheduling loop");
 
         loop {
-            status_management::update_status(&root_id, &mut nodemap, &self.backend);
-            submitter.submit(&mut nodemap);
+            backend.update_status(&mut nodemap);
+            status_management::update_status(&root_id, &mut nodemap);
+            submitter.submit(&mut nodemap, &backend);
 
             let res = self.checkpointer.save_checkpoint(&nodemap, self.state);
             if let Err(e) = res {
