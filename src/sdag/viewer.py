@@ -210,7 +210,7 @@ class DAGViewer:
             case "TaskNode":
                 color = self.task_color
                 size = self.task_size
-                caption = node.behavior.fname  # type: ignore
+                caption = node.behavior.name  # type: ignore
 
             case "IfNode":
                 color = self.if_color

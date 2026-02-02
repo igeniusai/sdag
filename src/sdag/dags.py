@@ -195,7 +195,7 @@ class SDAG:
         fn = self.taskdict[manager.settings.sdag_task]
         logger.info(
             "Running task '%s' of node '%s'",
-            manager.settings.sdag_task,
+            manager.settings.sdag_task_name,
             manager.settings.sdag_uid,
         )
 
@@ -225,6 +225,7 @@ class SDAG:
     def task(
         self,
         launch_script: str | Path,
+        name: str | None = None,
         cmd: Literal["sbatch", "bash"] = "sbatch",
         mode: Literal["wrap", "ext"] = "wrap",
         caching: bool = False,  # noqa: FBT002
@@ -238,6 +239,9 @@ class SDAG:
         Args:
             launch_script (str | Path): Slurm script to execute
                 the task.
+            name (str | None): Node name, affects caching and logs.
+                If null, it will be equal to the function name.
+                Defaults to None.
             cmd (Literal["sbatch", "bash"]): Execution command. Set
                 to 'sbatch' for slurm jobs, 'bash' for blocking jobs
                 executed within the scheduler process. Defaults to
@@ -273,12 +277,14 @@ class SDAG:
                 raise TaskNotUniqueError(name=fn.__name__)
 
             self.taskdict[fn.__name__] = fn
+            tname = name if name is not None else fn.__name__
             script_path = Path(launch_script)
             if not script_path.is_absolute():
                 script_path.expanduser()
 
             return Task(
                 fn=fn,
+                name=tname,
                 cmd=cmd,
                 mode=mode,
                 caching=caching,

@@ -84,6 +84,7 @@ class TaskNode(BaseNodeType):
 
     Attributes:
         type (Literal['TaskNode']): Node type.
+        name (str): Node name, used for caching.
         fname (str): Function associated to the task.
         launch_script (Path): Lauch script path.
         cmd (Literal["sbatch", "bash"]): Execution command. Set to
@@ -99,6 +100,7 @@ class TaskNode(BaseNodeType):
     """
 
     type: Literal["TaskNode"] = "TaskNode"
+    name: str
     fname: str
     launch_script: Path
     cmd: Literal["sbatch", "bash"]

@@ -53,6 +53,7 @@ class Task:
 
     Atrributes:
         fn (Callable): Decorated stage.
+        name (str): Task name, affects caching and logs.
         cmd (Literal["sbatch", "bash"]): Execution command.
         mode (Literal["wrap", "ext"]): Execution mode.
         caching (bool): If True, stage caching is enabled.
@@ -65,6 +66,7 @@ class Task:
     def __init__(
         self,
         fn: Callable[..., Any],
+        name: str,
         cmd: Literal["sbatch", "bash"],
         mode: Literal["wrap", "ext"],
         caching: bool,
@@ -77,6 +79,7 @@ class Task:
 
         Args:
             fn (Callable): Decorated stage.
+            name (str): Task name, affects caching and logs.
             cmd (Literal["sbatch", "bash"]): Execution command. Set
                 to 'sbatch' for slurm jobs, 'bash' for blocking jobs
                 executed within the scheduler process.
@@ -91,6 +94,7 @@ class Task:
             get_uid (Callable[[], str]): Hook to get a unique id.
         """
         self.fn = fn
+        self.name = name
         self.cmd: Literal["sbatch", "bash"] = cmd
         self.mode: Literal["wrap", "ext"] = mode
         self.caching = caching
@@ -111,6 +115,7 @@ class Task:
         node = Node(
             uid=uid,
             behavior=TaskNode(
+                name=self.name,
                 fname=self.fn.__name__,
                 cmd=self.cmd,
                 mode=self.mode,

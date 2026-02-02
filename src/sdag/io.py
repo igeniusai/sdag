@@ -23,12 +23,15 @@ class Settings(BaseSettings):
         sdag_pipeline (str): Pipeline name.
         sdag_uid (str): Node unique id.
         sdag_task (str): Task function name.
+        sdag_task_name (str): Task name, by default it's equal to
+            the task name.
         sdag_try_num: Number of times the task has been executed.
     """
 
     sdag_pipeline: Path
     sdag_uid: str
     sdag_task: str
+    sdag_task_name: str
     sdag_try_num: int
 
 
