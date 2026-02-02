@@ -93,6 +93,22 @@ pub enum JobStatus {
     Failed(NodeFailure),
 }
 
+impl JobStatus {
+    /// Check if the status is final
+    ///
+    /// Used to stop the simulation
+    pub fn is_final(&self) -> bool {
+        match self {
+            Self::NotSubmitted => false,
+            Self::ReadyForSubmission => false,
+            Self::Running(_) => false,
+            Self::Completed(_) => true,
+            Self::Skipped => true,
+            Self::Failed(_) => true,
+        }
+    }
+}
+
 /// Used to display the status in the log table
 impl fmt::Display for JobStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -269,6 +285,17 @@ impl Node {
             self.status.clone()
         }
     }
+
+    /// Check if the node is in a final state
+    ///
+    /// Used to stop the simulation
+    pub fn is_in_final_state(&self) -> bool {
+        let mut check = self.status.is_final();
+        if let NodeBehavior::TaskNode(task) = &self.behavior {
+            check &= task.try_num > task.retries;
+        };
+        check
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -413,5 +440,55 @@ mod tests {
             deserialized_dag.nodes[0].status,
             JobStatus::Running(_)
         ));
+    }
+
+    /// Node failed but can be retried
+    #[test]
+    fn check_not_in_final_state() {
+        let node = Node {
+            uid: String::from("0"),
+            output_artifacts: Vec::new(),
+            parents: Vec::new(),
+            children: Vec::new(),
+            status: JobStatus::Failed(NodeFailure::Node),
+            behavior: NodeBehavior::TaskNode(Task {
+                fname: String::from("fname"),
+                name: String::from("fname"),
+                caching: false,
+                mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
+                try_num: 1,
+                retries: 1,
+                launch_script: String::from("lauch.sh"),
+                input_kwargs: Vec::new(),
+            }),
+        };
+
+        assert!(!node.is_in_final_state())
+    }
+
+    /// Node failed and can't be retried
+    #[test]
+    fn check_in_final_state() {
+        let node = Node {
+            uid: String::from("0"),
+            output_artifacts: Vec::new(),
+            parents: Vec::new(),
+            children: Vec::new(),
+            status: JobStatus::Failed(NodeFailure::Node),
+            behavior: NodeBehavior::TaskNode(Task {
+                fname: String::from("fname"),
+                name: String::from("fname"),
+                caching: false,
+                mode: ExecMode::Wrap,
+                cmd: Cmd::Sbatch,
+                try_num: 2,
+                retries: 1,
+                launch_script: String::from("lauch.sh"),
+                input_kwargs: Vec::new(),
+            }),
+        };
+
+        assert!(node.is_in_final_state())
     }
 }
