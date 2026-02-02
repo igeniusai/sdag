@@ -290,11 +290,7 @@ impl Node {
     ///
     /// Used to stop the simulation
     pub fn is_in_final_state(&self) -> bool {
-        let mut check = self.status.is_final();
-        if let NodeBehavior::TaskNode(task) = &self.behavior {
-            check &= task.try_num > task.retries;
-        };
-        check
+        self.status.is_final()
     }
 }
 
@@ -442,7 +438,7 @@ mod tests {
         ));
     }
 
-    /// Node failed but can be retried
+    /// Node is still running
     #[test]
     fn check_not_in_final_state() {
         let node = Node {
@@ -450,7 +446,7 @@ mod tests {
             output_artifacts: Vec::new(),
             parents: Vec::new(),
             children: Vec::new(),
-            status: JobStatus::Failed(NodeFailure::Node),
+            status: JobStatus::Running("1234".to_string()),
             behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
                 name: String::from("fname"),
@@ -467,7 +463,7 @@ mod tests {
         assert!(!node.is_in_final_state())
     }
 
-    /// Node failed and can't be retried
+    /// Node failed
     #[test]
     fn check_in_final_state() {
         let node = Node {
@@ -482,8 +478,8 @@ mod tests {
                 caching: false,
                 mode: ExecMode::Wrap,
                 cmd: Cmd::Sbatch,
-                try_num: 2,
-                retries: 1,
+                try_num: 0,
+                retries: 0,
                 launch_script: String::from("lauch.sh"),
                 input_kwargs: Vec::new(),
             }),
