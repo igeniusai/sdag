@@ -31,6 +31,7 @@ class TestIOManager:
         os.environ["SDAG_UID"] = "0"
         os.environ["SDAG_TRY_NUM"] = "1"
         os.environ["SDAG_TASK"] = "task"
+        os.environ["SDAG_TASK_NAME"] = "task"
 
         return IOManager()
 
@@ -54,6 +55,7 @@ class TestIOManager:
                         "cmd": "sbatch",
                         "mode": "wrap",
                         "fname": "func",
+                        "name": "func",
                         "launch_script": "/",
                         "caching": False,
                         "retries": 0,

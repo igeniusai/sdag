@@ -199,6 +199,7 @@ class TestDAG:
             uid="2",
             behavior=TaskNode(
                 fname="fname",
+                name="fname",
                 cmd="sbatch",
                 mode="wrap",
                 launch_script=Path("script.sh"),
@@ -221,6 +222,7 @@ class TestDAG:
             uid="2",
             behavior=TaskNode(
                 fname="fname",
+                name="fname",
                 cmd="sbatch",
                 mode="wrap",
                 launch_script=Path("script.sh"),
@@ -246,6 +248,7 @@ class TestDAG:
             uid="2",
             behavior=TaskNode(
                 fname="fname",
+                name="fname",
                 cmd="sbatch",
                 mode="wrap",
                 launch_script=Path("script.sh"),
@@ -271,6 +274,7 @@ class TestDAG:
             uid="2",
             behavior=TaskNode(
                 fname="fname",
+                name="fname",
                 cmd="sbatch",
                 mode="wrap",
                 launch_script=Path("script.sh"),
@@ -350,6 +354,20 @@ class TestSDAG:
         def foo(): ...
 
         assert sdag.taskdict == {"foo": foo.fn}
+
+    def test_change_task_name(self, sdag: SDAG) -> None:
+        """Test the task decorator.
+
+        Args:
+            sdag (SDAG): sdag.
+        """
+
+        @sdag.task(launch_script="submit.sh", name="hello")
+        def foo(): ...
+
+        sdag.set_current_dag(name="dag")
+        task = foo()
+        assert task.behavior.name == "hello"
 
     def test_duplicate_task_decoration(self, sdag: SDAG) -> None:
         """Duplicate task names are not allowed.
@@ -510,6 +528,7 @@ class TestSDAG:
             uid="1",
             behavior=TaskNode(
                 fname="fname",
+                name="fname",
                 cmd="sbatch",
                 mode="wrap",
                 launch_script=Path("submit.sh"),
@@ -535,6 +554,7 @@ class TestSDAG:
             uid="1",
             behavior=TaskNode(
                 fname="fname",
+                name="fname",
                 cmd="sbatch",
                 mode="wrap",
                 launch_script=Path("submit.sh"),
@@ -555,6 +575,7 @@ class TestSDAG:
             uid="1",
             behavior=TaskNode(
                 fname="fname",
+                name="fname",
                 cmd="sbatch",
                 mode="wrap",
                 launch_script=Path("submit.sh"),

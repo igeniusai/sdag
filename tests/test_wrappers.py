@@ -139,6 +139,7 @@ class MockSDAG:
                     parents=[Parent(uid="0", parent_type=LogicalType())],
                     behavior=TaskNode(
                         fname="test",
+                        name="test",
                         launch_script=Path(),
                         mode="wrap",
                         cmd="sbatch",
@@ -181,6 +182,7 @@ class TestTask:
         sdag = MockSDAG()
         task = Task(
             fn=self.mock_stage,
+            name="mock_stage",
             mode="wrap",
             cmd="sbatch",
             caching=True,
@@ -208,6 +210,7 @@ class TestTask:
         sdag = MockSDAG()
         task = Task(
             fn=fn,
+            name="fn",
             mode="wrap",
             cmd="sbatch",
             caching=True,
@@ -222,6 +225,7 @@ class TestTask:
             uid="0",
             behavior=TaskNode(
                 fname="fn",
+                name="fn",
                 caching=True,
                 mode="wrap",
                 cmd="sbatch",
@@ -269,6 +273,7 @@ class TestTask:
         sdag = MockSDAG()
         task = Task(
             fn=fn,
+            name="fn",
             caching=True,
             retries=2,
             launch_script=Path(),
@@ -293,6 +298,7 @@ class TestTask:
         sdag = MockSDAG()
         task = Task(
             fn=fn,
+            name="fn",
             caching=True,
             retries=2,
             launch_script=Path(),
@@ -318,6 +324,7 @@ class TestTask:
         sdag = MockSDAG()
         task = Task(
             fn=fn,
+            name="fn",
             caching=True,
             mode="wrap",
             cmd="sbatch",
@@ -352,6 +359,7 @@ class TestTask:
         sdag = MockSDAG()
         task = Task(
             fn=self.mock_stage_artifact,
+            name="mock_stage_artifact",
             caching=False,
             retries=1,
             mode="wrap",
@@ -511,6 +519,7 @@ class TestPipeline:
             uid="1",
             behavior=TaskNode(
                 fname="fname",
+                name="name",
                 mode="wrap",
                 cmd="sbatch",
                 launch_script=Path("submit.sh"),

@@ -46,6 +46,7 @@ class TestGraphJoiner:
                     uid="0",
                     behavior=TaskNode(
                         fname="foo",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path("script.sh"),
@@ -62,6 +63,7 @@ class TestGraphJoiner:
                     parents=[Parent(uid="1", parent_type=OutputType(key="k"))],
                     behavior=TaskNode(
                         fname="foo",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path("script.sh"),
@@ -77,6 +79,7 @@ class TestGraphJoiner:
                     parents=[Parent(uid="1", parent_type=LogicalType())],
                     behavior=TaskNode(
                         fname="foo",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path("script.sh"),
@@ -114,6 +117,7 @@ class TestGraphJoiner:
             ],
             behavior=TaskNode(
                 fname="foo",
+                name="foo",
                 cmd="sbatch",
                 mode="wrap",
                 launch_script=Path("script.sh"),
@@ -196,6 +200,7 @@ class TestGraphJoiner:
             parents=node_parents,
             behavior=TaskNode(
                 fname="foo",
+                name="foo",
                 cmd="sbatch",
                 mode="wrap",
                 launch_script=Path("script.sh"),
@@ -208,6 +213,7 @@ class TestGraphJoiner:
             parents=swap_parents,
             behavior=TaskNode(
                 fname="foo",
+                name="foo",
                 cmd="sbatch",
                 mode="wrap",
                 launch_script=Path("script.sh"),
@@ -228,6 +234,7 @@ class TestGraphJoiner:
                     uid="0",
                     behavior=TaskNode(
                         fname="a",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path(),
@@ -239,6 +246,7 @@ class TestGraphJoiner:
                     uid="1",
                     behavior=TaskNode(
                         fname="b",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path(),
@@ -255,6 +263,7 @@ class TestGraphJoiner:
                     parents=[Parent(uid="1", parent_type=LogicalType())],
                     behavior=TaskNode(
                         fname="a",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path(),
@@ -266,6 +275,7 @@ class TestGraphJoiner:
                     uid="1",
                     behavior=TaskNode(
                         fname="a",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path(),
@@ -281,6 +291,7 @@ class TestGraphJoiner:
                     uid="0",
                     behavior=TaskNode(
                         fname="a",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path(),
@@ -293,6 +304,7 @@ class TestGraphJoiner:
                     parents=[Parent(uid="0", parent_type=LogicalType())],
                     behavior=TaskNode(
                         fname="a",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path(),
@@ -308,6 +320,7 @@ class TestGraphJoiner:
                     uid="0",
                     behavior=TaskNode(
                         fname="a",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path(),
@@ -320,6 +333,7 @@ class TestGraphJoiner:
                     uid="1",
                     behavior=TaskNode(
                         fname="a",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path(),
@@ -335,6 +349,7 @@ class TestGraphJoiner:
                     uid="0",
                     behavior=TaskNode(
                         fname="a",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path(),
@@ -347,6 +362,7 @@ class TestGraphJoiner:
                     uid="1",
                     behavior=TaskNode(
                         fname="a",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path(),
@@ -387,6 +403,7 @@ class TestGraphJoiner:
                 uid="0",
                 behavior=TaskNode(
                     fname="foo",
+                    name="foo",
                     cmd="sbatch",
                     mode="wrap",
                     launch_script=Path("script.sh"),
@@ -399,6 +416,7 @@ class TestGraphJoiner:
                 uid="1",
                 behavior=TaskNode(
                     fname="foo",
+                    name="foo",
                     cmd="sbatch",
                     mode="wrap",
                     launch_script=Path("script.sh"),
@@ -411,6 +429,7 @@ class TestGraphJoiner:
                 uid="2",
                 behavior=TaskNode(
                     fname="foo",
+                    name="foo",
                     cmd="sbatch",
                     mode="wrap",
                     launch_script=Path("script.sh"),
@@ -436,6 +455,7 @@ class TestGraphJoiner:
                 uid="0",
                 behavior=TaskNode(
                     fname="foo",
+                    name="foo",
                     cmd="sbatch",
                     mode="wrap",
                     launch_script=Path("script.sh"),
@@ -448,6 +468,7 @@ class TestGraphJoiner:
                 uid="1",
                 behavior=TaskNode(
                     fname="foo",
+                    name="foo",
                     cmd="sbatch",
                     mode="wrap",
                     launch_script=Path("script.sh"),
@@ -461,6 +482,7 @@ class TestGraphJoiner:
                 parents=[Parent(uid="1", parent_type=LogicalType())],
                 behavior=TaskNode(
                     fname="foo",
+                    name="foo",
                     cmd="sbatch",
                     mode="wrap",
                     launch_script=Path("script.sh"),
@@ -479,6 +501,7 @@ class TestGraphJoiner:
                 uid="0",
                 behavior=TaskNode(
                     fname="foo",
+                    name="foo",
                     cmd="sbatch",
                     mode="wrap",
                     launch_script=Path("script.sh"),
@@ -492,6 +515,7 @@ class TestGraphJoiner:
                 parents=[Parent(uid="0", parent_type=LogicalType())],
                 behavior=TaskNode(
                     fname="foo",
+                    name="foo",
                     cmd="sbatch",
                     mode="wrap",
                     launch_script=Path("script.sh"),
@@ -517,6 +541,7 @@ class TestGraphJoiner:
                     uid="0",
                     behavior=TaskNode(
                         fname="foo",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path("script.sh"),
@@ -530,6 +555,7 @@ class TestGraphJoiner:
                     parents=[Parent(uid="3", parent_type=LogicalType())],
                     behavior=TaskNode(
                         fname="foo",
+                        name="foo",
                         cmd="sbatch",
                         mode="wrap",
                         launch_script=Path("script.sh"),
@@ -553,6 +579,7 @@ class TestGraphJoiner:
                 parents=[Parent(uid="3", parent_type=LogicalType())],
                 behavior=TaskNode(
                     fname="foo",
+                    name="foo",
                     cmd="sbatch",
                     mode="wrap",
                     launch_script=Path("script.sh"),

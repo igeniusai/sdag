@@ -94,6 +94,7 @@ def test_kill_pipeline(
                 "behavior": {
                     "type": "TaskNode",
                     "fname": "task",
+                    "name": "task",
                     "caching": True,
                     "mode": "wrap",
                     "cmd": "sbatch",
@@ -156,7 +157,8 @@ def test_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
                 "behavior": {
                     "type": "TaskNode",
                     "fname": "task",
-                    "caching": True,
+                    "name": "task",
+                    "caching": False,
                     "mode": "ext",
                     "cmd": "bash",
                     "try_num": 1,
@@ -185,3 +187,75 @@ def test_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert (tmp_path / ".sdag" / "pipeline" / "0" / "output.json").exists()
     assert target_path.exists()
+
+
+@pytest.mark.usefixtures("set_home")
+def test_run_pipeline_with_caching(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test pipeline execution and task caching.
+
+    This also verifies the task name is used instead
+    of fname.
+
+    Args:
+        tmp_path (Path): Temporary path fixture.
+        monkeypatch (pytest.MonkeyPatch): Patcher.
+    """
+    script_path = tmp_path / "submit.sh"
+    pipeline_path = tmp_path / "pipeline.json"
+
+    with script_path.open("w") as f:
+        f.write("echo hello")
+
+    pipeline = {
+        "meta": {
+            "name": "pipeline",
+            "creation_dt": "2025-12-30T11:30:46.343072",
+        },
+        "nodes": [
+            {
+                "uid": "_pipeline_0_root_",
+                "output_used": False,
+                "parents": [],
+                "behavior": {"type": "RootNode"},
+                "output_artifacts": [],
+            },
+            {
+                "uid": "0",
+                "output_artifacts": [],
+                "behavior": {
+                    "type": "TaskNode",
+                    "fname": "task",
+                    "name": "task_name",
+                    "caching": True,
+                    "mode": "ext",
+                    "cmd": "bash",
+                    "try_num": 1,
+                    "retries": 0,
+                    "launch_script": str(script_path),
+                    "input_kwargs": [{"key": "k", "value": "v"}],
+                },
+                "parents": [
+                    {
+                        "parent_type": {"type": "Logical"},
+                        "uid": "_pipeline_0_root_",
+                    }
+                ],
+            },
+        ],
+    }
+
+    with pipeline_path.open("w") as f:
+        json.dump(pipeline, f)
+
+    monkeypatch.setattr(
+        "sys.argv",
+        ["sdag", "run", f"{pipeline_path}", "-w", "0"],
+    )
+    main()
+
+    cache_path = tmp_path / ".sdag" / ".cache" / "task_name"
+    assert (cache_path / "output.json").exists()
+    assert (cache_path / "input.json").exists()
+    assert (cache_path / "meta.json").exists()

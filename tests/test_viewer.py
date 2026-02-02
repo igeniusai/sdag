@@ -41,6 +41,7 @@ class TestDAGViewer:
                     parents=[],
                     behavior=TaskNode(
                         fname="fname",
+                        name="fname",
                         launch_script=Path("script.sh"),
                         cmd="sbatch",
                         mode="ext",
@@ -165,6 +166,7 @@ class TestDAGViewer:
                 parents=[Parent(uid="1", parent_type=LogicalType())],
                 behavior=TaskNode(
                     fname="fname",
+                    name="fname",
                     launch_script=Path("script.sh"),
                     cmd="sbatch",
                     mode="ext",
@@ -188,6 +190,7 @@ class TestDAGViewer:
                 parents=[Parent(uid="1", parent_type=LogicalType())],
                 behavior=TaskNode(
                     fname="fname",
+                    name="fname",
                     launch_script=Path("script.sh"),
                     cmd="sbatch",
                     mode="ext",

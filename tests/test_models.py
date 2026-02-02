@@ -168,6 +168,7 @@ class TestGraph:
                     parents=[Parent(uid="root", parent_type=LogicalType())],
                     behavior=TaskNode(
                         fname="test",
+                        name="test",
                         launch_script=Path(),
                         caching=False,
                         retries=0,
