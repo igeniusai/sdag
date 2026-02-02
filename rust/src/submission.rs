@@ -125,7 +125,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
             return JobStatus::NotSubmitted;
         }
 
-        log::debug!("Submitting task '{}' of node '{}'", task.fname, uid);
+        log::debug!("Submitting task '{}' of node '{}'", task.name, uid);
         match self.backend.submit(uid, task) {
             Ok(job_id) => {
                 self.nrunning += 1;
@@ -140,7 +140,7 @@ impl<'a, T: Backend, U: StateManager> Submitter<'a, T, U> {
 
     /// Submit a local task.
     fn submit_local_task(&self, task: &Task, uid: &str, artifacts: &Vec<Artifact>) -> JobStatus {
-        log::debug!("Submitting local task '{}' of node '{}'", task.fname, uid);
+        log::debug!("Submitting local task '{}' of node '{}'", task.name, uid);
         match self.backend.submit_local(uid, task, artifacts) {
             Ok(_) => JobStatus::Completed(NodeResult::Node),
             Err(e) => {
@@ -261,11 +261,11 @@ mod tests {
             Ok(())
         }
 
-        fn cache_task(&self, _fname: &str, _uid: &str) -> io::Result<u64> {
+        fn cache_task(&self, _name: &str, _uid: &str) -> io::Result<u64> {
             Ok(1)
         }
 
-        fn copy_cache(&self, _fname: &str, _uid: &str) -> io::Result<u64> {
+        fn copy_cache(&self, _name: &str, _uid: &str) -> io::Result<u64> {
             Ok(1)
         }
         fn clear_cache(&self, _task_name: &str) -> io::Result<()> {
@@ -384,6 +384,7 @@ mod tests {
             output_artifacts: Vec::new(),
             behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("function"),
+                name: String::from("fname"),
                 launch_script: String::from("script"),
                 caching: false,
                 mode: ExecMode::Wrap,
@@ -428,6 +429,7 @@ mod tests {
             output_artifacts: Vec::new(),
             behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("function"),
+                name: String::from("fname"),
                 launch_script: String::from("script"),
                 caching: false,
                 mode: ExecMode::Wrap,
@@ -575,6 +577,7 @@ mod tests {
             output_artifacts: Vec::new(),
             behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("function"),
+                name: String::from("fname"),
                 launch_script: String::from("script"),
                 caching: false,
                 mode: ExecMode::Wrap,
@@ -612,6 +615,7 @@ mod tests {
             output_artifacts: Vec::new(),
             behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("function"),
+                name: String::from("fname"),
                 launch_script: String::from("script"),
                 caching: false,
                 mode: ExecMode::Wrap,
@@ -678,6 +682,7 @@ mod tests {
                     status: JobStatus::Running(String::from("1234")),
                     behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("function"),
+                        name: String::from("fname"),
                         launch_script: String::from("script"),
                         caching: false,
                         mode: ExecMode::Wrap,
@@ -698,6 +703,7 @@ mod tests {
                     status: JobStatus::ReadyForSubmission,
                     behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("function"),
+                        name: String::from("fname"),
                         launch_script: String::from("script"),
                         caching: false,
                         mode: ExecMode::Wrap,
@@ -724,6 +730,7 @@ mod tests {
             output_artifacts: Vec::new(),
             behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("function"),
+                name: String::from("fname"),
                 launch_script: String::from("script"),
                 caching: false,
                 mode: ExecMode::Wrap,

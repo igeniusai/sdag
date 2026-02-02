@@ -35,9 +35,9 @@ pub trait StateManager {
     /// Save checkpoint.
     fn save_checkpoint(&self, dag: &DAG<&Node>) -> io::Result<()>;
     /// Cache a task
-    fn cache_task(&self, fname: &str, uid: &str) -> io::Result<u64>;
+    fn cache_task(&self, name: &str, uid: &str) -> io::Result<u64>;
     /// Copy cache back to the input
-    fn copy_cache(&self, fname: &str, uid: &str) -> io::Result<u64>;
+    fn copy_cache(&self, name: &str, uid: &str) -> io::Result<u64>;
     /// Clear the cache
     fn clear_cache(&self, task_name: &str) -> io::Result<()>;
 }
@@ -253,17 +253,17 @@ impl StateManager for LocalDirState {
         Ok(())
     }
 
-    fn cache_task(&self, fname: &str, uid: &str) -> io::Result<u64> {
+    fn cache_task(&self, name: &str, uid: &str) -> io::Result<u64> {
         let src = self.pipeline_dir.join(uid);
-        let dst = self.cache_dir.join(fname);
+        let dst = self.cache_dir.join(name);
 
         fs::remove_dir_all(&dst).ok();
         fs::create_dir(&dst)?;
         self.copy_task_data(&src, &dst)
     }
 
-    fn copy_cache(&self, fname: &str, uid: &str) -> io::Result<u64> {
-        let cache = self.cache_dir.join(fname);
+    fn copy_cache(&self, name: &str, uid: &str) -> io::Result<u64> {
+        let cache = self.cache_dir.join(name);
         let dst = self.pipeline_dir.join(uid);
         self.copy_task_data(&cache, &dst)
     }
@@ -315,6 +315,7 @@ pub mod tests {
                 status: JobStatus::NotSubmitted,
                 behavior: NodeBehavior::TaskNode(Task {
                     fname: String::from("fname"),
+                    name: String::from("fname"),
                     caching: false,
                     mode: ExecMode::Wrap,
                     cmd: Cmd::Sbatch,
@@ -427,7 +428,7 @@ pub mod tests {
     fn test_cache_task_no_dir() {
         let home_dir = get_tmp_dir();
         let pipeline_name = "pipeline";
-        let fname = "fname";
+        let name = "fname";
         let src_path = home_dir.join(pipeline_name).join("0");
         let content = r#"{"output": true}"#;
         let cache_path = home_dir.join(".cache");
@@ -439,11 +440,11 @@ pub mod tests {
         fs::write(src_path.join("meta.json"), content).unwrap();
 
         let manager = LocalDirState::new(&home_dir, pipeline_name);
-        manager.cache_task(fname, "0").unwrap();
+        manager.cache_task(name, "0").unwrap();
 
-        assert!(cache_path.join(fname).join("output.json").is_file());
-        assert!(cache_path.join(fname).join("input.json").is_file());
-        assert!(cache_path.join(fname).join("meta.json").is_file());
+        assert!(cache_path.join(name).join("output.json").is_file());
+        assert!(cache_path.join(name).join("input.json").is_file());
+        assert!(cache_path.join(name).join("meta.json").is_file());
     }
 
     #[test]
@@ -527,6 +528,7 @@ pub mod tests {
                     output_artifacts: Vec::new(),
                     behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from(fname),
+                        name: String::from("fname"),
                         caching: true,
                         mode: ExecMode::Wrap,
                         cmd: Cmd::Sbatch,
@@ -564,6 +566,7 @@ pub mod tests {
                 status: JobStatus::NotSubmitted,
                 behavior: NodeBehavior::TaskNode(Task {
                     fname: String::from("fname"),
+                    name: String::from("fname"),
                     caching: false,
                     mode: ExecMode::Wrap,
                     cmd: Cmd::Sbatch,
@@ -645,6 +648,7 @@ pub mod tests {
             status: JobStatus::Running(String::from("1234")),
             behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
+                name: String::from("fname"),
                 caching: false,
                 mode: ExecMode::Wrap,
                 cmd: Cmd::Sbatch,
@@ -675,6 +679,7 @@ pub mod tests {
             status: JobStatus::Completed(NodeResult::Task(String::from("1234"))),
             behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
+                name: String::from("fname"),
                 caching: false,
                 mode: ExecMode::Wrap,
                 cmd: Cmd::Sbatch,
@@ -708,6 +713,7 @@ pub mod tests {
             status: JobStatus::Completed(NodeResult::Task(String::from("1234"))),
             behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
+                name: String::from("fname"),
                 caching: false,
                 mode: ExecMode::Wrap,
                 cmd: Cmd::Sbatch,
@@ -764,6 +770,7 @@ pub mod tests {
             status: JobStatus::Completed(NodeResult::Task(String::from("1234"))),
             behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
+                name: String::from("fname"),
                 caching: false,
                 mode: ExecMode::Wrap,
                 cmd: Cmd::Sbatch,

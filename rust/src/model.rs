@@ -193,6 +193,8 @@ impl fmt::Display for Cmd {
 pub struct Task {
     /// Task function name.
     pub fname: String,
+    /// Task name. By default it's equal to the function name
+    pub name: String,
     /// Caching.
     pub caching: bool,
     /// Execution mode
@@ -384,6 +386,7 @@ mod tests {
                 status: JobStatus::Running(String::from("1234")),
                 behavior: NodeBehavior::TaskNode(Task {
                     fname: String::from("fname"),
+                    name: String::from("fname"),
                     caching: false,
                     mode: ExecMode::Wrap,
                     cmd: Cmd::Sbatch,

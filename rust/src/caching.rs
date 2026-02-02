@@ -41,7 +41,7 @@ fn get_task_caching_status<T: StateManager>(
     match &node.behavior {
         NodeBehavior::TaskNode(task) => Some((
             key.to_string(),
-            check_task_caching(node, &task.caching, &task.fname, &task.input_kwargs, state),
+            check_task_caching(node, &task.caching, &task.name, &task.input_kwargs, state),
         )),
         _ => None,
     }
@@ -69,12 +69,12 @@ fn set_caching_and_status(node: &mut Node, result: Result<bool, Box<dyn Error>>)
 fn check_task_caching<T: StateManager>(
     node: &Node,
     caching: &bool,
-    fname: &str,
+    name: &str,
     input_kwargs: &Vec<InputKwarg>,
     state: &T,
 ) -> Result<bool, Box<dyn Error>> {
     let input = read_input_data(node, input_kwargs, state)?;
-    if !*caching | state.copy_cache(fname, &node.uid).is_err() {
+    if !*caching | state.copy_cache(name, &node.uid).is_err() {
         return treat_as_uncached(&node.uid, &input, state);
     }
 
@@ -232,10 +232,10 @@ mod tests {
         fn validate_checkpoint(&self, _dag: &DAG<Node>) -> Result<(), String> {
             Ok(())
         }
-        fn cache_task(&self, _fname: &str, _uid: &str) -> io::Result<u64> {
+        fn cache_task(&self, _name: &str, _uid: &str) -> io::Result<u64> {
             Ok(1)
         }
-        fn copy_cache(&self, _fname: &str, _uid: &str) -> io::Result<u64> {
+        fn copy_cache(&self, _name: &str, _uid: &str) -> io::Result<u64> {
             Ok(1)
         }
 
@@ -329,6 +329,7 @@ mod tests {
             status: JobStatus::ReadyForSubmission,
             behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
+                name: String::from("fname"),
                 caching: true,
                 mode: ExecMode::Wrap,
                 cmd: Cmd::Sbatch,
@@ -367,6 +368,7 @@ mod tests {
             status: JobStatus::ReadyForSubmission,
             behavior: NodeBehavior::TaskNode(Task {
                 fname: fname.clone(),
+                name: String::from("fname"),
                 caching: caching,
                 mode: ExecMode::Wrap,
                 cmd: Cmd::Sbatch,
@@ -398,6 +400,7 @@ mod tests {
             status: JobStatus::ReadyForSubmission,
             behavior: NodeBehavior::TaskNode(Task {
                 fname: fname.clone(),
+                name: String::from("fname"),
                 caching: caching,
                 mode: ExecMode::Wrap,
                 cmd: Cmd::Sbatch,
@@ -435,6 +438,7 @@ mod tests {
             status: JobStatus::ReadyForSubmission,
             behavior: NodeBehavior::TaskNode(Task {
                 fname: fname.clone(),
+                name: String::from("fname"),
                 caching: caching,
                 mode: ExecMode::Wrap,
                 cmd: Cmd::Sbatch,
@@ -469,6 +473,7 @@ mod tests {
             status: JobStatus::ReadyForSubmission,
             behavior: NodeBehavior::TaskNode(Task {
                 fname: fname.clone(),
+                name: String::from("fname"),
                 caching: caching,
                 mode: ExecMode::Wrap,
                 cmd: Cmd::Sbatch,
@@ -493,6 +498,7 @@ mod tests {
             status: JobStatus::ReadyForSubmission,
             behavior: NodeBehavior::TaskNode(Task {
                 fname: String::from("fname"),
+                name: String::from("fname"),
                 caching: true,
                 mode: ExecMode::Wrap,
                 cmd: Cmd::Sbatch,

@@ -72,6 +72,7 @@ mod tests {
                 status: JobStatus::Running(String::from("1234")),
                 behavior: NodeBehavior::TaskNode(Task {
                     fname: String::from("fname"),
+                    name: String::from("fname"),
                     caching: false,
                     mode: ExecMode::Wrap,
                     cmd: Cmd::Sbatch,
@@ -115,6 +116,7 @@ mod tests {
                 status: JobStatus::Running(String::from("1234")),
                 behavior: NodeBehavior::TaskNode(Task {
                     fname: String::from("fname"),
+                    name: String::from("fname"),
                     caching: false,
                     mode: ExecMode::Wrap,
                     cmd: Cmd::Sbatch,

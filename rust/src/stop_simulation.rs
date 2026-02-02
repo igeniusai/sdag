@@ -73,6 +73,7 @@ mod tests {
                     status: JobStatus::Running("1234".to_string()),
                     behavior: NodeBehavior::TaskNode(Task {
                         fname: "fn".to_string(),
+                        name: String::from("fname"),
                         caching: false,
                         mode: ExecMode::Ext,
                         cmd: Cmd::Sbatch,
@@ -98,6 +99,7 @@ mod tests {
                     status: JobStatus::Running("5678".to_string()),
                     behavior: NodeBehavior::TaskNode(Task {
                         fname: "fn".to_string(),
+                        name: String::from("fname"),
                         caching: false,
                         mode: ExecMode::Ext,
                         cmd: Cmd::Sbatch,

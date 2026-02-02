@@ -29,7 +29,7 @@ pub fn get_summary_table<'a>(nodemap: &'a HashMap<String, Node>) -> Table {
         if let NodeBehavior::TaskNode(task) = &node.behavior {
             records.push(Summary {
                 uid: &node.uid,
-                task: &task.fname,
+                task: &task.name,
                 status: &node.status,
                 num_tries: task.try_num,
             });
@@ -59,7 +59,8 @@ mod tests {
                     uid: String::from("2"),
                     output_artifacts: Vec::new(),
                     behavior: NodeBehavior::TaskNode(Task {
-                        fname: String::from("stage1"),
+                        fname: String::from("fname"),
+                        name: String::from("stage1"),
                         caching: false,
                         mode: ExecMode::Wrap,
                         cmd: Cmd::Sbatch,
@@ -79,7 +80,8 @@ mod tests {
                     uid: String::from("10"),
                     output_artifacts: Vec::new(),
                     behavior: NodeBehavior::TaskNode(Task {
-                        fname: String::from("stage2"),
+                        fname: String::from("fname"),
+                        name: String::from("stage2"),
                         caching: false,
                         mode: ExecMode::Wrap,
                         cmd: Cmd::Sbatch,

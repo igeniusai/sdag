@@ -15,10 +15,10 @@ pub fn limit_cached_tasks_same_name(nodemap: &mut HashMap<String, Node>) {
             && let NodeBehavior::TaskNode(task) = &node.behavior
             && task.caching
         {
-            if submitted_with_caching.contains(&task.fname) {
+            if submitted_with_caching.contains(&task.name) {
                 node.status = JobStatus::NotSubmitted;
             } else {
-                submitted_with_caching.insert(task.fname.to_string());
+                submitted_with_caching.insert(task.name.to_string());
             }
         }
     }
@@ -33,7 +33,7 @@ fn find_running_cacheable_jobs(nodemap: &HashMap<String, Node>) -> HashSet<Strin
             if let NodeBehavior::TaskNode(task) = &n.behavior
                 && task.caching
             {
-                Some(task.fname.to_string())
+                Some(task.name.to_string())
             } else {
                 None
             }
@@ -60,6 +60,7 @@ mod tests {
                     status: JobStatus::ReadyForSubmission,
                     behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("fname"),
+                        name: String::from("fname"),
                         caching: true,
                         mode: ExecMode::Wrap,
                         cmd: Cmd::Sbatch,
@@ -80,6 +81,7 @@ mod tests {
                     status: JobStatus::ReadyForSubmission,
                     behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("fname"),
+                        name: String::from("fname"),
                         caching: true,
                         mode: ExecMode::Wrap,
                         cmd: Cmd::Sbatch,
@@ -114,6 +116,7 @@ mod tests {
                     status: JobStatus::ReadyForSubmission,
                     behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("fname"),
+                        name: String::from("fname"),
                         caching: true,
                         mode: ExecMode::Wrap,
                         cmd: Cmd::Sbatch,
@@ -134,6 +137,7 @@ mod tests {
                     status: JobStatus::Running("123".to_string()),
                     behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("fname"),
+                        name: String::from("fname"),
                         caching: true,
                         mode: ExecMode::Wrap,
                         cmd: Cmd::Sbatch,
@@ -168,6 +172,7 @@ mod tests {
                     status: JobStatus::Running("1".to_string()),
                     behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("fname"),
+                        name: String::from("fname"),
                         caching: true,
                         mode: ExecMode::Wrap,
                         cmd: Cmd::Sbatch,
@@ -188,6 +193,7 @@ mod tests {
                     status: JobStatus::ReadyForSubmission,
                     behavior: NodeBehavior::TaskNode(Task {
                         fname: String::from("not-running"),
+                        name: String::from("fname"),
                         caching: true,
                         mode: ExecMode::Wrap,
                         cmd: Cmd::Sbatch,

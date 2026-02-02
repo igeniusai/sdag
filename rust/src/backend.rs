@@ -105,7 +105,8 @@ impl<'a, T: StateManager> SchedulerBackend<'a, T> {
         cmd.env("SDAG_TRY_NUM", &task.try_num.to_string())
             .env("SDAG_PIPELINE", pipeline_dir)
             .env("SDAG_UID", uid)
-            .env("SDAG_TASK", &task.fname);
+            .env("SDAG_TASK", &task.fname)
+            .env("SDAG_TASK_NAME", &task.name);
 
         if let ExecMode::Ext = task.mode {
             self.set_input_as_envs(&mut cmd, uid)?;
@@ -115,7 +116,7 @@ impl<'a, T: StateManager> SchedulerBackend<'a, T> {
     }
 
     fn override_sbatch(&self, cmd: &mut Command, task: &Task) {
-        let job_name = format!("--job-name={}", task.fname);
+        let job_name = format!("--job-name={}", task.name);
         let error = format!("--error=./logs/{}/%x.%j.err", self.pipeline_name);
         let output = format!("--output=./logs/{}/%x.%j.out", self.pipeline_name);
         cmd.arg(&job_name).arg(&error).arg(&output);
@@ -268,9 +269,9 @@ impl<'a, T: StateManager> SchedulerBackend<'a, T> {
         }
 
         if task.caching
-            && let Err(e) = self.state.cache_task(&task.fname, uid)
+            && let Err(e) = self.state.cache_task(&task.name, uid)
         {
-            log::error!("Failed to save task '{}' cache: {}", task.fname, e)
+            log::error!("Failed to save task '{}' cache: {}", task.name, e)
         }
         Ok(())
     }
@@ -402,6 +403,7 @@ mod tests {
         let backend = get_backend(&state);
         let task = Task {
             fname: String::from("fname"),
+            name: String::from("fname"),
             caching: false,
             mode: ExecMode::Wrap,
             cmd: Cmd::Sbatch,
@@ -423,6 +425,7 @@ mod tests {
         let launch_script = path.to_string_lossy().into_owned();
         let task = Task {
             fname: String::from("fname"),
+            name: String::from("fname"),
             caching: false,
             mode: ExecMode::Wrap,
             cmd: Cmd::Bash,
@@ -449,6 +452,7 @@ mod tests {
         let launch_script = path.to_string_lossy().into_owned();
         let task = Task {
             fname: String::from("fname"),
+            name: String::from("fname"),
             caching: false,
             mode: ExecMode::Ext,
             cmd: Cmd::Bash,
@@ -478,6 +482,7 @@ mod tests {
     fn test_save_output_and_cache() {
         let task = Task {
             fname: String::from("fname"),
+            name: String::from("fname"),
             caching: true,
             mode: ExecMode::Ext,
             cmd: Cmd::Sbatch,

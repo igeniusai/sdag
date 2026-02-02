@@ -129,6 +129,7 @@ mod tests {
             output_artifacts: Vec::new(),
             behavior: NodeBehavior::TaskNode(Task {
                 fname: "fname".to_string(),
+                name: String::from("fname"),
                 caching: false,
                 mode: ExecMode::Wrap,
                 cmd: Cmd::Sbatch,
