@@ -11,7 +11,7 @@
 use crate::backend::{Backend, SchedulerBackend};
 use crate::checkpoint::Checkpointer;
 use crate::graph;
-use crate::model::{DAG, JobStatus, Node};
+use crate::model::{DAG, Node};
 use crate::startup;
 use crate::state::{LocalDirState, StateManager};
 use crate::status_management;
@@ -92,11 +92,9 @@ impl<'a, T: StateManager> Scheduler<'a, T> {
             status_management::update_status(&root_id, &mut nodemap);
             submitter.submit(&mut nodemap, &backend);
 
-            let res = self.checkpointer.save_checkpoint(&nodemap, self.state);
-            if let Err(e) = res {
+            if let Err(e) = self.checkpointer.save_checkpoint(&nodemap, self.state) {
                 log::error!("Failed to save checkpoint: {e}");
             }
-
             let table = summary::get_summary_table(&nodemap);
             log::info!("Summary:\n{table}");
 
@@ -104,17 +102,14 @@ impl<'a, T: StateManager> Scheduler<'a, T> {
                 log::info!("Simulation completed, exiting...");
                 break;
             }
-
             thread::sleep(self.poll_time);
         }
+
+        summary::print_recap(&nodemap);
     }
 
     /// Every node is in a final state (completed, failed, or skipped).
     fn is_simulation_completed(&self, nodemap: &HashMap<String, Node>) -> bool {
-        nodemap.values().all(|n| {
-            matches!(n.status, JobStatus::Completed { .. })
-                | matches!(n.status, JobStatus::Failed(_))
-                | matches!(n.status, JobStatus::Skipped)
-        })
+        nodemap.values().all(|n| n.is_in_final_state())
     }
 }
