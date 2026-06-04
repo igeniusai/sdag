@@ -1,10 +1,9 @@
 """sdag models."""
 
 import random
-import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Any, Literal, TypeVar
+from typing import Annotated, Any, Literal, Self, TypeVar
 
 from pydantic import (
     BaseModel,
@@ -16,11 +15,6 @@ from pydantic import (
 
 from sdag.constants import POSIX_ENV_VARIABLES
 from sdag.exceptions import POSIXOverrideError
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 class ScriptPath(BaseModel):

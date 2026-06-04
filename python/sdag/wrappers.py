@@ -2,10 +2,9 @@
 
 import inspect
 import logging
-import sys
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from sdag.compiler import compiler, master
 from sdag.exceptions import (
@@ -15,12 +14,6 @@ from sdag.exceptions import (
     KwargNotFoundError,
     TaskNotUniqueError,
 )
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
 from sdag.models import (
     DAG,
     ArtifactContainer,

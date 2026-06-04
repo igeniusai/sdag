@@ -64,7 +64,7 @@ def find_all_pipelines() -> dict[str, str]:
     """
     pipelines: dict[str, str] = {}
     dag_dir = _find_dag_dir()
-    for path in Path(dag_dir).rglob("**/*.py", recurse_symlinks=True):
+    for path in Path(dag_dir).rglob("**/*.py"):
         tree = ast.parse(path.read_text())
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
