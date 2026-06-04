@@ -2,15 +2,15 @@
 
 import logging
 
-from sdag4.exceptions import CLIError
-from sdag4.settings import configure_logging, get_log_level
+from sdag.exceptions import CLIError
+from sdag.settings import configure_logging, get_log_level
 
 logger = logging.getLogger(__name__)
 
 
 def cli():
     """CLI entrypoint."""
-    from sdag4.parser import ExtraArgumentParser, ParserBuilder
+    from sdag.parser import ExtraArgumentParser, ParserBuilder
 
     parser = (
         ParserBuilder()
@@ -53,8 +53,8 @@ def sdag_execute(configure_logger: bool = True) -> None:  # noqa: FBT002
     import inspect
     import json
 
-    from sdag4.io import IOHandler, find_and_import_task
-    from sdag4.settings import get_cached_settings
+    from sdag.io import IOHandler, find_and_import_task
+    from sdag.settings import get_cached_settings
 
     if configure_logger:
         log_level = get_log_level()

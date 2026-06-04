@@ -3,8 +3,8 @@ import sys
 from pathlib import Path
 
 import pytest
-from sdag4.entrypoints import cli, sdag_execute
-from sdag4.exceptions import CLIError
+from sdag.entrypoints import cli, sdag_execute
+from sdag.exceptions import CLIError
 
 
 def test_weird_arguments_are_blocked():
@@ -40,7 +40,7 @@ def test_all_commands_are_reachable(argv: list[str]) -> None:
 
 
 def test_task_execution(tmp_path: Path) -> None:
-    from sdag4 import task
+    from sdag import task
 
     @task("path/to/script.sh")
     def foo(): ...

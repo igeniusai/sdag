@@ -7,8 +7,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal
 
-from sdag4.compiler import compiler, master
-from sdag4.exceptions import (
+from sdag.compiler import compiler, master
+from sdag.exceptions import (
     DynamicArtifactError,
     IncorrectElifError,
     IncorrectElseError,
@@ -21,7 +21,7 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-from sdag4.models import (
+from sdag.models import (
     DAG,
     ArtifactContainer,
     ArtifactSig,
@@ -39,7 +39,7 @@ from sdag4.models import (
     ScriptUnion,
     TaskNode,
 )
-from sdag4.settings import get_compile_settings
+from sdag.settings import get_compile_settings
 
 logger = logging.getLogger(__name__)
 

@@ -14,8 +14,8 @@ from pydantic import (
     model_validator,
 )
 
-from sdag4.constants import POSIX_ENV_VARIABLES
-from sdag4.exceptions import POSIXOverrideError
+from sdag.constants import POSIX_ENV_VARIABLES
+from sdag.exceptions import POSIXOverrideError
 
 if sys.version_info >= (3, 11):
     from typing import Self

@@ -17,10 +17,10 @@ def say_hello(world: str) -> None: ...
 Run `sdag run hello:dag` to execute the pipeline.
 """
 
-from sdag4.entrypoints import sdag_execute
-from sdag4.models import Artifact
-from sdag4.visualization import DAGViewer
-from sdag4.wrappers import Elif, Else, If, Script, pipeline, task
+from sdag.entrypoints import sdag_execute
+from sdag.models import Artifact
+from sdag.visualization import DAGViewer
+from sdag.wrappers import Elif, Else, If, Script, pipeline, task
 
 __all__ = [
     "Artifact",

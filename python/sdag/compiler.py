@@ -7,8 +7,8 @@ access to, so it is not thread safe.
 import logging
 from typing import TYPE_CHECKING
 
-from sdag4.exceptions import DAGNotSetError, TaskNotUniqueError
-from sdag4.models import (
+from sdag.exceptions import DAGNotSetError, TaskNotUniqueError
+from sdag.models import (
     DAG,
     BranchNode,
     CompiledDAG,
@@ -20,7 +20,7 @@ from sdag4.models import (
 )
 
 if TYPE_CHECKING:
-    from sdag4.wrappers import Pipeline, Task
+    from sdag.wrappers import Pipeline, Task
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +215,7 @@ class DAGCompiler:
 
         return dag, root, end
 
-    def _parents_do_not_depend_on_branch(self, parents: list[Parent]) -> None:
+    def _parents_do_not_depend_on_branch(self, parents: list[Parent]) -> bool:
         """Traverse the graph to check root dependencies.
 
         Ugly solution to prevent useless edges if two subpipelines
@@ -223,7 +223,15 @@ class DAGCompiler:
 
         Args:
             parents (list[Parent]): Root parents.
+
+        Raises:
+            DAGNotSetError: No DAG is being compiled.
+
+        Returns:
+            bool: True if the parents do not depend on the branch.
         """
+        if self.active is None:
+            raise DAGNotSetError
         branch_uid = self.active.branches[-1].uid
         queue: list[int] = [parent.uid for parent in parents]
         visited = set()

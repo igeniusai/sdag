@@ -3,10 +3,9 @@
 import json
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any
 
 import pytest
-from sdag4.entrypoints import cli
+from sdag.entrypoints import cli
 
 
 @pytest.fixture

@@ -1,6 +1,6 @@
 """Custom exceptions."""
 
-from sdag4.constants import POSIX_ENV_VARIABLES
+from sdag.constants import POSIX_ENV_VARIABLES
 
 
 class SDAGError(Exception):

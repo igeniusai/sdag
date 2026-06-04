@@ -9,10 +9,10 @@ import importlib
 import logging
 from pathlib import Path
 
-from sdag4.compiler import master
-from sdag4.exceptions import DAGNotFoundError
-from sdag4.settings import parse_pyproject
-from sdag4.wrappers import Pipeline
+from sdag.compiler import master
+from sdag.exceptions import DAGNotFoundError
+from sdag.settings import parse_pyproject
+from sdag.wrappers import Pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -193,8 +193,8 @@ def _detect_root(file_path: Path) -> Path:
 
     - src layout:  …/src/ is the root if it exists in the chain.
     - flat layout: the topmost directory that still has an __init__.py
-                   (i.e. the package root), or the file's own directory
-                   if it's a standalone script.
+        (i.e. the package root), or the file's own directory
+        if it's a standalone script.
     """
     init = "__init__.py"
     for parent in file_path.parents:

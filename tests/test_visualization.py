@@ -1,14 +1,14 @@
 from pathlib import Path
 
 import pytest
-from sdag4 import Else, If, pipeline, task
-from sdag4.models import DAG, Artifact, EndNode, LogicalParent, Parent
-from sdag4.visualization import DAGViewer, MermaidGenerator
+from sdag import Else, If, pipeline, task
+from sdag.models import DAG, Artifact, EndNode, LogicalParent, Parent
+from sdag.visualization import DAGViewer, MermaidGenerator
 
 
 @pytest.fixture(autouse=True)
 def reset_master():
-    from sdag4.compiler import master
+    from sdag.compiler import master
 
     master._reset()
 

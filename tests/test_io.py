@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from sdag4 import Artifact
-from sdag4.exceptions import KwargNotFoundError
-from sdag4.io import IOHandler
-from sdag4.models import ArtifactEdge
+from sdag import Artifact
+from sdag.exceptions import KwargNotFoundError
+from sdag.io import IOHandler
+from sdag.models import ArtifactEdge
 
 
 class TestIOHandler:

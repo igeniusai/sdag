@@ -5,11 +5,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from sdag4.commands import get_task
-from sdag4.compiler import master
-from sdag4.discovery import find_pipeline_by_name
-from sdag4.models import ArtifactEdge, TaskOutput
-from sdag4.wrappers import Task, is_artifact, validate_kwargs
+from sdag.commands import get_task
+from sdag.compiler import master
+from sdag.discovery import find_pipeline_by_name
+from sdag.models import ArtifactEdge, TaskOutput
+from sdag.wrappers import Task, is_artifact, validate_kwargs
 
 
 def find_and_import_task(

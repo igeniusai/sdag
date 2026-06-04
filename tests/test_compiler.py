@@ -1,9 +1,9 @@
 from pathlib import Path
 
 import pytest
-from sdag4.compiler import SDAG, DAGCompiler
-from sdag4.exceptions import TaskNotUniqueError
-from sdag4.models import BranchNode, RootNode, ScriptPath, TaskNode
+from sdag.compiler import SDAG, DAGCompiler
+from sdag.exceptions import TaskNotUniqueError
+from sdag.models import BranchNode, RootNode, ScriptPath, TaskNode
 
 
 class TestSDAG:
@@ -12,7 +12,7 @@ class TestSDAG:
         return SDAG()
 
     def test_add_pipeline(self, sdag: SDAG) -> None:
-        from sdag4.wrappers import Pipeline
+        from sdag.wrappers import Pipeline
 
         def foo(): ...
 
@@ -21,7 +21,7 @@ class TestSDAG:
         assert "foo" in sdag.pipelines
 
     def test_add_task(self, sdag: SDAG) -> None:
-        from sdag4.wrappers import Task
+        from sdag.wrappers import Task
 
         def foo(): ...
 

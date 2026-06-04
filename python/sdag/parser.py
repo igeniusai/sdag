@@ -11,8 +11,8 @@ else:
     from typing_extensions import Self
 
 
-from sdag4._version import __version__
-from sdag4.commands import (
+from sdag._version import __version__
+from sdag.commands import (
     compile_pipeline,
     continue_breakpoint,
     describe_pipeline,

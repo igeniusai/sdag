@@ -1,13 +1,13 @@
 from pathlib import Path
 
 import pytest
-from sdag4.commands import (
+from sdag.commands import (
     _find_cacheable_tasks,
     _find_compiled_path,
     _get_dag_from_name_import_or_json,
     _parse_compiled_pipeline,
 )
-from sdag4.models import DAG
+from sdag.models import DAG
 
 
 @pytest.fixture

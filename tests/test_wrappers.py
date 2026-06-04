@@ -5,15 +5,15 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from sdag4 import Artifact, Elif, Else, If, pipeline
-from sdag4.compiler import compiler, master
-from sdag4.exceptions import (
+from sdag import Artifact, Elif, Else, If, pipeline
+from sdag.compiler import compiler, master
+from sdag.exceptions import (
     IncorrectElifError,
     IncorrectElseError,
     KwargNotFoundError,
     TaskNotUniqueError,
 )
-from sdag4.models import (
+from sdag.models import (
     ArtifactEdge,
     ArtifactParent,
     BranchParent,
@@ -26,8 +26,8 @@ from sdag4.models import (
     ScriptPath,
     TaskNode,
 )
-from sdag4.settings import get_compile_settings
-from sdag4.wrappers import Task, is_artifact, oneof, validate_kwargs
+from sdag.settings import get_compile_settings
+from sdag.wrappers import Task, is_artifact, oneof, validate_kwargs
 
 
 @pytest.fixture(autouse=True)

@@ -5,7 +5,7 @@ For notebook visualizations it is required to install neo4j_viz.
 
 from typing import TYPE_CHECKING, Any, Literal
 
-from sdag4.models import DAG, NodeUnion, Parent
+from sdag.models import DAG, NodeUnion, Parent
 
 if TYPE_CHECKING:
     from IPython.display import HTML
@@ -211,7 +211,7 @@ class DAGViewer:
         from neo4j_viz import Layout, VisualizationGraph
         from neo4j_viz import Node as VizNode
 
-        from sdag4.commands import _get_dag_from_name_import_or_json
+        from sdag.commands import _get_dag_from_name_import_or_json
 
         viz_nodes: list[VizNode] = []
         edges: list[Relationship] = []

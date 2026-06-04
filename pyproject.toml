@@ -1,5 +1,5 @@
 [project]
-name = "sdag4"
+name = "sdag"
 version = "0.1.0"
 description = "DAGs for Slurm"
 readme = "README.md"
@@ -20,9 +20,9 @@ build-backend = "maturin"
 [tool.maturin]
 # "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
 features = ["pyo3/extension-module"]
-# python-packages = ["sdag4"]
+# python-packages = ["sdag"]
 python-source = "python"
-module-name = "sdag4.core"
+module-name = "sdag.core"
 strip = true
 
 [tool.ruff]
@@ -111,15 +111,15 @@ viz = [
 ]
 
 [project.scripts]
-sdag = "sdag4.entrypoints:cli"
-sdag-execute = "sdag4.entrypoints:sdag_execute"
+sdag = "sdag.entrypoints:cli"
+sdag-execute = "sdag.entrypoints:sdag_execute"
 
 [project.entry-points."uv.run"]
-sdag = "sdag4.entrypoints:cli"
-sdag-execute = "sdag4.entrypoints:sdag_execute"
+sdag = "sdag.entrypoints:cli"
+sdag-execute = "sdag.entrypoints:sdag_execute"
 
 [tool.sdag]
-dag-dir = "python/sdag4/pipelines"
+dag-dir = "python/sdag/pipelines"
 compiled-dag-dir = "compiled-pipelines"
 prepend-compiled-dag-dir = true
 log-level = "info"

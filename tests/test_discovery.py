@@ -1,16 +1,15 @@
 from pathlib import Path
 
 import pytest
-import sdag4.discovery
-from sdag4.discovery import (
+import sdag.discovery
+from sdag.discovery import (
     _detect_root,
     _find_module_path,
     _find_pipeline_path,
     _get_importable_module_path,
     find_all_pipelines,
-    find_pipeline_by_name,
 )
-from sdag4.exceptions import DAGNotFoundError
+from sdag.exceptions import DAGNotFoundError
 
 
 def test_detect_root_src_layout(tmp_path: Path) -> None:
@@ -76,7 +75,7 @@ def test_get_importable_module_path_flat_layout(tmp_path: Path) -> None:
 
 
 def _create_target_structure(base_path: Path) -> Path:
-    content = """from sdag4 import pipeline, task
+    content = """from sdag import pipeline, task
 
 
 @task("script.sh")
@@ -92,7 +91,7 @@ def target_pipeline():
 def local_task(): ...
 """
 
-    disturbing_content = """from sdag4 import pipeline, task
+    disturbing_content = """from sdag import pipeline, task
 
 
 @pipeline
@@ -143,7 +142,7 @@ def test_find_module_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        sdag4.discovery, "_find_dag_dir", lambda: str(tmp_path / "pkg")
+        sdag.discovery, "_find_dag_dir", lambda: str(tmp_path / "pkg")
     )
 
     _create_target_structure(base_path=tmp_path)
@@ -156,7 +155,7 @@ def test_do_not_find_module_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        sdag4.discovery, "_find_dag_dir", lambda: str(tmp_path / "pkg")
+        sdag.discovery, "_find_dag_dir", lambda: str(tmp_path / "pkg")
     )
 
     _create_target_structure(base_path=tmp_path)
@@ -168,10 +167,10 @@ def test_find_all_pipelines(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        sdag4.discovery, "_find_dag_dir", lambda: str(tmp_path / "pkg")
+        sdag.discovery, "_find_dag_dir", lambda: str(tmp_path / "pkg")
     )
 
-    content12 = """from sdag4 import pipeline, task
+    content12 = """from sdag import pipeline, task
 
 
 @task("script.sh")
@@ -194,7 +193,7 @@ def local_task(): ...
 def local_task(): ...
 """
 
-    content3 = """from sdag4 import pipeline, task
+    content3 = """from sdag import pipeline, task
 
 
 @task("script.sh")

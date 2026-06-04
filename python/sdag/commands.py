@@ -10,14 +10,14 @@ from argparse import Namespace
 from pathlib import Path
 from typing import Any
 
-import sdag4.core as core
-from sdag4.compiler import master
-from sdag4.discovery import find_all_pipelines, find_pipeline_by_name
-from sdag4.exceptions import DAGNotFoundError
-from sdag4.models import DAG, Kwarg, TaskNode
-from sdag4.settings import parse_pyproject
-from sdag4.visualization import MermaidGenerator
-from sdag4.wrappers import Task
+import sdag.core as core
+from sdag.compiler import master
+from sdag.discovery import find_all_pipelines, find_pipeline_by_name
+from sdag.exceptions import DAGNotFoundError
+from sdag.models import DAG, Kwarg, TaskNode
+from sdag.settings import parse_pyproject
+from sdag.visualization import MermaidGenerator
+from sdag.wrappers import Task
 
 logger = logging.getLogger(__name__)
 

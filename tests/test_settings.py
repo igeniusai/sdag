@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from sdag4.settings import (
+from sdag.settings import (
     EnvLoggerFormatter,
     configure_logging,
     get_log_level,

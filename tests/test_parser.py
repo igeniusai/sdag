@@ -1,7 +1,7 @@
 from typing import Any
 
 import pytest
-from sdag4.commands import (
+from sdag.commands import (
     compile_pipeline,
     continue_breakpoint,
     describe_pipeline,
@@ -14,7 +14,7 @@ from sdag4.commands import (
     skip_breakpoint,
     view_pipeline,
 )
-from sdag4.parser import ExtraArgumentParser, ParserBuilder
+from sdag.parser import ExtraArgumentParser, ParserBuilder
 
 
 class TestExtraArgumentParser:

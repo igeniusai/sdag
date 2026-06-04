@@ -1,8 +1,8 @@
 from pathlib import Path
 
 import pytest
-from sdag4.exceptions import POSIXOverrideError
-from sdag4.models import EndNode, Kwarg, ScriptPath, TaskNode
+from sdag.exceptions import POSIXOverrideError
+from sdag.models import EndNode, Kwarg, ScriptPath, TaskNode
 
 
 @pytest.fixture
