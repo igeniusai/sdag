@@ -182,6 +182,8 @@ mod tests {
     };
     use serde_json::Value;
     use std::env;
+    use std::thread;
+    use std::time::Duration;
     use uuid::Uuid;
 
     fn get_tmp_dir() -> PathBuf {
@@ -264,7 +266,9 @@ mod tests {
         create_subfolders(&path);
         let subfolders = get_subfolder_creation_dates(&path).unwrap();
         assert_eq!(subfolders[0].0, path.join("3"));
+        thread::sleep(Duration::from_millis(50));
         assert_eq!(subfolders[1].0, path.join("1"));
+        thread::sleep(Duration::from_millis(50));
         assert_eq!(subfolders[2].0, path.join("2"));
     }
 
