@@ -1,182 +1,137 @@
-"""Test task I/O."""
-
+import inspect
 import json
-import os
 from pathlib import Path
 from typing import Any
 
 import pytest
-
-from sdag.exceptions import (
-    KwargNotFoundError,
-)
-from sdag.io import IOManager
-from sdag.models import Graph
+from sdag4 import Artifact
+from sdag4.exceptions import KwargNotFoundError
+from sdag4.io import IOHandler
+from sdag4.models import ArtifactEdge
 
 
-class TestIOManager:
-    """Test the I/O manager."""
-
+class TestIOHandler:
     @pytest.fixture
-    def io_manager(self, tmp_path: Path) -> IOManager:
-        """I/O manager.
-
-        Args:
-            tmp_path (Path): Temporary path fixture.
-
-        Returns:
-            IOManager: I/O manager.
-        """
-        os.environ["SDAG_PIPELINE"] = str(tmp_path)
-        os.environ["SDAG_UID"] = "0"
-        os.environ["SDAG_TRY_NUM"] = "1"
-        os.environ["SDAG_TASK"] = "task"
-        os.environ["SDAG_TASK_NAME"] = "task"
-
-        return IOManager()
-
-    @pytest.fixture
-    def graph_dict(self) -> dict[str, Any]:
-        """Graph dictionary.
-
-        Returns:
-            dict[str, Any]: Graph dictionary.
-        """
-        return {
-            "meta": {
-                "name": "test",
-                "creation_dt": "1920-01-01 09:20:20",
-            },
-            "nodes": [
-                {
-                    "uid": "0",
-                    "behavior": {
-                        "type": "TaskNode",
-                        "cmd": "sbatch",
-                        "mode": "wrap",
-                        "fname": "func",
-                        "name": "func",
-                        "launch_script": "/",
-                        "caching": False,
-                        "retries": 0,
-                    },
-                    "parents": [
-                        {
-                            "uid": "1",
-                            "parent_type": {
-                                "type": "Output",
-                                "key": "input_data",
-                            },
-                        },
-                    ],
-                },
-                {
-                    "uid": "1",
-                    "behavior": {"type": "RootNode", "children": ["0"]},
-                },
-            ],
-        }
+    def handler(self, tmp_path: Path) -> IOHandler:
+        return IOHandler(uid=0, pipeline_dir=tmp_path / "pipeline")
 
     @pytest.mark.parametrize(
         argnames="output",
         argvalues=[None, True, "test", 1, [1, 2, 3], {"a": 1}],
     )
     def test_output_serialization(
-        self, output: Any, io_manager: IOManager
+        self, output: Any, handler: IOHandler
     ) -> None:
         """Check the output serialization in JSON.
 
         Args:
             output (Any): Output.
-            io_manager (IOManager): I/O manager.
+            handler (IOManager): I/O manager.
         """
-        settings = io_manager.settings
-        path = settings.sdag_pipeline / settings.sdag_uid
+        path = handler.pipeline_dir / f"{handler.uid}"
         path.mkdir(parents=True, exist_ok=True)
 
-        io_manager.serialize_output(output, artifacts={})
+        handler.serialize_output(output, artifacts={})
 
-        with (path / io_manager._output_fname).open() as f:
+        with (path / handler._output_fname).open() as f:
             data = json.load(f)
 
         assert data == {"output": output, "artifacts": []}
 
-    def test_read_dag(
-        self, io_manager: IOManager, graph_dict: dict[str, Any]
-    ) -> None:
-        """Test the DAG deserialization.
-
-        Args:
-            io_manager (IOManager): I/O manager.
-            graph_dict (dict[str, Any]): graph to be read.
-        """
-        pipeline_dir = io_manager.settings.sdag_pipeline
-        pipeline_dir.mkdir(parents=True, exist_ok=True)
-        path = pipeline_dir / io_manager._pipeline_fname
-        with path.open("w") as f:
-            json.dump(graph_dict, f)
-
-        graph = io_manager._read_dag()
-        assert isinstance(graph, Graph)
-
-    def test_get_input(self, io_manager: IOManager) -> None:
+    def test_get_input(self, handler: IOHandler) -> None:
         """Test the input value retrieval.
 
         Args:
-            io_manager (IOManager): I/O manager.
+            handler (IOManager): I/O manager.
         """
 
         def foo(a: Any) -> None: ...
 
-        pipeline_dir = io_manager.settings.sdag_pipeline
-        uid = io_manager.settings.sdag_uid
-        path = pipeline_dir / uid
+        path = handler.pipeline_dir / f"{handler.uid}"
         path.mkdir(parents=True, exist_ok=True)
         input_data = {"a": True}
-        with (path / io_manager._input_fname).open("w") as f:
+        with (path / handler._input_fname).open("w") as f:
             json.dump(input_data, f)
 
-        input_retrieved = io_manager.get_input(fn=foo)
+        sig = inspect.signature(foo)
+        input_retrieved = handler.get_input(sig)
         assert input_data == input_retrieved
 
-    def test_input_not_in_signature(self, io_manager: IOManager) -> None:
+    def test_input_not_in_signature(self, handler: IOHandler) -> None:
         """The input key is not in the function signature.
 
         Args:
-            io_manager (IOManager): I/O manager.
+            handler (IOManager): I/O manager.
         """
 
         def foo() -> None: ...
 
-        pipeline_dir = io_manager.settings.sdag_pipeline
-        uid = io_manager.settings.sdag_uid
-        path = pipeline_dir / uid
+        path = handler.pipeline_dir / f"{handler.uid}"
         path.mkdir(parents=True, exist_ok=True)
         input_data = {"a": True}
-        with (path / io_manager._input_fname).open("w") as f:
+        with (path / handler._input_fname).open("w") as f:
             json.dump(input_data, f)
 
+        sig = inspect.signature(foo)
         with pytest.raises(KwargNotFoundError):
-            io_manager.get_input(fn=foo)
+            handler.get_input(sig)
 
-    def test_input_kwargs(self, io_manager: IOManager) -> None:
+    def test_input_kwargs(self, handler: IOHandler) -> None:
         """Test the input kwargs.
 
         The input key is not in the function signature but the function
         contains input kwargs, no error is thrown.
 
         Args:
-            io_manager (IOManager): I/O manager.
+            handler (IOManager): I/O manager.
         """
 
         def foo(**kwargs) -> None: ...
 
-        pipeline_dir = io_manager.settings.sdag_pipeline
-        uid = io_manager.settings.sdag_uid
-        path = pipeline_dir / uid
+        path = handler.pipeline_dir / f"{handler.uid}"
         path.mkdir(parents=True, exist_ok=True)
         input_data = {"a": True}
-        with (path / io_manager._input_fname).open("w") as f:
+        with (path / handler._input_fname).open("w") as f:
             json.dump(input_data, f)
 
-        io_manager.get_input(fn=foo)
+        sig = inspect.signature(foo)
+        handler.get_input(sig)
+
+    def test_serialize_artifacts(self, handler: IOHandler) -> None:
+        artifacts = {
+            "a": ArtifactEdge(name="name", path=Path("path/to/artifact"))
+        }
+        expected = """{
+    "name": "name",
+    "path": "path/to/artifact"
+}"""
+
+        assert handler.serialize_artifacts(artifacts) == expected
+
+    def test_cast_values(self, handler: IOHandler) -> None:
+        def foo(a: Path, b: Artifact[Path], c: Artifact[str], d: Artifact): ...
+
+        sig = inspect.signature(foo)
+        kwargs = {"a": "a/path", "b": "b/path", "c": "c/path", "d": "d/path"}
+
+        handler.cast_values(sig, kwargs)
+
+        assert kwargs["a"] == Path("a/path")
+        assert kwargs["b"] == Path("b/path")
+        assert kwargs["c"] == "c/path"
+        assert kwargs["d"] == "d/path"
+
+    def test_get_artifacts(self, handler: IOHandler) -> None:
+        def foo(a: Path, b: Artifact[Path], c: Artifact[str], d: Artifact): ...
+
+        sig = inspect.signature(foo)
+        kwargs = {"a": "a/path", "b": "b/path", "c": "c/path", "d": "d/path"}
+
+        artifacts = handler.get_artifacts(sig, kwargs)
+        expected = {
+            "b": ArtifactEdge(name="b", path=Path("b/path")),
+            "c": ArtifactEdge(name="c", path=Path("c/path")),
+            "d": ArtifactEdge(name="d", path=Path("d/path")),
+        }
+
+        assert artifacts == expected

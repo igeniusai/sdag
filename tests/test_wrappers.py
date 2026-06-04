@@ -1,5 +1,3 @@
-"""Wrapper tests."""
-
 import inspect
 import os
 from collections.abc import Callable, Generator
@@ -7,26 +5,34 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from pytest_mock import MockerFixture
-
-from sdag.exceptions import KwargNotFoundError
-from sdag.models import (
-    Artifact,
-    ArtifactType,
-    EndNode,
-    Graph,
-    GraphMetadata,
-    IfNode,
-    InputKwarg,
-    LogicalType,
-    Node,
-    OutputType,
+from sdag4 import Artifact, Elif, Else, If, pipeline
+from sdag4.compiler import compiler, master
+from sdag4.exceptions import (
+    IncorrectElifError,
+    IncorrectElseError,
+    KwargNotFoundError,
+    TaskNotUniqueError,
+)
+from sdag4.models import (
+    ArtifactEdge,
+    ArtifactParent,
+    BranchParent,
+    Kwarg,
+    LogicalParent,
+    OneOfNode,
+    OutputParent,
     Parent,
     RootNode,
+    ScriptPath,
     TaskNode,
-    get_compile_settings,
 )
-from sdag.wrappers import IfWrapper, Pipeline, Task, validate_kwargs
+from sdag4.settings import get_compile_settings
+from sdag4.wrappers import Task, is_artifact, oneof, validate_kwargs
+
+
+@pytest.fixture(autouse=True)
+def reset_master():
+    master._reset()
 
 
 class TestKwargValidation:
@@ -77,88 +83,317 @@ class TestKwargValidation:
         validate_kwargs(sig, kwargs)
 
 
-class MockSDAG:
-    """Mocked SDAG for testing purposes.
+@pytest.mark.parametrize(
+    argnames=("param", "result"),
+    argvalues=[
+        ("missing", False),
+        ("a", False),
+        ("b", True),
+        ("c", True),
+        ("d", True),
+    ],
+)
+def test_is_artifact(param: str, result: bool) -> None:
+    def foo(a: int, b: Artifact, c: Artifact[str], d: Artifact[Path]): ...
 
-    Attributes:
-        nodes (list[Node]): Nodes.
-        branches (list[Node[IfNode]]): Branches.
-        dags (list[str]): DAGs.
-    """
+    sig = inspect.signature(foo)
 
-    def __init__(self):
-        """Initialize the mocked sdag."""
-        self.nodes: list[Node] = []
-        self.branches: list[Node[IfNode]] = []
-        self.dags: list[str] = []
+    assert is_artifact(sig.parameters.get(param)) == result
 
-    def register(self, node: Node):
-        """Register a node.
 
-        Args:
-            node (Node): Registered node.
-        """
-        self.nodes.append(node)
+def test_oneof() -> None:
+    @pipeline
+    def dag():
+        t1 = test_task()
+        t2 = test_task()
+        t3 = test_task()
+        oneof(t1, t2, t3)
 
-    def get_uid(self) -> str:
-        """Retrieve a uid.
+    @dag.task("script.sh")
+    def test_task(): ...
 
-        Returns:
-            str: uid.
-        """
-        return "0"
+    graph = dag.compile()
+    oneofnode = graph.nodes[-2]
+    assert isinstance(oneofnode, OneOfNode)
+    assert oneofnode.parents[0].uid == 2
+    assert oneofnode.parents[0].kind.kind == "logical"
+    assert oneofnode.parents[1].uid == 3
+    assert oneofnode.parents[1].kind.kind == "logical"
+    assert oneofnode.parents[2].uid == 4
+    assert oneofnode.parents[2].kind.kind == "logical"
 
-    def push_branch(self, node: Node[IfNode]) -> None:
-        """Push a branch.
 
-        Args:
-            node (Node[IfNode]): If node.
-        """
-        self.branches.append(node)
+class TestIf:
+    def test_if(self) -> None:
+        @pipeline
+        def dag():
+            with If(test_task()):
+                test_task()
 
-    def set_dag(self, name: str) -> None:
-        """Set a dag.
+        @dag.task("script.sh")
+        def test_task(): ...
 
-        Args:
-            name (str): DAG name.
-        """
-        self.dags.append(name)
+        graph = dag.compile()
+        expnode = graph.nodes[1]
+        ifnode = graph.nodes[2]
+        tasknode = graph.nodes[3]
 
-    def get_graph(self) -> Graph:
-        """Retrieve a graph.
+        assert tasknode.kind == "task"
+        assert ifnode.kind == "branch"
+        assert expnode.kind == "task"
+        assert ifnode.parents[0].kind.kind == "output"
+        assert ifnode.parents[0].uid == expnode.uid
+        assert tasknode.parents[0].kind.kind == "branch"
+        assert tasknode.parents[0].uid == ifnode.uid
+        assert tasknode.parents[0].kind.branch
 
-        Returns:
-            Graph: Graph.
-        """
-        return Graph(
-            meta=GraphMetadata(name="test"),
-            nodes=[
-                Node(uid="0", behavior=RootNode()),
-                Node(
-                    uid="1",
-                    parents=[Parent(uid="0", parent_type=LogicalType())],
-                    behavior=TaskNode(
-                        fname="test",
-                        name="test",
-                        launch_script=Path(),
-                        mode="wrap",
-                        cmd="sbatch",
-                        caching=False,
-                        retries=0,
-                    ),
-                ),
-                Node(
-                    uid="2",
-                    parents=[Parent(uid="1", parent_type=LogicalType())],
-                    behavior=EndNode(),
-                ),
-            ],
+
+class TestElIf:
+    def test_elif(self) -> None:
+        @pipeline
+        def dag():
+            with If(test_task()):
+                test_task()
+            with Elif(test_task()):
+                test_task()
+
+        @dag.task("script.sh")
+        def test_task(): ...
+
+        graph = dag.compile()
+        expnode1 = graph.nodes[1]
+        ifnode = graph.nodes[2]
+        tasknode1 = graph.nodes[3]
+        expnode2 = graph.nodes[4]
+        elifnode = graph.nodes[5]
+        tasknode2 = graph.nodes[6]
+
+        assert tasknode1.kind == tasknode2.kind == "task"
+        assert ifnode.kind == elifnode.kind == "branch"
+        assert expnode1.kind == expnode2.kind == "task"
+
+        assert expnode2.parents[0].uid == ifnode.uid
+
+        assert expnode2.parents[0].kind.kind == "branch"
+        assert not expnode2.parents[0].kind.branch
+        assert elifnode.parents[0].kind.kind == "output"
+        assert elifnode.parents[0].uid == expnode2.uid
+        assert tasknode2.parents[0].kind.kind == "branch"
+        assert tasknode2.parents[0].uid == elifnode.uid
+        assert tasknode2.parents[0].kind.branch
+
+    def test_elif_without_if(self) -> None:
+        @pipeline
+        def dag():
+            with Elif(test_task()):
+                test_task()
+
+        @dag.task("script.sh")
+        def test_task(): ...
+
+        with pytest.raises(IncorrectElifError):
+            dag.compile()
+
+    def test_elif_inside_if(self) -> None:
+        @pipeline
+        def dag():
+            with If(test_task()):  # noqa: SIM117
+                with Elif(test_task()):
+                    test_task()
+
+        @dag.task("script.sh")
+        def test_task(): ...
+
+        with pytest.raises(IncorrectElifError):
+            dag.compile()
+
+    def test_elif_after_if(self) -> None:
+        @pipeline
+        def dag():
+            with If(test_task()):
+                test_task()
+            test_task()
+            with Elif(test_task()):
+                test_task()
+
+        @dag.task("script.sh")
+        def test_task(): ...
+
+        with pytest.raises(IncorrectElifError):
+            dag.compile()
+
+    def test_elif_after_else(self) -> None:
+        @pipeline
+        def dag():
+            with If(test_task()):
+                test_task()
+            with Else():
+                test_task()
+            with Elif(test_task()):
+                test_task()
+
+        @dag.task("script.sh")
+        def test_task(): ...
+
+        with pytest.raises(IncorrectElifError):
+            dag.compile()
+
+
+class TestElse:
+    def test_else(self) -> None:
+        @pipeline
+        def dag():
+            with If(test_task()):
+                test_task()
+            with Else():
+                test_task()
+
+        @dag.task("script.sh")
+        def test_task(): ...
+
+        graph = dag.compile()
+        expnode = graph.nodes[1]
+        ifnode = graph.nodes[2]
+        tasknode1 = graph.nodes[3]
+        tasknode2 = graph.nodes[4]
+
+        assert ifnode.kind == "branch"
+        assert expnode.kind == "task"
+        assert tasknode1.kind == tasknode2.kind == "task"
+        assert tasknode2.parents[0].kind.kind == "branch"
+        assert tasknode2.parents[0].uid == ifnode.uid
+        assert not tasknode2.parents[0].kind.branch
+
+    def test_inner_pipelines_in_if(self) -> None:
+        @pipeline
+        def dag_outer():
+            with If(exp()):
+                p = dag_inner()
+                dag_inner(p)
+
+        @dag_outer.task("submit.sh")
+        def exp(): ...
+
+        @pipeline
+        def dag_inner(): ...
+
+        graph = dag_outer.compile()
+        root1 = graph.nodes[0]
+        branch = graph.nodes[2]
+        end1 = graph.nodes[7]
+        end2 = graph.nodes[4]
+        end3 = graph.nodes[6]
+        root2 = graph.nodes[3]
+        root3 = graph.nodes[5]
+        assert root1.kind == root2.kind == root3.kind == "root"
+        assert branch.kind == "branch"
+        assert end1.kind == end2.kind == end3.kind == "end"
+        assert root2.parents == [
+            Parent(uid=3, kind=BranchParent(kind="branch", branch=True))
+        ]
+        assert root3.parents == [
+            Parent(uid=5, kind=LogicalParent(kind="logical"))
+        ]
+
+    def test_else_without_if(self) -> None:
+        @pipeline
+        def dag():
+            with Else():
+                test_task()
+
+        @dag.task("script.sh")
+        def test_task(): ...
+
+        with pytest.raises(IncorrectElseError):
+            dag.compile()
+
+    def test_else_inside_if(self) -> None:
+        @pipeline
+        def dag():
+            with If(test_task()):  # noqa: SIM117
+                with Else():
+                    test_task()
+
+        @dag.task("script.sh")
+        def test_task(): ...
+
+        with pytest.raises(IncorrectElseError):
+            dag.compile()
+
+    def test_else_after_if(self) -> None:
+        @pipeline
+        def dag():
+            with If(test_task()):
+                test_task()
+            test_task()
+            with Else():
+                test_task()
+
+        @dag.task("script.sh")
+        def test_task(): ...
+
+        with pytest.raises(IncorrectElseError):
+            dag.compile()
+
+
+class TestPipeline:
+    def test_add_duplicate_task(self) -> None:
+        @pipeline
+        def dag(): ...
+
+        @dag.task("submit.sh")
+        def my_task(): ...
+
+        with pytest.raises(TaskNotUniqueError):
+
+            @dag.task("submit.sh")
+            def my_task(): ...
+
+    def test_call(self) -> None:
+        @pipeline
+        def dag(a: int) -> None:  # noqa: ARG001
+            my_task(b="path/artifact")
+
+        @dag.task("script.sh")
+        def my_task(b: Artifact[str]): ...
+
+        parent = TaskNode(
+            uid=0,
+            root_uid=-1,
+            name="task",
+            pipeline_name="",
+            fn_name="task",
+            cache=False,
+            cache_local=False,
+            debug=False,
+            mode="wrap",
+            cmd="bash",
+            retries=0,
+            script=ScriptPath(path=Path("submit.sh")),
         )
+
+        endnode = dag(parent, a=1)
+        assert endnode.kind == "end"
+
+        container = endnode.artifacts["my_task"]["b"]
+        assert container.key == "b"
+        assert container.node.name == "my_task"
+        assert container.path == Path("path/artifact")
+
+    def test_compile(self) -> None:
+        @pipeline
+        def dag(a: int):  # noqa: ARG001
+            task1()
+
+        @dag.task("script.sh")
+        def task1(): ...
+
+        graph = dag.compile(import_path="path.to:dag", a=1)
+        assert graph.meta.import_path == "path.to:dag"
+        assert len(graph.nodes) == 3
 
 
 class TestTask:
-    """Task tests."""
-
     @pytest.fixture
     def _set_sdag_base_path(self) -> Generator[None]:
         """Safely set the base path.
@@ -171,33 +406,26 @@ class TestTask:
         del os.environ["SDAG_BASE_PATH"]
         get_compile_settings.cache_clear()
 
-    def mock_stage(self) -> None:
-        """Mocked stage function."""
-
-    def mock_stage_artifact(self, a: Artifact, b: str) -> None:
-        """Mocked stage function with artifacts."""
-
     def test_add_default_values(self) -> None:
         """Test the default value addition."""
-        sdag = MockSDAG()
-        task = Task(
-            fn=self.mock_stage,
-            name="mock_stage",
+
+        def fn(a: str, b: int = 5, c: str = "c") -> None: ...
+
+        test_task = Task(
+            fn=fn,
+            name="task",
             mode="wrap",
             cmd="sbatch",
-            caching=True,
-            retries=2,
-            launch_script=Path(),
-            register=sdag.register,
-            get_uid=sdag.get_uid,
+            retries=0,
+            script=ScriptPath(path=Path()),
+            cache=False,
+            cache_local=False,
+            debug=False,
         )
-
-        def fn(a: str, b: int = 5, c: str = "c") -> None:
-            """Mocked function with default values."""
 
         sig = inspect.signature(fn)
         kwargs = {"a": "a", "c": "custom_c"}
-        task._add_default_values(sig, kwargs)
+        test_task._add_default_values(sig, kwargs)
 
         assert kwargs == {"a": "a", "b": 5, "c": "custom_c"}
 
@@ -207,42 +435,42 @@ class TestTask:
         def fn(a: str, b: Artifact, **kw: Any) -> None:
             """Mocked task function."""
 
-        sdag = MockSDAG()
-        task = Task(
+        test_task = Task(
             fn=fn,
-            name="fn",
+            name="task",
             mode="wrap",
             cmd="sbatch",
-            caching=True,
-            retries=2,
-            launch_script=Path(),
-            register=sdag.register,
-            get_uid=sdag.get_uid,
+            retries=0,
+            script=ScriptPath(path=Path()),
+            cache=False,
+            cache_local=False,
+            debug=False,
         )
 
         kwargs = {"a": "a", "b": "/path", "custom_kw": 10}
-        node = Node(
-            uid="0",
-            behavior=TaskNode(
-                fname="fn",
-                name="fn",
-                caching=True,
-                mode="wrap",
-                cmd="sbatch",
-                retries=2,
-                launch_script=Path(),
-            ),
+        node = TaskNode(
+            uid=0,
+            fn_name="fn",
+            name="fn",
+            cache=True,
+            cache_local=False,
+            debug=False,
+            mode="wrap",
+            cmd="sbatch",
+            retries=2,
+            script=ScriptPath(path=Path()),
         )
-        task._add_kwargs(node, kwargs)
 
-        assert node.behavior.input_kwargs == [
-            InputKwarg(key="a", value="a"),
-            InputKwarg(key="b", value="/path"),
-            InputKwarg(key="custom_kw", value=10),
+        test_task._add_kwargs(node, kwargs)
+
+        assert node.kwargs == [
+            Kwarg(key="a", value="a"),
+            Kwarg(key="b", value="/path"),
+            Kwarg(key="custom_kw", value=10),
         ]
 
         assert node.output_artifacts == [
-            Artifact(name="b", path=Path("/path"))
+            ArtifactEdge(name="b", path=Path("/path"))
         ]
 
     @pytest.mark.parametrize(
@@ -267,52 +495,48 @@ class TestTask:
             expected (str): Expected artifact path.
         """
 
-        def fn(a: Artifact) -> None:
-            """Mocked task with artifact."""
+        def fn(a: Artifact) -> None: ...
 
-        sdag = MockSDAG()
-        task = Task(
+        test_task = Task(
             fn=fn,
-            name="fn",
-            caching=True,
-            retries=2,
-            launch_script=Path(),
+            name="task",
             mode="wrap",
             cmd="sbatch",
-            register=sdag.register,
-            get_uid=sdag.get_uid,
+            retries=0,
+            script=ScriptPath(path=Path()),
+            cache=False,
+            cache_local=False,
+            debug=False,
         )
 
         kwargs = {"a": original}
         sig = inspect.signature(fn)
 
-        task._prepend_base_path_if_set(kwargs, sig)
+        test_task._prepend_base_path_if_set(kwargs, sig)
         assert kwargs["a"] == expected
 
     def test_do_not_prepend_base_path(self) -> None:
         """SDAG home is not set, do not prepend."""
 
-        def fn(a: Artifact) -> None:
-            """Mocked task with artifact."""
+        def fn(a: Artifact) -> None: ...
 
-        sdag = MockSDAG()
-        task = Task(
+        test_task = Task(
             fn=fn,
-            name="fn",
-            caching=True,
-            retries=2,
-            launch_script=Path(),
+            name="task",
             mode="wrap",
             cmd="sbatch",
-            register=sdag.register,
-            get_uid=sdag.get_uid,
+            retries=0,
+            script=ScriptPath(path=Path()),
+            cache=False,
+            cache_local=False,
+            debug=False,
         )
 
         original = "hello.txt"
         kwargs = {"a": original}
         sig = inspect.signature(fn)
 
-        task._prepend_base_path_if_set(kwargs, sig)
+        test_task._prepend_base_path_if_set(kwargs, sig)
         assert kwargs["a"] == original
 
     def test_call(self) -> None:
@@ -321,226 +545,82 @@ class TestTask:
         def fn(kwarg: Any, static_input: dict[str, int]) -> None:
             """Mocked task with static and dynamic args."""
 
-        sdag = MockSDAG()
-        task = Task(
+        test_task = Task(
             fn=fn,
-            name="fn",
-            caching=True,
+            name="task",
             mode="wrap",
             cmd="sbatch",
-            retries=2,
-            launch_script=Path(),
-            register=sdag.register,
-            get_uid=sdag.get_uid,
+            retries=0,
+            script=ScriptPath(path=Path()),
+            cache=False,
+            cache_local=False,
+            debug=False,
         )
 
-        argnode = Node(uid="1", behavior=RootNode())
-        kwargnode = Node(uid="2", behavior=RootNode())
+        argnode = RootNode(uid=1)
+        kwargnode = RootNode(uid=2)
         static_input = {"a": 1}
+        root = RootNode(uid=0, pipeline_name="dag")
+        compiler.set_dag(root)
+        node = test_task(argnode, kwarg=kwargnode, static_input=static_input)
 
-        node = task(argnode, kwarg=kwargnode, static_input=static_input)
-
-        assert node.uid == "0"
-        assert sdag.nodes[0] is node
-        assert node.behavior.caching == task.caching
-        assert node.behavior.retries == task.retries
-        assert node.behavior.launch_script == task.launch_script
-        assert node.behavior.input_kwargs == [
-            InputKwarg(key="static_input", value={"a": 1})
-        ]
-
+        assert compiler.active is not None
+        assert node in compiler.active.dag.nodes
+        assert node.cache == test_task.cache
+        assert node.retries == test_task.retries
+        assert node.script == test_task.script
+        assert node.kwargs == [Kwarg(key="static_input", value={"a": 1})]
         assert sorted(node.parents, key=lambda x: x.uid) == [
-            Parent(uid="1", parent_type=LogicalType()),
-            Parent(uid="2", parent_type=OutputType(key="kwarg")),
+            Parent(uid=1, kind=LogicalParent()),
+            Parent(uid=2, kind=OutputParent(key="kwarg")),
         ]
 
     def test_call_artifact(self) -> None:
         """Test the task call."""
-        sdag = MockSDAG()
-        task = Task(
-            fn=self.mock_stage_artifact,
-            name="mock_stage_artifact",
-            caching=False,
-            retries=1,
+
+        def fn(a: Artifact, b: str) -> None: ...
+
+        test_task = Task(
+            fn=fn,
+            name="task",
             mode="wrap",
             cmd="sbatch",
-            launch_script=Path(),
-            register=sdag.register,
-            get_uid=sdag.get_uid,
+            retries=0,
+            script=ScriptPath(path=Path()),
+            cache=False,
+            cache_local=False,
+            debug=False,
         )
 
         artifact_path = "/path/to/artifact"
-        parent = Node(uid="1", behavior=RootNode())
+        parent = TaskNode(
+            uid=1,
+            fn_name="fn",
+            name="fn",
+            cache=True,
+            cache_local=False,
+            debug=False,
+            mode="wrap",
+            cmd="sbatch",
+            retries=2,
+            script=ScriptPath(path=Path()),
+        )
         parent.register_artifact("artifact", path=Path(artifact_path))
-        node = task(a=parent.artifacts["artifact"], b="/path/to/artifact")
+        root = RootNode(uid=0, pipeline_name="dag")
+        compiler.set_dag(root)
+        node = test_task(a=parent.artifacts["artifact"], b="/path/to/artifact")
 
-        assert node.uid == "0"
-        assert sdag.nodes[0] is node
-        assert node.behavior.caching == task.caching
-        assert node.behavior.retries == task.retries
-        assert node.behavior.launch_script == task.launch_script
-        assert node.behavior.input_kwargs == [
-            InputKwarg(key="b", value="/path/to/artifact")
-        ]
+        assert compiler.active is not None
+        assert node in compiler.active.dag.nodes
+        assert node.cache == test_task.cache
+        assert node.retries == test_task.retries
+        assert node.script == test_task.script
+        assert node.kwargs == [Kwarg(key="b", value="/path/to/artifact")]
         assert node.parents == [
             Parent(
-                uid="1",
-                parent_type=ArtifactType(
+                uid=1,
+                kind=ArtifactParent(
                     key="a", name="artifact", path=Path(artifact_path)
                 ),
             ),
         ]
-
-
-class TestIfWrapper:
-    """If wrapper tests."""
-
-    @pytest.fixture
-    def node(self) -> Node[IfNode]:
-        """If node.
-
-        Returns:
-            Node[IfNode]: If node.
-        """
-        return Node(uid="0", behavior=IfNode())
-
-    def test_enter(self, node: Node[IfNode]) -> None:
-        """Test the context manager enter.
-
-        Args:
-            node (Node[IfNode]): Node.
-        """
-        sdag = MockSDAG()
-        if_wrapper = IfWrapper(node=node, push_branch=sdag.push_branch)
-        wrapper = if_wrapper.__enter__()
-
-        assert wrapper is if_wrapper
-        assert sdag.branches[0] is node
-        assert node.behavior.in_context
-
-    def test_exit(self, node: Node[IfNode]) -> None:
-        """Test the context manager exit.
-
-        Args:
-            node (Node[IfNode]): Node.
-        """
-        sdag = MockSDAG()
-        if_wrapper = IfWrapper(node=node, push_branch=sdag.push_branch)
-        with if_wrapper:
-            ...
-
-        assert not node.behavior.in_context
-
-
-class TestPipeline:
-    """Test the pipeline wrapper."""
-
-    def test_call(self) -> None:
-        """Test the pipeline call."""
-
-        def func():
-            """Mocked pipeline function."""
-
-        sdag = MockSDAG()
-        parent_node = Node(uid="3", behavior=RootNode())
-        pipeline = Pipeline(
-            fn=func, set_dag=sdag.set_dag, get_graph=sdag.get_graph
-        )
-        pipeline(parent_node)
-
-    def test_compile(self) -> None:
-        """Test mocked pipeline compilation."""
-
-        def func() -> None:
-            """Test the pipeline call."""
-
-        sdag = MockSDAG()
-        pipeline = Pipeline(
-            fn=func, set_dag=sdag.set_dag, get_graph=sdag.get_graph
-        )
-        graph = pipeline.compile()
-        assert isinstance(graph, Graph)
-
-    def test_compile_with_input(self) -> None:
-        """Test mocked pipeline compilation with input arguments."""
-
-        def func(a: str) -> None:
-            """Test the pipeline call."""
-
-        sdag = MockSDAG()
-        pipeline = Pipeline(
-            fn=func, set_dag=sdag.set_dag, get_graph=sdag.get_graph
-        )
-        graph = pipeline.compile({"a": 3})
-        assert isinstance(graph, Graph)
-
-    def test_call_with_input(self, mocker: MockerFixture) -> None:
-        """Test the pipeline call with input arguments.
-
-        Args:
-            mocker (MockerFixture): Mocker fixture.
-        """
-
-        def func(a: str) -> None:
-            """Mocked pipeline function with input argument."""
-
-        sdag = MockSDAG()
-        parent_node = Node(uid="0", behavior=RootNode())
-        pipeline = Pipeline(
-            fn=func, set_dag=sdag.set_dag, get_graph=sdag.get_graph
-        )
-
-        spy = mocker.spy(pipeline, "fn")
-        pipeline(parent_node, a="test")
-        spy.assert_called_once_with(a="test")
-
-    def test_call_with_output(self) -> None:
-        """Test a pipeline not returning the end node."""
-
-        sdag = MockSDAG()
-
-        def func() -> Node[RootNode]:
-            """Mocked pipeline returning a node."""
-            return Node(uid="0", behavior=RootNode())
-
-        pipeline = Pipeline(
-            fn=func, set_dag=sdag.set_dag, get_graph=sdag.get_graph
-        )
-
-        output = pipeline()
-        assert isinstance(output, Node)
-
-    def test_get_end(self) -> None:
-        """Check the end node retrieval.+
-
-        It must contain the artifacts of all nodes in the graph.
-        """
-        node = Node(
-            uid="1",
-            behavior=TaskNode(
-                fname="fname",
-                name="name",
-                mode="wrap",
-                cmd="sbatch",
-                launch_script=Path("submit.sh"),
-                caching=True,
-                retries=0,
-            ),
-        )
-        node.register_artifact(key="key", path=Path())
-        end = Node(uid="2", behavior=EndNode())
-        end.add_logical_edge(node.uid)
-        graph = Graph(meta=GraphMetadata(name="graph"))
-        graph.nodes = [node, end]
-
-        sdag = MockSDAG()
-        pipeline = Pipeline(
-            fn=lambda: ..., set_dag=sdag.set_dag, get_graph=sdag.get_graph
-        )
-
-        endnode = pipeline._get_end(graph)
-
-        assert endnode is end
-        assert endnode.artifacts["key"].key == "key"
-        assert endnode.artifacts["key"].node is node
-        assert endnode.artifacts["key"].path == Path()
