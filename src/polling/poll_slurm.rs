@@ -193,7 +193,7 @@ mod tests {
         Cfg::new(&PathBuf::from("/a/path"), &meta, 5, 4, false, false)
     }
 
-    fn get_poller(cfg: &Cfg) -> SlurmPoller {
+    fn get_poller(cfg: &Cfg) -> SlurmPoller<'_> {
         SlurmPoller {
             cfg,
             nslurm_fails: 3,
