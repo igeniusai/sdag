@@ -55,6 +55,7 @@ def test_task_execution(tmp_path: Path) -> None:
     os.environ["SDAG_PIPELINE_NAME"] = "dag"
     os.environ["SDAG_SUBPIPELINE_NAME"] = "dag"
     os.environ["SDAG_IMPORT_PATH"] = "dag"
+    os.environ["SDAG_INPUT_KWARGS"] = r"{}"
     os.environ["SDAG_UID"] = "0"
     os.environ["SDAG_TASK_NAME"] = "foo"
     os.environ["SDAG_TASK_FN"] = "foo"

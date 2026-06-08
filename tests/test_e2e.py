@@ -102,6 +102,7 @@ def test_prune_cache_from_json(
             "timestamp": "2025-12-30T11:30:46.343072",
             "hash": "xyzk",
             "extra": {},
+            "kwargs": {},
             "import_path": "path.to.pipeline:fn",
         },
         "nodes": [
@@ -238,6 +239,7 @@ def test_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
             "hash": "xyz",
             "extra": {},
             "import_path": "path.to.pipeline:fn",
+            "kwargs": {},
         },
         "nodes": [
             {"uid": 0, "pipeline_name": "dag", "kind": "root"},
@@ -318,6 +320,7 @@ def test_run_pipeline_with_caching(
             "timestamp": "2025-12-30T11:30:46.343072",
             "hash": "xyzk",
             "extra": {},
+            "kwargs": {},
             "import_path": "path.to.pipeline:fn",
         },
         "nodes": [
