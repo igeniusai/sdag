@@ -13,10 +13,9 @@ from typing import Any
 import sdag.core as core
 from sdag.compiler import master
 from sdag.discovery import find_all_pipelines, find_pipeline_by_name
-from sdag.exceptions import DAGNotFoundError
+from sdag.exceptions import DAGNotFoundError, ExtraCLIArgsError
 from sdag.models import DAG, Kwarg, TaskNode
 from sdag.settings import parse_pyproject
-from sdag.visualization import MermaidGenerator
 from sdag.wrappers import Task
 
 logger = logging.getLogger(__name__)
@@ -224,10 +223,10 @@ def restart_run(args: Namespace, extras: dict[str, Any]) -> None:
         extras (dict[str, Any]): Extra args (not allowed).
 
     Raises:
-        ValueError: Extra argument used.
+        ExtraCLIArgsError: Extra argument used.
     """
     if extras:
-        raise ValueError
+        raise ExtraCLIArgsError(extras)
 
     if args.pipeline.endswith(".json"):
         dag = _parse_compiled_pipeline(args.pipeline)
@@ -255,10 +254,10 @@ def kill_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
         extras (dict[str, Any]): Extra args (not allowed).
 
     Raises:
-        ValueError: Extra argument used.
+        ExtraCLIArgsError: Extra argument used.
     """
     if extras:
-        raise ValueError
+        raise ExtraCLIArgsError(extras)
 
     if args.pipeline.endswith(".json"):
         dag = _parse_compiled_pipeline(args.pipeline)
@@ -284,10 +283,10 @@ def prune_cache(args: Namespace, extras: dict[str, Any]) -> None:
         extras (dict[str, Any]): Extra args (not allowed).
 
     Raises:
-        ValueError: Extra argument used.
+        ExtraCLIArgsError: Extra argument used.
     """
     if args.pipeline is None and not args.task:
-        raise ValueError
+        raise ExtraCLIArgsError(extras)
 
     if args.pipeline is not None and not args.task:
         dag = _get_dag_from_name_import_or_json(
@@ -336,6 +335,8 @@ def view_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
         extras (dict[str, Any]): Extra arguments only used
             if the pipeline is not read from JSON.
     """
+    from sdag.visualization import MermaidGenerator
+
     dag = _get_dag_from_name_import_or_json(
         path=args.pipeline,
         extra_metadata=args.extra_metadata,
@@ -391,10 +392,10 @@ def list_pipelines(args: Namespace, extras: dict[str, Any]) -> None:
         extras (dict[str, Any]): Extra arguments (not allowed)
 
     Raises:
-        ValueError: Extra argument used.
+        ExtraCLIArgsError: Extra argument used.
     """
     if extras:
-        raise ValueError
+        raise ExtraCLIArgsError(extras)
 
     if args.pipeline is not None:
         core.print_runs(pipeline_name=args.pipeline, log_level=args.log_level)
@@ -429,10 +430,10 @@ def skip_breakpoint(args: Namespace, extras: dict[str, Any]) -> None:
         extras (dict[str, Any]): Extra args (not allowed).
 
     Raises:
-        ValueError: Extra argument used.
+        ExtraCLIArgsError: Extra argument used.
     """
     if extras:
-        raise ValueError
+        raise ExtraCLIArgsError(extras)
 
     if args.pipeline.endswith(".json"):
         dag = _parse_compiled_pipeline(args.pipeline)
@@ -458,10 +459,10 @@ def continue_breakpoint(args: Namespace, extras: dict[str, Any]) -> None:
         extras (dict[str, Any]): Extra arguments (not allowed).
 
     Raises:
-        ValueError: Extra argument used.
+        ExtraCLIArgsError: Extra argument used.
     """
     if extras:
-        raise ValueError
+        raise ExtraCLIArgsError(extras)
 
     if args.pipeline.endswith(".json"):
         dag = _parse_compiled_pipeline(args.pipeline)

@@ -1,5 +1,7 @@
 """Custom exceptions."""
 
+from typing import Any
+
 from sdag.constants import POSIX_ENV_VARIABLES
 
 
@@ -105,3 +107,19 @@ class CLIError(SDAGError):
 
 class DAGNotFoundError(SDAGError):
     """DAG not found in path."""
+
+
+class ExtraCLIArgsError(SDAGError):
+    """Extra CLI arguments are not allowed."""
+
+    def __init__(self, extra_kwargs: dict[str, Any]):
+        """Raise the exception.
+
+        Args:
+            extra_kwargs (dict[str, Any]): Extra args used.
+        """
+        msg = (
+            "Extra CLI arguments are not allowed."
+            f" Extra arguments used: {extra_kwargs}"
+        )
+        super().__init__(msg)
