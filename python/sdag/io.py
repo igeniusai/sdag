@@ -18,6 +18,15 @@ logger = logging.getLogger(__name__)
 def _get_already_imported_task(
     task_name: str, subpipeline_name: str
 ) -> Task | None:
+    """Get an already imported task.
+
+    Args:
+        task_name (str): Task name.
+        subpipeline_name (str): Pipeline containing the task.
+
+    Returns:
+        Task | None: If the task is not found, None is returned.
+    """
     if subpipeline_name in master.pipelines:
         pipeline = master.pipelines[subpipeline_name]
         if task_name in pipeline.tasks:
@@ -30,6 +39,16 @@ def _get_already_imported_task(
 
 
 def _try_get_task(task_name: str, pipeline_name: str) -> Task | None:
+    """Try to import tasks suppressing errors.
+
+    Args:
+        task_name (str): Task name.
+        pipeline_name (str): Pipeline name.
+
+    Returns:
+        Task | None: Task name. If the task is not found, errors are
+            suppressed and none is returned.
+    """
     try:
         return get_task(task_name, pipeline_name)
     except DAGNotFoundError:
