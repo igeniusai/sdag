@@ -232,6 +232,8 @@ class Task:
         mode (Literal["wrap", "ext"]): Task mode.
         cache (bool): Activate global caching.
         cache_local (bool): Activate local caching.
+        cache_ignore (list[str]): list of fields ignored
+            during cache validation.
         debug (bool): Interactive debugging.
         retries (int): Number of retries.
         script (ScriptUnion): Submission script.
@@ -245,6 +247,7 @@ class Task:
         mode: Literal["wrap", "ext"],
         cache: bool,
         cache_local: bool,
+        cache_ignore: list[str] | None,
         debug: bool,
         retries: int,
         script: ScriptUnion,
@@ -258,6 +261,8 @@ class Task:
             mode (Literal["wrap", "ext"]): Task mode.
             cache (bool): Activate global caching.
             cache_local (bool): Activate local caching.
+            cache_ignore (list[str] | None): list of fields
+                ignored during cache validation.
             debug (bool): Interactive debugging.
             retries (int): Number of retries.
             script (ScriptUnion): Submission script.
@@ -268,6 +273,7 @@ class Task:
         self.mode: Literal["wrap", "ext"] = mode
         self.cache = cache
         self.cache_local = cache_local
+        self.cache_ignore = cache_ignore if cache_ignore is not None else []
         self.debug = debug
         self.retries = retries
         self.script = script
@@ -288,6 +294,7 @@ class Task:
             name=self.name,
             cache=self.cache,
             cache_local=self.cache_local,
+            cache_ignore=self.cache_ignore,
             debug=self.debug,
             mode=self.mode,
             cmd=self.cmd,
@@ -475,6 +482,7 @@ class Pipeline:
         cmd: Literal["sbatch", "bash"] = "sbatch",
         mode: Literal["wrap", "ext"] = "wrap",
         cache_local: bool = False,  # noqa: FBT002
+        cache_ignore: list[str] | None = None,
         debug: bool = False,  # noqa: FBT002
         retries: int = 0,
     ) -> Callable[[Callable], Task]:
@@ -492,6 +500,8 @@ class Pipeline:
                 Defaults to "wrap".
             cache_local (bool, optional): Cache the result in the
                 context of the pipeline. Defaults to False.
+            cache_ignore (list[str] | None): List of fields ignored
+                during cache validation.
             debug (bool): Enable interactive debugging.
             retries: (int): Number of retries. Defaults to 0.
 
@@ -521,6 +531,7 @@ class Pipeline:
                 mode=mode,
                 cache=False,
                 cache_local=cache_local,
+                cache_ignore=cache_ignore,
                 debug=debug,
                 retries=retries,
                 script=script_obj,
@@ -582,6 +593,7 @@ def task(
     mode: Literal["wrap", "ext"] = "wrap",
     cache: bool = False,  # noqa: FBT002
     cache_local: bool = False,  # noqa: FBT002
+    cache_ignore: list[str] | None = None,
     debug: bool = False,  # noqa: FBT002
     retries: int = 0,
 ) -> Callable[[Callable], Task]:
@@ -601,6 +613,8 @@ def task(
             to False.
         cache_local (bool, optional): Cache the result in the
             context of the pipeline. Defaults to False.
+        cache_ignore (list[str] | None): List of fields ignored
+            during cache validation. Defaults to None.
         debug (bool): Enable interactive debugging.
         retries: (int): Number of retries. Defaults to 0.
 
@@ -622,6 +636,7 @@ def task(
             mode=mode,
             cache=cache,
             cache_local=cache_local,
+            cache_ignore=cache_ignore,
             debug=debug,
             retries=retries,
             script=script_obj,

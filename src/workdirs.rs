@@ -203,6 +203,7 @@ mod tests {
             pipeline_name: "pipeline_name".into(),
             cache: true,
             cache_local: false,
+            cache_ignore: vec![],
             debug: false,
             mode: ExecMode::Wrap,
             cmd: Cmd::Sbatch,

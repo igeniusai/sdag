@@ -24,7 +24,7 @@ pub fn submit_validate_cache(task: &Task, cfg: &Cfg) -> bool {
             .local_cachedir
             .join(&task.pipeline_name)
             .join(&task.name);
-        if validate_cache(task.uid, &input, &cache_path, &dst_path) {
+        if validate_cache(task.uid, &input, &cache_path, &dst_path, &task.cache_ignore) {
             return true;
         }
         log::info!("Task {}: Local cache validation failed", task.uid);
@@ -33,7 +33,7 @@ pub fn submit_validate_cache(task: &Task, cfg: &Cfg) -> bool {
     if task.cache {
         log::info!("Task {}: Validating global cache", task.uid);
         let cache_path = cfg.cachedir.join(&task.name);
-        return validate_cache(task.uid, &input, &cache_path, &dst_path);
+        return validate_cache(task.uid, &input, &cache_path, &dst_path, &task.cache_ignore);
     }
 
     false
@@ -91,8 +91,9 @@ pub fn validate_cache(
     input: &HashMap<String, Value>,
     cache_path: &Path,
     dst_path: &Path,
+    cache_ignore: &[String],
 ) -> bool {
-    match compare_input_with_cache(uid, &input, &cache_path) {
+    match compare_input_with_cache(uid, &input, &cache_path, cache_ignore) {
         Err(e) => {
             log::info!("Task {uid}: Cache validation failed - {e}");
             false
@@ -116,8 +117,11 @@ pub fn compare_input_with_cache(
     uid: usize,
     input: &HashMap<String, Value>,
     cache_path: &Path,
+    cache_ignore: &[String],
 ) -> io::Result<bool> {
-    let cached_input = state::read_input(cache_path)?;
+    let mut cached_input = state::read_input(cache_path)?;
+    replace_cache_ignored_value(&mut cached_input, input, cache_ignore);
+
     if *input != cached_input {
         log::info!("Task {uid}: Cache invalidated as input doesn't match the cached one.");
         log::debug!("Task {uid}:\ninput:\n{input:?};\ncached input:\n{cached_input:?}");
@@ -145,4 +149,17 @@ fn find_branch_target(parents: &[Parent]) -> Result<usize, String> {
     }
 
     Err("Failed to identify the target task".into())
+}
+
+fn replace_cache_ignored_value(
+    cached_input: &mut HashMap<String, Value>,
+    input: &HashMap<String, Value>,
+    cache_ignore: &[String],
+) {
+    for key in cache_ignore {
+        if let Some(value) = input.get(key) {
+            log::debug!("Inserting excluded cache value {key}");
+            cached_input.insert(key.clone(), value.clone());
+        }
+    }
 }

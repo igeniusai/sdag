@@ -293,6 +293,8 @@ class TaskNode(BaseNode):
         name (str): Task name, linked to caching.
         cache (bool): Cache the task locally.
         cache_local (bool): Cache task gloabally.
+        cache_ignore (list[str]): list of fields ignored
+            during cache validation.
         debug (bool): Block the scheduler in case of failures.
         mode (Literal["wrap", "ext"]): Wrap a Python function or
             an external script.
@@ -313,6 +315,7 @@ class TaskNode(BaseNode):
     name: str
     cache: bool
     cache_local: bool
+    cache_ignore: list[str] = Field(default_factory=list)
     debug: bool
     mode: Literal["wrap", "ext"]
     cmd: Literal["bash", "sbatch"]

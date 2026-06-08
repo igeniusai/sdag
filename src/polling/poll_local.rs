@@ -102,6 +102,7 @@ mod test {
             pipeline_name: "pipeline_name".into(),
             cache: false,
             cache_local: false,
+            cache_ignore: vec![],
             debug: false,
             mode: ExecMode::Wrap,
             cmd: Cmd::Bash,

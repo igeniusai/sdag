@@ -81,7 +81,7 @@ fn check_caching(task: &Task, cfg: &Cfg, input: &HashMap<String, Value>) -> bool
             .join(&task.pipeline_name)
             .join(&task.name);
         let path_str = cache_path.to_string_lossy();
-        match blocking::compare_input_with_cache(task.uid, input, &cache_path) {
+        match blocking::compare_input_with_cache(task.uid, input, &cache_path, &task.cache_ignore) {
             Ok(true) => return true,
             Ok(false) => {
                 log::info!(
@@ -101,7 +101,7 @@ fn check_caching(task: &Task, cfg: &Cfg, input: &HashMap<String, Value>) -> bool
     if task.cache {
         let cache_path = cfg.cachedir.join(&task.name);
         let path_str = cache_path.to_string_lossy();
-        match blocking::compare_input_with_cache(task.uid, input, &cache_path) {
+        match blocking::compare_input_with_cache(task.uid, input, &cache_path, &task.cache_ignore) {
             Ok(true) => return true,
             Ok(false) => {
                 log::info!("Task {}: cache at '{path_str}' doesn't match", task.uid)

@@ -32,6 +32,7 @@ class TestSDAG:
             mode="wrap",
             cache=False,
             cache_local=False,
+            cache_ignore=None,
             debug=False,
             retries=0,
             script=ScriptPath(path=Path("a/path")),

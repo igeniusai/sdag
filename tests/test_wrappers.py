@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from sdag import Artifact, Elif, Else, If, pipeline
 from sdag.compiler import compiler, master
 from sdag.exceptions import (
     IncorrectElifError,
@@ -28,6 +27,8 @@ from sdag.models import (
 )
 from sdag.settings import get_compile_settings
 from sdag.wrappers import Task, is_artifact, oneof, validate_kwargs
+
+from sdag import Artifact, Elif, Else, If, pipeline
 
 
 @pytest.fixture(autouse=True)
@@ -420,6 +421,7 @@ class TestTask:
             script=ScriptPath(path=Path()),
             cache=False,
             cache_local=False,
+            cache_ignore=None,
             debug=False,
         )
 
@@ -444,6 +446,7 @@ class TestTask:
             script=ScriptPath(path=Path()),
             cache=False,
             cache_local=False,
+            cache_ignore=None,
             debug=False,
         )
 
@@ -506,6 +509,7 @@ class TestTask:
             script=ScriptPath(path=Path()),
             cache=False,
             cache_local=False,
+            cache_ignore=None,
             debug=False,
         )
 
@@ -529,6 +533,7 @@ class TestTask:
             script=ScriptPath(path=Path()),
             cache=False,
             cache_local=False,
+            cache_ignore=None,
             debug=False,
         )
 
@@ -554,6 +559,7 @@ class TestTask:
             script=ScriptPath(path=Path()),
             cache=False,
             cache_local=False,
+            cache_ignore=None,
             debug=False,
         )
 
@@ -589,6 +595,7 @@ class TestTask:
             script=ScriptPath(path=Path()),
             cache=False,
             cache_local=False,
+            cache_ignore=None,
             debug=False,
         )
 
