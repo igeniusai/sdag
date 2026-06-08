@@ -62,15 +62,18 @@ def find_and_import_task(
     Returns:
         Task: Imported task.
     """
+    logger.debug("Checking if the task is already imported")
     target_task = _get_already_imported_task(task_name, subpipeline_name)
     if target_task is not None:
         return target_task
 
     if pipeline_name == subpipeline_name:
+        logger.debug("Task is not in an inner pipeline")
         target_task = _try_get_task(task_name, import_path)
         if target_task is not None:
             return target_task
 
+    logger.debug("Trying to directly import the subpipeline")
     target_task = _try_get_task(task_name, subpipeline_name)
     if target_task is not None:
         return target_task

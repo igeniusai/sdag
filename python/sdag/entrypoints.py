@@ -82,7 +82,7 @@ def sdag_execute(configure_logger: bool = True) -> None:  # noqa: FBT002
         import_path=settings.sdag_import_path,
         input_kwargs=settings.sdag_input_kwargs,
     )
-
+    logger.info("Found task '%s'", task.name)
     sig = inspect.signature(task.fn)
     input_kwargs = handler.get_input(sig)
     logger.info("Input values:\n%s", json.dumps(input_kwargs, indent=4))
