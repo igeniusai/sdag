@@ -28,6 +28,7 @@ def test_parse_pyproject(tmp_path: Path) -> None:
     compiled-dag-dir = "path/to/compiled"
     prepend-compiled-dag-dir = true
     log-level = "debug"
+    local = true
     """
     path = tmp_path / "pyproject.toml"
     with path.open("w") as f:
@@ -37,6 +38,7 @@ def test_parse_pyproject(tmp_path: Path) -> None:
     assert pyproj.dag_dir == "path/to/dagdir"
     assert pyproj.compiled_dag_dir == "path/to/compiled"
     assert pyproj.prepend_compiled_dag_dir
+    assert pyproj.local
     assert pyproj.log_level == "debug"
 
 

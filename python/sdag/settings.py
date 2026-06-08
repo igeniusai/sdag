@@ -20,11 +20,14 @@ class Pyproj(BaseModel):
         prepend_compiled_dag_dir (bool): Add the compiled pipeline
             dir automatically if the directory has not been
             specified.
+        local (bool): Set to True to enforce local runs.
         log_level (Literal["debug", "info", "warning", "error"]):
+            Logging level.
     """
 
     dag_dir: str = Field(alias="dag-dir", default="./pipelines")
     compiled_dag_dir: str = Field(alias="compiled-dag-dir", default=".")
+    local: bool = False
     prepend_compiled_dag_dir: bool = Field(
         alias="prepend-compiled-dag-dir", default=False
     )

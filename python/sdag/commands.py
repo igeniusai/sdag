@@ -204,12 +204,14 @@ def run_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
     else:
         path = compile_pipeline(args, extras)
 
+    pyproj = parse_pyproject()
+    local = pyproj.local if pyproj.local else args.local
     core.run(
         pipeline_path=str(path),
         max_concurrency=args.max_concurrency,
         time_between_polls=args.time_between_polls,
         log_level=args.log_level,
-        local=args.local,
+        local=local,
         debug=args.debug,
     )
 
@@ -353,7 +355,8 @@ def run_task(args: Namespace, extras: dict[str, Any]) -> None:
         extras (dict[str, Any]): Extra arguments used for compilation.
     """
     task = get_task(name=args.task, pipeline_name=args.pipeline)
-    if args.local:
+    pyproj = parse_pyproject()
+    if pyproj.local or args.local:
         task.cmd = "bash"
 
     task = TaskNode(
