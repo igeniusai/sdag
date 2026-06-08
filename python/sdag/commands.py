@@ -48,7 +48,7 @@ def _find_cacheable_tasks(
     return tasks, pipelines
 
 
-def _compile(
+def compile_and_return_dag(
     path: str, extra_metadata: Any, input_kwargs: dict[str, Any]
 ) -> DAG:
     """Compile a pipeline.
@@ -65,6 +65,7 @@ def _compile(
     logger.info("Compiling pipeline '%s'", path)
     pipeline = find_pipeline_by_name(path)
     dag = pipeline.compile(path, **input_kwargs)
+    dag.meta.kwargs |= input_kwargs
     if extra_metadata is not None:
         dag.meta.extra = json.loads(extra_metadata)
 
@@ -126,7 +127,7 @@ def _get_dag_from_name_import_or_json(
     if path.endswith(".json"):
         return _parse_compiled_pipeline(path)
 
-    return _compile(
+    return compile_and_return_dag(
         path=path, extra_metadata=extra_metadata, input_kwargs=input_kwargs
     )
 
@@ -164,7 +165,7 @@ def compile_pipeline(args: Namespace, extras: dict[str, Any]) -> Path:
     Returns:
         Path: Path where the compiled JSON has been saved.
     """
-    dag = _compile(
+    dag = compile_and_return_dag(
         path=args.pipeline,
         extra_metadata=args.extra_metadata,
         input_kwargs=extras,

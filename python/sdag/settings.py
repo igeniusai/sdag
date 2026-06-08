@@ -72,6 +72,8 @@ class Settings(BaseSettings):
             to the pipeline name.
         sdag_import_path (str): Import path used to compile
             the pipeline.
+        sdag_input_kwargs (str): Pipeline input kwargs
+            JSON string. Useful to recompile the pipeline.
         sdag_uid (str): Node unique id.
         sdag_task_fn (str): Task function name.
         sdag_task_name (str): Task name, by default it's equal to
@@ -83,6 +85,7 @@ class Settings(BaseSettings):
     sdag_pipeline_name: str
     sdag_subpipeline_name: str
     sdag_import_path: str
+    sdag_input_kwargs: str
     sdag_uid: int
     sdag_task_name: str
     sdag_task_fn: str

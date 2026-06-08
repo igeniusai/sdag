@@ -3,7 +3,7 @@ use crate::settings::Cfg;
 use crate::status::Status;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{borrow::Cow, fmt, path::PathBuf};
+use std::{borrow::Cow, collections::HashMap, fmt, path::PathBuf};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct DAGMeta {
@@ -12,6 +12,7 @@ pub struct DAGMeta {
     pub timestamp: String,
     pub extra: Value,
     pub import_path: String,
+    pub kwargs: HashMap<String, Value>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

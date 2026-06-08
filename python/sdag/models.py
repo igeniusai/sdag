@@ -533,6 +533,7 @@ class DAGMeta(BaseModel):
         hash (str): Unique hash.
         timestamp (str): Timestamp.
         import_path (str): Import path.
+        kwargs (dict[str, Any]): Pipeline input kwargs.
         extra (str): Extra metadata.
     """
 
@@ -540,6 +541,7 @@ class DAGMeta(BaseModel):
     hash: str = Field(default_factory=get_random_hash)
     timestamp: str = Field(default_factory=datetime.now().isoformat)
     import_path: str = ""
+    kwargs: dict[str, Any] = Field(default_factory=dict)
     extra: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")

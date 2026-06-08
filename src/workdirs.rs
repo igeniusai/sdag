@@ -181,6 +181,7 @@ mod tests {
         Cmd, DAGMeta, ExecMode, Parent, ParentKind, Script, ScriptPath, SlurmOverride,
     };
     use serde_json::Value;
+    use std::collections::HashMap;
     use std::env;
     use uuid::Uuid;
 
@@ -320,6 +321,7 @@ mod tests {
             timestamp: "1900-01-01T09:20:20".into(),
             extra: Value::Null,
             import_path: String::new(),
+            kwargs: HashMap::new(),
         };
 
         let homedir = path.join("home");

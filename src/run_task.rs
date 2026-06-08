@@ -6,6 +6,7 @@ use crate::workdirs;
 use chrono::Local;
 use log;
 use serde_json::{self, Value};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 pub fn run_task(task_serialized: &str) {
@@ -16,7 +17,8 @@ pub fn run_task(task_serialized: &str) {
         hash: format!("task-{}-{}", task.name, Uuid::new_v4().to_string()),
         timestamp: format!("{}", Local::now().format("%Y-%m-%dT%H:%M:%S")),
         extra: Value::Null,
-        import_path: String::new(), // TODO
+        import_path: task.pipeline_name.clone(), // TODO
+        kwargs: HashMap::new(),
     };
 
     let is_local = matches!(task.cmd, Cmd::Bash);

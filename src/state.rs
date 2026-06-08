@@ -238,7 +238,7 @@ mod tests {
     use super::*;
     use crate::nodes::End;
     use crate::schemas::{Cmd, ExecMode, Script, ScriptPath, SlurmOverride};
-    use serde_json::json;
+    use serde_json::{Value, json};
     use std::env;
     use std::path::PathBuf;
     use std::time::Duration;
@@ -265,7 +265,8 @@ mod tests {
         "hash": "e",
         "import_path": "path.to.module:pipeline",
         "timestamp": "1900-01-01T09:20:20",
-        "extra": {"extra_field": "hello"}
+        "extra": {"extra_field": "hello"},
+        "kwargs": {"a": 1, "b": true}
     },
     "nodes": [
         {
@@ -281,7 +282,9 @@ mod tests {
         let dag_path = path.join("dag.json");
         fs::write(&dag_path, dag_str).unwrap();
         let dag = read_dag(&dag_path).unwrap();
-        assert_eq!(dag.nodes.len(), 1);
+        let exp_kwargs =
+            HashMap::from([("a".to_string(), json![1]), ("b".to_string(), json![true])]);
+        assert_eq!(dag.meta.kwargs, exp_kwargs);
     }
 
     #[test]
@@ -332,6 +335,7 @@ mod tests {
             timestamp: "1900-01-01T09:20:20".into(),
             extra: Value::Null,
             import_path: String::new(),
+            kwargs: HashMap::new(),
         };
         let nodes = vec![Node::End(End {
             uid: 0,

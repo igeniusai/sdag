@@ -95,10 +95,12 @@ fn build_command(
     meta: &DAGMeta,
     input: &HashMap<String, Value>,
 ) -> io::Result<Command> {
+    let input_kwargs = serde_json::to_string(&meta.kwargs)?;
     let mut cmd = Command::new(task.cmd.to_string());
     cmd.env("SDAG_TRY_NUM", try_num.to_string())
         .env("SDAG_PIPELINE_DIR", &cfg.dagdir)
         .env("SDAG_PIPELINE_NAME", &meta.pipeline_name)
+        .env("SDAG_INPUT_KWARGS", &input_kwargs)
         .env("SDAG_SUBPIPELINE_NAME", &task.pipeline_name)
         .env("SDAG_IMPORT_PATH", &meta.import_path)
         .env("SDAG_UID", task.uid.to_string())
@@ -234,6 +236,7 @@ mod tests {
             timestamp: "1920-01-01T09:20:20".into(),
             extra: Value::Null,
             import_path: String::new(),
+            kwargs: HashMap::new(),
         }
     }
 

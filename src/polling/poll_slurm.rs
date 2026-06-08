@@ -172,6 +172,7 @@ fn get_status_from_string(status_string: &str, job_id: &str) -> Status {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::path::PathBuf;
 
     use super::*;
@@ -185,6 +186,7 @@ mod tests {
             timestamp: "1920-01-01T09:20:20".into(),
             extra: Value::Null,
             import_path: String::new(),
+            kwargs: HashMap::new(),
         }
     }
 

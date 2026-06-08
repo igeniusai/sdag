@@ -76,9 +76,11 @@ def sdag_execute(configure_logger: bool = True) -> None:  # noqa: FBT002
     )
 
     task = find_and_import_task(
-        task_name=settings.sdag_task_name,
+        task_name=settings.sdag_task_fn,
+        pipeline_name=settings.sdag_pipeline_name,
         subpipeline_name=settings.sdag_subpipeline_name,
         import_path=settings.sdag_import_path,
+        input_kwargs=settings.sdag_input_kwargs,
     )
 
     sig = inspect.signature(task.fn)

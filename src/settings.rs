@@ -90,6 +90,7 @@ pub fn find_homedir() -> Result<PathBuf, String> {
 mod tests {
     use super::*;
     use serde_json::Value;
+    use std::collections::HashMap;
 
     fn set_sdag_home() -> PathBuf {
         let path = "./a/path";
@@ -115,6 +116,7 @@ mod tests {
             timestamp: "1900-01-01T09:20:20".into(),
             extra: Value::Null,
             import_path: String::new(),
+            kwargs: HashMap::new(),
         };
         let home_path = PathBuf::from("./a/path");
         let cfg = Cfg::new(&home_path, &meta, 5, 2, false, false);
