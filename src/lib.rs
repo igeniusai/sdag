@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+mod banner;
 mod breakpoint;
 mod cache_pruning;
 mod context;

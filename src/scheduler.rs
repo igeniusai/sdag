@@ -11,6 +11,7 @@ use crate::summary;
 use crate::visitors::NodeVisitor;
 use crate::workdirs;
 use crate::{dag_setup, kill};
+use banner;
 use ctrlc;
 use std::path::PathBuf;
 use std::sync::mpsc;
@@ -95,7 +96,7 @@ fn install_ctrlc_handler() {
 }
 
 fn scheduling_loop(nodes: &[Node], ctx: &mut Ctx, cfg: &Cfg, meta: &DAGMeta) {
-    dag_setup::log_banner();
+    banner::log_banner();
     log::info!(
         "Start scheduling pipeline '{}' with hash '{}'",
         meta.pipeline_name,
