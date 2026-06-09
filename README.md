@@ -7,28 +7,23 @@ DAGs for Slurm.
 After installing the library, copy the following snippet into a file named `pipeline.py`:
 
 ```py
-from sdag import sdag
+from sdag import Script, pipeline, task
 
 
-@sdag.task(launch_script="submit.sh", mode="ext", cmd="bash")
-def hello_world(name: str): ...
+@pipeline
+def hello() -> None:
+    say_hello(name="sdag")
 
 
-@sdag.pipeline
-def pipeline():
-    hello_world(name="sdag")
+@task(Script("sdag-execute"), cmd="bash")
+def say_hello(name: str) -> None:
+    print(f"hello from {name}")
 ```
 
-and create a new scipt named `script.sh` with the following content:
+To run the `hello` pipeline, execute:
 
 ```sh
-echo Hello from $NAME
-```
-
-To compile and run the pipeline locally, execute:
-
-```sh
-sdag cr pipeline:pipeline --local
+sdag run pipeline:hello
 ```
 
 Check out the [sdag examples](https://github.com/igeniusai/sdag_examples) for end-to-end examples.
