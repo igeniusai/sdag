@@ -1,3 +1,4 @@
+use crate::banner;
 use crate::breakpoint::Debugger;
 use crate::context::Ctx;
 use crate::nodes::Node;
@@ -11,7 +12,6 @@ use crate::summary;
 use crate::visitors::NodeVisitor;
 use crate::workdirs;
 use crate::{dag_setup, kill};
-use banner;
 use ctrlc;
 use std::path::PathBuf;
 use std::sync::mpsc;
