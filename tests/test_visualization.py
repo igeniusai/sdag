@@ -3,8 +3,7 @@ from pathlib import Path
 import pytest
 from sdag.models import DAG, Artifact, EndNode, LogicalParent, Parent
 from sdag.visualization import DAGViewer, MermaidGenerator
-
-from sdag import Else, If, pipeline, task
+from sdag.wrappers import Else, If, pipeline, task
 
 
 @pytest.fixture(autouse=True)
