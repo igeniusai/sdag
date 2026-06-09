@@ -95,6 +95,7 @@ fn install_ctrlc_handler() {
 }
 
 fn scheduling_loop(nodes: &[Node], ctx: &mut Ctx, cfg: &Cfg, meta: &DAGMeta) {
+    dag_setup::log_banner();
     log::info!(
         "Start scheduling pipeline '{}' with hash '{}'",
         meta.pipeline_name,
