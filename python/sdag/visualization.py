@@ -95,7 +95,7 @@ class MermaidGenerator:
                 return f"{node.uid}(_root_)"
             case "end":
                 return f"{node.uid}(_end_)"
-            case "oneof":
+            case "one_of":
                 return f"{node.uid}[oneof]"
 
     def _get_edge(self, parent: Parent) -> str:
@@ -304,10 +304,10 @@ class DAGViewer:
                     size = self.if_size
                     caption = "T/F"
 
-                case "oneof":
+                case "one_of":
                     color = self.oneof_color
                     size = self.oneof_size
-                    caption = "oneof"
+                    caption = "one_of"
 
                 case "root":
                     color = self.root_color

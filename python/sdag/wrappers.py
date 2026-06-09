@@ -76,7 +76,7 @@ def validate_kwargs(sig: inspect.Signature, kwargs: dict[str, Any]) -> None:
             raise KwargNotFoundError(key)
 
 
-def oneof(*args: NodeUnion, name: str = "oneof") -> OneOfNode:
+def oneof(*args: NodeUnion, name: str = "one_of") -> OneOfNode:
     """OneOf node.
 
     It has two major use cases:
@@ -561,7 +561,7 @@ class Pipeline:
         dag, root, end = compiler.get_dag()
 
         for node in dag.nodes:
-            if node.kind in ("oneof", "task"):
+            if node.kind in ("one_of", "task"):
                 end.join_artifacts(node)  # type: ignore
 
         return end

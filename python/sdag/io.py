@@ -102,9 +102,9 @@ def find_and_import_task(
         " imported). Trying to compile the pipeline to find it"
     )
 
-    input_kwargs = json.loads(input_kwargs)
+    kwargs = json.loads(input_kwargs)
     compile_and_return_dag(
-        path=import_path, extra_metadata=None, input_kwargs=input_kwargs
+        path=import_path, extra_metadata=None, input_kwargs=kwargs
     )
     target_task = _get_already_imported_task(task_name, subpipeline_name)
     if target_task is None:

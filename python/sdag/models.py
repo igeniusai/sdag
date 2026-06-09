@@ -442,14 +442,14 @@ class OneOfNode(BaseNode):
     """OneOf node.
 
     Attributes:
-        kind (Literal["oneof"]): Kind.
+        kind (Literal["one_of"]): Kind.
         name (str): Node name.
         output_artifacts (list[ArtifactEdge]): Artifact edge.
         _artifact_containers (dict[str, ArtifactContainer]):
             Used to make artifact edges.
     """
 
-    kind: Literal["oneof"] = "oneof"
+    kind: Literal["one_of"] = "one_of"
     name: str
     output_artifacts: list[ArtifactEdge] = Field(
         default_factory=list, serialization_alias="artifacts"

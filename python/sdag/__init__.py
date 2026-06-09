@@ -20,7 +20,7 @@ Run `sdag run hello:dag` to execute the pipeline.
 from sdag.entrypoints import sdag_execute
 from sdag.models import Artifact
 from sdag.visualization import DAGViewer
-from sdag.wrappers import Elif, Else, If, Script, pipeline, task
+from sdag.wrappers import Elif, Else, If, Script, oneof, pipeline, task
 
 __all__ = [
     "Artifact",
@@ -29,6 +29,7 @@ __all__ = [
     "Else",
     "If",
     "Script",
+    "oneof",
     "pipeline",
     "sdag_execute",
     "task",
