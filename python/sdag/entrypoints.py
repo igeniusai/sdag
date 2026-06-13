@@ -52,9 +52,12 @@ def sdag_execute(configure_logger: bool = True) -> None:  # noqa: FBT002
     """
     import inspect
     import json
+    from time import perf_counter
 
     from sdag.io import IOHandler, find_and_import_task
     from sdag.settings import get_cached_settings
+
+    start = perf_counter()
 
     if configure_logger:
         log_level = get_log_level()
@@ -91,8 +94,16 @@ def sdag_execute(configure_logger: bool = True) -> None:  # noqa: FBT002
     logger.info("Artifacts:\n%s", handler.serialize_artifacts(artifacts))
 
     handler.cast_values(sig, input_kwargs)
+    logger.info("Starting task execution")
+
     output = task.fn(**input_kwargs)
     logger.info("Output values:\n%s", json.dumps(output, indent=4))
 
     handler.serialize_output(output, artifacts)
-    logger.info("Task '%s' completed", settings.sdag_task_name)
+
+    end = perf_counter()
+    logger.info(
+        "Task '%s' completed. Elapsed time: %s s",
+        settings.sdag_task_name,
+        round(end - start, 2),
+    )
