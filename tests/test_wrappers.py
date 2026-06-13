@@ -13,6 +13,7 @@ from sdag.exceptions import (
     TaskNotUniqueError,
 )
 from sdag.models import (
+    Artifact,
     ArtifactEdge,
     ArtifactParent,
     BranchParent,
@@ -26,9 +27,16 @@ from sdag.models import (
     TaskNode,
 )
 from sdag.settings import get_compile_settings
-from sdag.wrappers import Task, is_artifact, oneof, validate_kwargs
-
-from sdag import Artifact, Elif, Else, If, pipeline
+from sdag.wrappers import (
+    Elif,
+    Else,
+    If,
+    Task,
+    is_artifact,
+    oneof,
+    pipeline,
+    validate_kwargs,
+)
 
 
 @pytest.fixture(autouse=True)
