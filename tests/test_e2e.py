@@ -3,12 +3,9 @@
 import json
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any
 
 import pytest
-
-from sdag.__main__ import main
-from sdag.commands import _parse_json_input
+from sdag.entrypoints import cli
 
 
 @pytest.fixture
@@ -29,27 +26,6 @@ def set_home(
     monkeypatch.delenv("SDAG_HOME")
 
 
-@pytest.mark.parametrize(
-    argnames=("data", "res"), argvalues=[(None, None), ('{"a": 1}', {"a": 1})]
-)
-def test_parse_json_input(data: str | None, res: Any) -> None:
-    """Test the JSON string parsing.
-
-    Args:
-        data (str | None): JSON string input data.
-        res (Any): Expected result.
-    """
-    parsed = _parse_json_input(data)
-    assert parsed == res
-
-
-def test_fail_parse_json_input() -> None:
-    """Input string is incorrect."""
-    data = '{"a"'
-    with pytest.raises(json.decoder.JSONDecodeError):
-        _parse_json_input(data)
-
-
 @pytest.mark.usefixtures("set_home")
 def test_prune_task(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """Test the cache pruning of a task named 'all'.
@@ -59,14 +35,159 @@ def test_prune_task(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         monkeypatch (pytest.MonkeyPatch): Patcher.
     """
     cache_path = tmp_path / ".sdag" / ".cache"
-    cached_task_path = cache_path / "all"
+    cached_task_path = cache_path / "global" / "all"
     cached_task_path.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr("sys.argv", ["sdag", "prune", "all"])
 
-    main()
+    cli()
 
     assert not cached_task_path.exists()
     assert cache_path.exists()
+
+
+@pytest.mark.usefixtures("set_home")
+def test_prune_local_task(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Test the cache pruning of a task named 'all'.
+
+    Args:
+        tmp_path (Path): Temporary path fixture.
+        monkeypatch (pytest.MonkeyPatch): Patcher.
+    """
+    cache_path = tmp_path / ".sdag" / ".cache"
+    cached_task_path = cache_path / "local" / "dag" / "task_name"
+    cached_task_path.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(
+        "sys.argv", ["sdag", "prune", "task_name", "-p", "dag"]
+    )
+
+    cli()
+
+    assert not cached_task_path.exists()
+    assert cache_path.exists()
+
+
+@pytest.mark.usefixtures("set_home")
+def test_prune_entire_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Test the cache pruning of a task named 'all'.
+
+    Args:
+        tmp_path (Path): Temporary path fixture.
+        monkeypatch (pytest.MonkeyPatch): Patcher.
+    """
+    cache_path = tmp_path / ".sdag" / ".cache"
+    cache_path.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr("sys.argv", ["sdag", "prune", "all"])
+
+    cli()
+
+    assert not cache_path.exists()
+
+
+@pytest.mark.usefixtures("set_home")
+def test_prune_cache_from_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Test the cache pruning of a task named 'all'.
+
+    Args:
+        tmp_path (Path): Temporary path fixture.
+        monkeypatch (pytest.MonkeyPatch): Patcher.
+    """
+
+    pipeline_path = tmp_path / "pipeline.json"
+
+    pipeline = {
+        "meta": {
+            "pipeline_name": "dag",
+            "timestamp": "2025-12-30T11:30:46.343072",
+            "hash": "xyzk",
+            "extra": {},
+            "kwargs": {},
+            "import_path": "path.to.pipeline:fn",
+        },
+        "nodes": [
+            {"uid": 0, "pipeline_name": "dag", "kind": "root"},
+            {
+                "uid": 1,
+                "kind": "task",
+                "fn_name": "task",
+                "name": "task_global",
+                "pipeline_name": "dag",
+                "cache": True,
+                "cache_local": False,
+                "debug": False,
+                "mode": "ext",
+                "cmd": "bash",
+                "try_num": 1,
+                "retries": 0,
+                "script": {"kind": "script_path", "path": "script.sh"},
+                "kwargs": [{"key": "k", "value": "v"}],
+                "parents": [
+                    {
+                        "kind": {"kind": "logical"},
+                        "uid": 0,
+                    }
+                ],
+                "artifacts": [],
+            },
+            {
+                "uid": 2,
+                "kind": "task",
+                "fn_name": "task",
+                "name": "task_local",
+                "pipeline_name": "dag",
+                "cache": False,
+                "cache_local": True,
+                "debug": False,
+                "mode": "ext",
+                "cmd": "bash",
+                "try_num": 1,
+                "retries": 0,
+                "script": {"kind": "script_path", "path": "script.sh"},
+                "kwargs": [{"key": "k", "value": "v"}],
+                "parents": [
+                    {
+                        "kind": {"kind": "logical"},
+                        "uid": 0,
+                    }
+                ],
+                "artifacts": [],
+            },
+            {
+                "uid": 2,
+                "pipeline_name": "dag",
+                "kind": "end",
+                "parents": [
+                    {
+                        "kind": {"kind": "logical"},
+                        "uid": 1,
+                    },
+                    {
+                        "kind": {"kind": "logical"},
+                        "uid": 2,
+                    },
+                ],
+            },
+        ],
+    }
+
+    with pipeline_path.open("w") as f:
+        json.dump(pipeline, f)
+
+    cache_path = tmp_path / ".sdag" / ".cache"
+    local_cache_path = cache_path / "local" / "dag" / "task_local"
+    global_cache_path = cache_path / "global" / "task_global"
+    global_cache_path.mkdir(parents=True, exist_ok=True)
+    local_cache_path.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(
+        "sys.argv", ["sdag", "prune", "-p", str(pipeline_path)]
+    )
+
+    cli()
+
+    assert cache_path.exists()
+    assert not local_cache_path.exists()
+    assert not global_cache_path.exists()
 
 
 @pytest.mark.usefixtures("set_home")
@@ -75,49 +196,22 @@ def test_kill_pipeline(
 ) -> None:
     """Test the job killing.
 
-    The pipeline has no running jobs, so nothing happens.
-
     Args:
         tmp_path (Path): Temporary path fixture.
         monkeypatch (pytest.MonkeyPatch): Patcher.
     """
     pipeline_name = "pipeline"
-    pipeline = {
-        "meta": {
-            "name": pipeline_name,
-            "creation_dt": "2025-12-30T11:30:46.343072",
-        },
-        "nodes": [
-            {
-                "uid": "0",
-                "output_artifacts": [],
-                "behavior": {
-                    "type": "TaskNode",
-                    "fname": "task",
-                    "name": "task",
-                    "caching": True,
-                    "mode": "wrap",
-                    "cmd": "sbatch",
-                    "try_num": 1,
-                    "retries": 0,
-                    "launch_script": "submit.sh",
-                    "input_kwargs": [],
-                },
-                "status": "NotSubmitted",
-                "parents": [],
-                "children": [],
-            }
-        ],
-    }
+    pipeline_hash = "xyz"
+    pipeline_path = (
+        tmp_path / ".sdag" / "pipelines" / pipeline_name / pipeline_hash
+    )
+    pipeline_path.mkdir(parents=True, exist_ok=True)
 
-    pipeline_path = tmp_path / ".sdag" / pipeline_name
-    # 0 is needed because checkpoints are validated
-    (pipeline_path / "0").mkdir(parents=True, exist_ok=True)
-    with Path(pipeline_path / "checkpoint.json").open("w") as f:
-        json.dump(pipeline, f)
-
-    monkeypatch.setattr("sys.argv", ["sdag", "kill", pipeline_name])
-    main()
+    monkeypatch.setattr(
+        "sys.argv", ["sdag", "kill", pipeline_name, "--hash", pipeline_hash]
+    )
+    cli()
+    assert pipeline_path.joinpath("kill.lock").is_file()
 
 
 @pytest.mark.usefixtures("set_home")
@@ -140,36 +234,46 @@ def test_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
     pipeline = {
         "meta": {
-            "name": "pipeline",
-            "creation_dt": "2025-12-30T11:30:46.343072",
+            "pipeline_name": "dag",
+            "timestamp": "2025-12-30T11:30:46.343072",
+            "hash": "xyz",
+            "extra": {},
+            "import_path": "path.to.pipeline:fn",
+            "kwargs": {},
         },
         "nodes": [
+            {"uid": 0, "pipeline_name": "dag", "kind": "root"},
             {
-                "uid": "_pipeline_0_root_",
-                "output_used": False,
-                "parents": [],
-                "behavior": {"type": "RootNode"},
-                "output_artifacts": [],
-            },
-            {
-                "uid": "0",
-                "output_artifacts": [],
-                "behavior": {
-                    "type": "TaskNode",
-                    "fname": "task",
-                    "name": "task",
-                    "caching": False,
-                    "mode": "ext",
-                    "cmd": "bash",
-                    "try_num": 1,
-                    "retries": 0,
-                    "launch_script": str(script_path),
-                    "input_kwargs": [{"key": "k", "value": "v"}],
-                },
+                "uid": 1,
+                "kind": "task",
+                "fn_name": "task",
+                "name": "task",
+                "pipeline_name": "dag",
+                "cache": False,
+                "cache_local": False,
+                "debug": False,
+                "mode": "ext",
+                "cmd": "bash",
+                "try_num": 1,
+                "retries": 0,
+                "script": {"kind": "script_path", "path": str(script_path)},
+                "kwargs": [{"key": "k", "value": "v"}],
                 "parents": [
                     {
-                        "parent_type": {"type": "Logical"},
-                        "uid": "_pipeline_0_root_",
+                        "kind": {"kind": "logical"},
+                        "uid": 0,
+                    }
+                ],
+                "artifacts": [],
+            },
+            {
+                "uid": 2,
+                "pipeline_name": "dag",
+                "kind": "end",
+                "parents": [
+                    {
+                        "kind": {"kind": "logical"},
+                        "uid": 1,
                     }
                 ],
             },
@@ -181,11 +285,13 @@ def test_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(
         "sys.argv",
-        ["sdag", "run", f"{pipeline_path}", "-w", "0"],
+        ["sdag", "run", f"{pipeline_path}", "-t", "0"],
     )
-    main()
+    cli()
 
-    assert (tmp_path / ".sdag" / "pipeline" / "0" / "output.json").exists()
+    assert (
+        tmp_path / ".sdag" / "pipelines" / "dag" / "xyz" / "1" / "output.json"
+    ).exists()
     assert target_path.exists()
 
 
@@ -210,36 +316,46 @@ def test_run_pipeline_with_caching(
 
     pipeline = {
         "meta": {
-            "name": "pipeline",
-            "creation_dt": "2025-12-30T11:30:46.343072",
+            "pipeline_name": "dag",
+            "timestamp": "2025-12-30T11:30:46.343072",
+            "hash": "xyzk",
+            "extra": {},
+            "kwargs": {},
+            "import_path": "path.to.pipeline:fn",
         },
         "nodes": [
+            {"uid": 0, "pipeline_name": "dag", "kind": "root"},
             {
-                "uid": "_pipeline_0_root_",
-                "output_used": False,
-                "parents": [],
-                "behavior": {"type": "RootNode"},
-                "output_artifacts": [],
-            },
-            {
-                "uid": "0",
-                "output_artifacts": [],
-                "behavior": {
-                    "type": "TaskNode",
-                    "fname": "task",
-                    "name": "task_name",
-                    "caching": True,
-                    "mode": "ext",
-                    "cmd": "bash",
-                    "try_num": 1,
-                    "retries": 0,
-                    "launch_script": str(script_path),
-                    "input_kwargs": [{"key": "k", "value": "v"}],
-                },
+                "uid": 1,
+                "kind": "task",
+                "fn_name": "task",
+                "name": "task",
+                "pipeline_name": "dag",
+                "cache": True,
+                "cache_local": True,
+                "debug": False,
+                "mode": "ext",
+                "cmd": "bash",
+                "try_num": 1,
+                "retries": 0,
+                "script": {"kind": "script_path", "path": str(script_path)},
+                "kwargs": [{"key": "k", "value": "v"}],
                 "parents": [
                     {
-                        "parent_type": {"type": "Logical"},
-                        "uid": "_pipeline_0_root_",
+                        "kind": {"kind": "logical"},
+                        "uid": 0,
+                    }
+                ],
+                "artifacts": [],
+            },
+            {
+                "uid": 2,
+                "pipeline_name": "dag",
+                "kind": "end",
+                "parents": [
+                    {
+                        "kind": {"kind": "logical"},
+                        "uid": 1,
                     }
                 ],
             },
@@ -251,11 +367,65 @@ def test_run_pipeline_with_caching(
 
     monkeypatch.setattr(
         "sys.argv",
-        ["sdag", "run", f"{pipeline_path}", "-w", "0"],
+        ["sdag", "run", f"{pipeline_path}", "-t", "0"],
     )
-    main()
+    cli()
 
-    cache_path = tmp_path / ".sdag" / ".cache" / "task_name"
+    cache_path = tmp_path / ".sdag" / ".cache" / "global" / "task"
     assert (cache_path / "output.json").exists()
     assert (cache_path / "input.json").exists()
     assert (cache_path / "meta.json").exists()
+
+    cache_local_path = tmp_path / ".sdag" / ".cache" / "local" / "dag" / "task"
+    assert (cache_local_path / "output.json").exists()
+    assert (cache_local_path / "input.json").exists()
+    assert (cache_local_path / "meta.json").exists()
+
+
+@pytest.mark.usefixtures("set_home")
+def test_skip_breakpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test the breakpoint skip.
+
+    Args:
+        tmp_path (Path): Temporary path fixture.
+        monkeypatch (pytest.MonkeyPatch): Patcher.
+    """
+    pipeline_name = "pipeline"
+    pipeline_hash = "xyz"
+    pipeline_path = (
+        tmp_path / ".sdag" / "pipelines" / pipeline_name / pipeline_hash
+    )
+    pipeline_path.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(
+        "sys.argv", ["sdag", "skip", pipeline_name, "--hash", pipeline_hash]
+    )
+    cli()
+    assert pipeline_path.joinpath("skip.lock").is_file()
+
+
+@pytest.mark.usefixtures("set_home")
+def test_continue_breakpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test continue breakpoint.
+
+    Args:
+        tmp_path (Path): Temporary path fixture.
+        monkeypatch (pytest.MonkeyPatch): Patcher.
+    """
+    pipeline_name = "pipeline"
+    pipeline_hash = "xyz"
+    pipeline_path = (
+        tmp_path / ".sdag" / "pipelines" / pipeline_name / pipeline_hash
+    )
+    pipeline_path.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(
+        "sys.argv",
+        ["sdag", "continue", pipeline_name, "--hash", pipeline_hash],
+    )
+    cli()
+    assert pipeline_path.joinpath("continue.lock").is_file()

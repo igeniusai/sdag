@@ -170,3 +170,7 @@ target/
 
 # Ruff
 .ruff_cache/
+
+# internal pipelines
+compiled-pipelines
+python/sdag/pipelines

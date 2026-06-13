@@ -1,6 +1,6 @@
 [project]
 name = "sdag"
-version = "0.1.0"
+version = "0.2.0"
 description = "DAGs for Slurm"
 readme = "README.md"
 authors = [
@@ -8,15 +8,10 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "pydantic>=2.11.9",
-    "pydantic-settings>=2.11.0",
+    "pydantic>=2.13.3",
+    "pydantic-settings>=2.14.0",
+    "tomli >= 1.1.0 ; python_version < '3.11'",
 ]
-
-[project.scripts]
-sdag = "sdag.__main__:main"
-
-[project.entry-points."uv.run"]
-sdag = "sdag.__main__:main"
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
@@ -25,7 +20,9 @@ build-backend = "maturin"
 [tool.maturin]
 # "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
 features = ["pyo3/extension-module"]
-python-packages = ["sdag"]
+# python-packages = ["sdag"]
+python-source = "python"
+module-name = "sdag.core"
 strip = true
 
 [tool.ruff]
@@ -103,12 +100,26 @@ venv = ".venv"
 
 [dependency-groups]
 dev = [
-    "ipykernel>=7.1.0",
+    "ipykernel>=7.2.0",
 ]
 test = [
-    "pytest>=8.4.2",
-    "pytest-mock>=3.15.1",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
 ]
 viz = [
-    "neo4j-viz>=1.0.0",
+    "neo4j-viz>=1.4.0",
 ]
+
+[project.scripts]
+sdag = "sdag.entrypoints:cli"
+sdag-execute = "sdag.entrypoints:sdag_execute"
+
+[project.entry-points."uv.run"]
+sdag = "sdag.entrypoints:cli"
+sdag-execute = "sdag.entrypoints:sdag_execute"
+
+[tool.sdag]
+dag-dir = "python/sdag/pipelines"
+compiled-dag-dir = "compiled-pipelines"
+prepend-compiled-dag-dir = true
+log-level = "info"
