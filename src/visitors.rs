@@ -41,7 +41,7 @@ impl<'a> Visitor<()> for NodeVisitor<'a> {
         let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.statuses);
         if all_parents_completed(&parent_statuses) {
             ctx.statuses[node.uid] = Status::Completed(Completed::Generic);
-        } else if some_parents_failed_or_skipped(&parent_statuses) {
+        } else if all_parents_failed_or_skipped(&parent_statuses) {
             ctx.statuses[node.uid] = Status::Skipped
         }
     }
@@ -135,7 +135,7 @@ impl<'a> NodeVisitor<'a> {
 mod tests {
     use super::*;
     use crate::schemas::{Cmd, ExecMode, ParentKind, Script, ScriptPath, SlurmOverride};
-    use crate::status::Failed;
+    use crate::status::{Failed, JobType};
 
     fn get_ctx(nodes: &[Node]) -> Ctx {
         Ctx::new(nodes).unwrap()
@@ -294,6 +294,26 @@ mod tests {
         visitor.visit(&mut ctx);
 
         assert!(matches!(ctx.statuses[1], Status::Skipped))
+    }
+
+    #[test]
+    fn test_visit_end_not_submitted() {
+        let root = get_root(0);
+        let root2 = get_root(1);
+        let mut end = get_end(2);
+        end.parents.push(get_parent(0));
+        end.parents.push(get_parent(1));
+        let nodes = [Node::Root(root), Node::Root(root2), Node::End(end)];
+
+        let mut ctx = get_ctx(&nodes);
+        ctx.updated.push_back(2);
+        ctx.statuses[0] = Status::Failed(Failed::Generic);
+        ctx.statuses[1] = Status::Running(JobType::Slurm("123".into()));
+
+        let mut visitor = NodeVisitor { nodes: &nodes };
+        visitor.visit(&mut ctx);
+
+        assert!(matches!(ctx.statuses[2], Status::NotSubmitted))
     }
 
     #[test]
