@@ -12,6 +12,7 @@ def restart_run(
     max_concurrency: int,
     time_between_polls: int,
     log_level: str,
+    retry: bool,
 ) -> None: ...
 def kill_run(
     pipeline_name: str, pipeline_hash: str, log_level: str

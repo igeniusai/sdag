@@ -1,4 +1,3 @@
-use crate::banner;
 use crate::breakpoint::Debugger;
 use crate::context::Ctx;
 use crate::nodes::Node;
@@ -11,6 +10,7 @@ use crate::submission::Submitter;
 use crate::summary;
 use crate::visitors::NodeVisitor;
 use crate::workdirs;
+use crate::{banner, status};
 use crate::{dag_setup, kill};
 use ctrlc;
 use std::path::PathBuf;
@@ -18,6 +18,7 @@ use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::sync::{Mutex, Once};
 use std::time::Duration;
+
 pub fn run(
     pipeline_path: &str,
     max_concurrency: usize,
@@ -58,7 +59,13 @@ pub fn run(
 }
 
 // TODO: Validate directory structure
-pub fn restart_run(name: &str, hash: &str, max_concurrency: usize, time_between_polls: u64) {
+pub fn restart_run(
+    name: &str,
+    hash: &str,
+    max_concurrency: usize,
+    time_between_polls: u64,
+    retry: bool,
+) {
     let homedir = settings::find_homedir().expect("Failed to find the home directory");
     let Some(path) = workdirs::find_pipeline_folder(&homedir, name, hash) else {
         log::warn!("No '{}' pipeline runs found for hash '{}'", name, hash);
@@ -68,8 +75,13 @@ pub fn restart_run(name: &str, hash: &str, max_concurrency: usize, time_between_
     let ckpt = state::read_chekpoint(&path).expect("Failed to read checkpoint");
     let meta = ckpt.meta.into_owned();
     let nodes = ckpt.nodes.into_owned();
-    let statuses = ckpt.statuses.into_owned();
     let try_nums = ckpt.try_nums.into_owned();
+    let mut statuses = ckpt.statuses.into_owned();
+    if retry {
+        log::info!("Retry enabled by user");
+        status::reset_failed_or_skipped_status(&mut statuses);
+    }
+
     let mut ctx = Ctx::from_checkpoint(&nodes, statuses, try_nums);
     let mut cfg = ckpt.cfg.into_owned();
 

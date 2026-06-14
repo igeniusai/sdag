@@ -113,6 +113,14 @@ impl fmt::Display for Status {
     }
 }
 
+pub fn reset_failed_or_skipped_status(statuses: &mut [Status]) {
+    for status in statuses {
+        if matches!(status, Status::Failed(_) | Status::Skipped) {
+            *status = Status::NotSubmitted;
+        }
+    }
+}
+
 /// Verify that all parent have completed successfully.
 pub fn all_parents_completed(parent_statuses: &[&Status]) -> bool {
     parent_statuses
@@ -228,5 +236,19 @@ mod tests {
         let s2 = Status::Failed(Failed::Generic);
         let statuses = vec![&s0, &s1, &s2];
         assert!(find_completed_parent(&parents, &statuses).is_none());
+    }
+
+    #[test]
+    fn test_retry_run() {
+        let mut statuses = vec![
+            Status::Failed(Failed::Generic),
+            Status::Pending(JobType::Slurm("123".into())),
+            Status::Skipped,
+            Status::NotSubmitted,
+        ];
+
+        reset_failed_or_skipped_status(&mut statuses);
+        assert!(matches!(statuses[0], Status::NotSubmitted));
+        assert!(matches!(statuses[2], Status::NotSubmitted));
     }
 }

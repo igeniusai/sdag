@@ -13,6 +13,7 @@ from sdag.commands import (
     list_pipelines,
     prune_cache,
     restart_run,
+    retry_run,
     run_pipeline,
     run_task,
     skip_breakpoint,
@@ -128,6 +129,27 @@ class ParserBuilder:
         self._add_log_level(restart_parser)
         self._add_scheduler_args(restart_parser)
         restart_parser.set_defaults(fn=restart_run)
+
+        return self
+
+    def add_retry_subparser(self) -> Self:
+        """Add the retry subparser.
+
+        Returns:
+            Self: Parser.
+        """
+        restart_parser = self._subparsers.add_parser(
+            "retry",
+            help=(
+                "Restart a previous run while resetting all"
+                " failed and skipped tasks. If no tasks are failed"
+                " or skipped, it is identical to sdag restart"
+            ),
+        )
+        self._add_pipeline_name_and_hash_or_json(restart_parser)
+        self._add_log_level(restart_parser)
+        self._add_scheduler_args(restart_parser)
+        restart_parser.set_defaults(fn=retry_run)
 
         return self
 

@@ -243,6 +243,39 @@ def restart_run(args: Namespace, extras: dict[str, Any]) -> None:
         max_concurrency=args.max_concurrency,
         time_between_polls=args.time_between_polls,
         log_level=args.log_level,
+        retry=False,
+    )
+
+
+def retry_run(args: Namespace, extras: dict[str, Any]) -> None:
+    """Retry a run.
+
+    Args:
+        args (Namespace): Parsed args.
+        extras (dict[str, Any]): Extra args (not allowed).
+
+    Raises:
+        ExtraCLIArgsError: Extra argument used.
+    """
+    if extras:
+        raise ExtraCLIArgsError(extras)
+
+    if args.pipeline.endswith(".json"):
+        dag = _parse_compiled_pipeline(args.pipeline)
+        pipeline_name = dag.meta.pipeline_name
+        pipeline_hash = dag.meta.hash
+
+    else:
+        pipeline_name = args.pipeline
+        pipeline_hash = args.hash
+
+    core.restart_run(
+        pipeline_name=pipeline_name,
+        pipeline_hash=pipeline_hash,
+        max_concurrency=args.max_concurrency,
+        time_between_polls=args.time_between_polls,
+        log_level=args.log_level,
+        retry=True,
     )
 
 

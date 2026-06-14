@@ -18,6 +18,7 @@ def cli():
         .add_compile_subparser()
         .add_run_subparser()
         .add_restart_subparser()
+        .add_retry_subparser()
         .add_kill_subparser()
         .add_prune_subparser()
         .add_runtask_subparser()

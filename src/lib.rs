@@ -58,6 +58,7 @@ mod core {
         max_concurrency:"int",
         time_between_polls:"int",
         log_level: "str",
+        retry: "bool",
     ) -> "None")]
     pub fn restart_run(
         pipeline_name: &str,
@@ -65,6 +66,7 @@ mod core {
         max_concurrency: usize,
         time_between_polls: u64,
         log_level: &str,
+        retry: bool,
     ) {
         settings::configure_logging(log_level);
         scheduler::restart_run(
@@ -72,6 +74,7 @@ mod core {
             pipeline_hash,
             max_concurrency,
             time_between_polls,
+            retry,
         );
     }
 
