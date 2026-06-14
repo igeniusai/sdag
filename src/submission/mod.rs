@@ -144,7 +144,7 @@ impl<'a> Submitter<'a> {
 
         log::info!("Task '{}': Submitted job_id '{}'", task.uid, job_id);
         ctx.slurm_jobs.push((task.uid, job_id.to_string()));
-        ctx.statuses[task.uid] = Status::Running(JobType::Slurm(job_id));
+        ctx.statuses[task.uid] = Status::Pending(JobType::Slurm(job_id));
 
         Ok(())
     }
