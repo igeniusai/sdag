@@ -6,8 +6,8 @@ from sdag.discovery import (
     _detect_root,
     _find_module_path,
     _find_pipeline_path,
-    _get_importable_module_path,
     find_all_pipelines,
+    get_importable_module_path,
 )
 from sdag.exceptions import DAGNotFoundError
 
@@ -43,33 +43,33 @@ def test_detect_root_single_script(tmp_path: Path) -> None:
     assert root == tmp_path / "pkg"
 
 
-def test_get_importable_module_path_single_script(tmp_path: Path) -> None:
+def testget_importable_module_path_single_script(tmp_path: Path) -> None:
     script = tmp_path / "pkg" / "script.py"
     script.parent.mkdir(parents=True, exist_ok=True)
     script.touch(exist_ok=True)
-    path = _get_importable_module_path(script)
+    path = get_importable_module_path(script)
 
     assert path == "script"
 
 
-def test_get_importable_module_path_src_layout(tmp_path: Path) -> None:
+def testget_importable_module_path_src_layout(tmp_path: Path) -> None:
     script = tmp_path / "pkg" / "src" / "pkg" / "subpkg" / "script.py"
     script.parent.mkdir(parents=True, exist_ok=True)
     script.touch(exist_ok=True)
     (script.parent / "__init__.py").touch(exist_ok=True)
     (script.parent.parent / "__init__.py").touch(exist_ok=True)
-    path = _get_importable_module_path(script)
+    path = get_importable_module_path(script)
 
     assert path == "pkg.subpkg.script"
 
 
-def test_get_importable_module_path_flat_layout(tmp_path: Path) -> None:
+def testget_importable_module_path_flat_layout(tmp_path: Path) -> None:
     script = tmp_path / "pkg" / "pkg" / "subpkg" / "script.py"
     script.parent.mkdir(parents=True, exist_ok=True)
     script.touch(exist_ok=True)
     (script.parent / "__init__.py").touch(exist_ok=True)
     (script.parent.parent / "__init__.py").touch(exist_ok=True)
-    path = _get_importable_module_path(script)
+    path = get_importable_module_path(script)
 
     assert path == "pkg.subpkg.script"
 

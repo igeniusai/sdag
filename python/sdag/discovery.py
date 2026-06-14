@@ -75,6 +75,26 @@ def find_all_pipelines() -> dict[str, str]:
     return pipelines
 
 
+def get_importable_module_path(path: Path) -> str:
+    """Turn a module path into its import string.
+
+    Args:
+        path (Path): Module path.
+
+    Returns:
+        str: Import string.
+    """
+    file_path = path.resolve()  # TODO
+    root = _detect_root(file_path)
+    root = root.resolve()
+
+    logger.debug("Detected root: '%s'", root)
+    relative = file_path.relative_to(root)
+    parts = relative.with_suffix("").parts
+
+    return ".".join(parts)
+
+
 def _find_module_path(name: str) -> str:
     """Find the pipeline module from the name.
 
@@ -92,7 +112,7 @@ def _find_module_path(name: str) -> str:
     if path is None:
         msg = f"Module for pipeline '{name}' not found"
         raise DAGNotFoundError(msg)
-    return _get_importable_module_path(path)
+    return get_importable_module_path(path)
 
 
 def _find_dag_dir() -> str:
@@ -166,26 +186,6 @@ def _extract_decorator_name(d: ast.expr) -> str | None:
     if isinstance(d, ast.Call) and isinstance(d.func, ast.Name):
         return d.func.id
     return None
-
-
-def _get_importable_module_path(path: Path) -> str:
-    """Turn a module path into its import string.
-
-    Args:
-        path (Path): Module path.
-
-    Returns:
-        str: Import string.
-    """
-    file_path = path.resolve()  # TODO
-    root = _detect_root(file_path)
-    root = root.resolve()
-
-    logger.debug("Detected root: '%s'", root)
-    relative = file_path.relative_to(root)
-    parts = relative.with_suffix("").parts
-
-    return ".".join(parts)
 
 
 def _detect_root(file_path: Path) -> Path:
