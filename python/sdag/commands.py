@@ -386,7 +386,6 @@ def list_pipelines(args: Namespace, extras: dict[str, Any]) -> None:
     By default, pipelines are listed. If the pipeline name is
     specified, then run hashes are listed.
 
-
     Args:
         args (Namespace): Parsed args.
         extras (dict[str, Any]): Extra arguments (not allowed)
@@ -401,9 +400,11 @@ def list_pipelines(args: Namespace, extras: dict[str, Any]) -> None:
         core.print_runs(pipeline_name=args.pipeline, log_level=args.log_level)
         return
 
-    pipelines = find_all_pipelines()
-    names = list(pipelines)
-    paths = list(pipelines.values())
+    dags = find_all_pipelines()
+    sorted_dags = sorted(dags.items(), key=lambda kv: kv[0])
+    names = [name for name, _ in sorted_dags]
+    paths = [path for _, path in sorted_dags]
+
     core.print_pipeline_list(names, paths)
 
 
