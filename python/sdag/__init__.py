@@ -17,6 +17,11 @@ def say_hello(world: str) -> None: ...
 Run `sdag run hello:dag` to execute the pipeline.
 """
 
+from sdag.discovery import (
+    find_all_pipelines,
+    find_pipeline_by_name,
+    get_importable_module_path,
+)
 from sdag.entrypoints import sdag_execute
 from sdag.models import Artifact
 from sdag.visualization import DAGViewer
@@ -29,6 +34,9 @@ __all__ = [
     "Else",
     "If",
     "Script",
+    "find_all_pipelines",
+    "find_pipeline_by_name",
+    "get_importable_module_path",
     "oneof",
     "pipeline",
     "sdag_execute",
