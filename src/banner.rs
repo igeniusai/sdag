@@ -9,5 +9,5 @@ pub fn log_banner() {
  ____) | |__| / ____ \ |__| |
 |_____/|_____/_/    \_\_____|"#;
     let version = env!("CARGO_PKG_VERSION");
-    log::info!("\n\x1b[32m{banner}\x1b[0m {version}\n");
+    log::info!("\n\x1b[32m{banner}\x1b[0m v{version}\n");
 }
