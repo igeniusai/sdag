@@ -87,7 +87,7 @@ impl<'a> Visitor<()> for NodeVisitor<'a> {
 
     fn visit_oneof(&mut self, node: &OneOf, ctx: &mut Ctx) {
         let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.statuses);
-        if let Some(uid) = find_completed_parent(&node.parents, &parent_statuses) {
+        if let Some(uid) = find_completed_parent(&node.parents, &ctx.statuses) {
             ctx.jobs.push_back(Job::OneOf(node.uid, uid));
             ctx.statuses[node.uid] = Status::ReadyForSubmission
         } else if all_parents_failed_or_skipped(&parent_statuses) {

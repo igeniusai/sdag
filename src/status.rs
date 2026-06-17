@@ -141,7 +141,7 @@ pub fn all_parents_failed_or_skipped(parent_statuses: &[&Status]) -> bool {
         .all(|x| matches!(**x, Status::Failed(_)) | matches!(**x, Status::Skipped))
 }
 
-pub fn find_completed_parent(parents: &[Parent], statuses: &[&Status]) -> Option<usize> {
+pub fn find_completed_parent(parents: &[Parent], statuses: &[Status]) -> Option<usize> {
     for parent in parents {
         if matches!(statuses[parent.uid], Status::Completed(_)) {
             return Some(parent.uid);
@@ -214,7 +214,7 @@ mod tests {
         let s0 = Status::Completed(Completed::Cached);
         let s1 = Status::Skipped;
         let s2 = Status::Failed(Failed::Generic);
-        let statuses = vec![&s0, &s1, &s2];
+        let statuses = vec![s0, s1, s2];
         assert_eq!(find_completed_parent(&parents, &statuses).unwrap(), 0);
     }
 
@@ -234,7 +234,7 @@ mod tests {
         let s0 = Status::Completed(Completed::Cached);
         let s1 = Status::Skipped;
         let s2 = Status::Failed(Failed::Generic);
-        let statuses = vec![&s0, &s1, &s2];
+        let statuses = vec![s0, s1, s2];
         assert!(find_completed_parent(&parents, &statuses).is_none());
     }
 
