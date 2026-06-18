@@ -75,11 +75,11 @@ pub fn restart_run(
     let ckpt = state::read_chekpoint(&path).expect("Failed to read checkpoint");
     let meta = ckpt.meta.into_owned();
     let nodes = ckpt.nodes.into_owned();
-    let try_nums = ckpt.try_nums.into_owned();
+    let mut try_nums = ckpt.try_nums.into_owned();
     let mut statuses = ckpt.statuses.into_owned();
     if retry {
         log::info!("Retry enabled by user");
-        status::reset_failed_or_skipped_status(&mut statuses);
+        status::reset_failed_or_skipped_status(&mut statuses, &mut try_nums);
     }
 
     let mut ctx = Ctx::from_checkpoint(&nodes, statuses, try_nums);
@@ -123,7 +123,6 @@ fn scheduling_loop(nodes: &[Node], ctx: &mut Ctx, cfg: &Cfg, meta: &DAGMeta) {
     let mut debugger = Debugger::new(&nodes, &meta.pipeline_name, &meta.hash);
 
     let root_uid = dag_setup::find_root_node(nodes).expect("Failed to find the root node");
-    let end_uid = dag_setup::find_end_node(nodes).expect("Failed to find the end node");
     ctx.updated.push_back(root_uid);
 
     let (tx, rx) = mpsc::channel();
@@ -142,7 +141,7 @@ fn scheduling_loop(nodes: &[Node], ctx: &mut Ctx, cfg: &Cfg, meta: &DAGMeta) {
         };
 
         summary::print_summary(&nodes, &ctx, &meta.pipeline_name, &meta.hash);
-        if ctx.statuses[end_uid].is_final() {
+        if status::is_simulation_completed(&ctx.statuses) {
             log::info!("Simulation completed");
             break;
         }

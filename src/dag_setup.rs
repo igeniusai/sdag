@@ -13,18 +13,6 @@ pub fn find_root_node(nodes: &[Node]) -> Option<usize> {
     None
 }
 
-pub fn find_end_node(nodes: &[Node]) -> Option<usize> {
-    for node in nodes {
-        if let Node::End(end) = node
-            && end.children.len() == 0
-        {
-            return Some(end.uid);
-        }
-    }
-
-    None
-}
-
 pub fn add_children(nodes: &mut [Node]) {
     let mut all_children: Vec<Vec<usize>> = vec![Vec::new(); nodes.len()];
     for node in nodes.iter() {
@@ -166,13 +154,5 @@ mod tests {
         add_children(&mut nodes);
         let root_uid = find_root_node(&mut nodes).unwrap();
         assert_eq!(root_uid, 0)
-    }
-
-    #[test]
-    fn test_find_end() {
-        let mut nodes = get_nodes();
-        add_children(&mut nodes);
-        let end_uid = find_end_node(&mut nodes).unwrap();
-        assert_eq!(end_uid, 2)
     }
 }

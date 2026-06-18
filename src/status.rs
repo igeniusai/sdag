@@ -1,6 +1,7 @@
 use crate::schemas::Parent;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::iter::zip;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum JobType {
@@ -113,12 +114,17 @@ impl fmt::Display for Status {
     }
 }
 
-pub fn reset_failed_or_skipped_status(statuses: &mut [Status]) {
-    for status in statuses {
+pub fn reset_failed_or_skipped_status(statuses: &mut [Status], try_nums: &mut [usize]) {
+    for (status, try_num) in zip(statuses, try_nums) {
         if matches!(status, Status::Failed(_) | Status::Skipped) {
             *status = Status::NotSubmitted;
+            *try_num = 0;
         }
     }
+}
+
+pub fn is_simulation_completed(statuses: &[Status]) -> bool {
+    statuses.iter().all(|s| s.is_final())
 }
 
 /// Verify that all parent have completed successfully.
@@ -246,9 +252,34 @@ mod tests {
             Status::Skipped,
             Status::NotSubmitted,
         ];
+        let mut try_nums = vec![1, 2, 3, 0];
 
-        reset_failed_or_skipped_status(&mut statuses);
+        reset_failed_or_skipped_status(&mut statuses, &mut try_nums);
         assert!(matches!(statuses[0], Status::NotSubmitted));
         assert!(matches!(statuses[2], Status::NotSubmitted));
+        assert_eq!(try_nums[0], 0);
+        assert_eq!(try_nums[2], 0);
+    }
+
+    #[test]
+    fn check_simulation_is_completed() {
+        let statuses = vec![
+            Status::Completed(Completed::Generic),
+            Status::Failed(Failed::Generic),
+            Status::Skipped,
+        ];
+
+        assert!(is_simulation_completed(&statuses))
+    }
+
+    #[test]
+    fn check_simulation_is_not_completed() {
+        let statuses = vec![
+            Status::Running(JobType::Slurm("123".into())),
+            Status::Failed(Failed::Generic),
+            Status::Skipped,
+        ];
+
+        assert!(!is_simulation_completed(&statuses))
     }
 }
