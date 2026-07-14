@@ -191,7 +191,6 @@ impl<'a> Submitter<'a> {
             Status::Completed(Completed::Cached)
         } else {
             log::info!("Task {}: Cache validation failed.", task.uid);
-            ctx.jobs.push_front(Job::Task(task.uid));
             Status::ReadyForSubmission
         };
         ctx.statuses[task.uid] = status;
