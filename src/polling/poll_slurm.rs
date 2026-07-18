@@ -3,16 +3,19 @@ use crate::nodes::{Node, Task};
 use crate::polling::Poller;
 use crate::schemas::ExecMode;
 use crate::settings::Cfg;
+use crate::status::JobType::Slurm;
 use crate::status::{Completed, Failed, JobType, Status};
 use crate::submission;
 use log;
 use regex::Regex;
+use std::collections::HashMap;
 use std::error::Error;
 use std::process::Command;
 
 pub struct SlurmPoller<'a> {
     pub cfg: &'a Cfg,
     pub nslurm_fails: usize,
+    missing_jobs: HashMap<usize, usize>,
 }
 
 impl<'a> Poller for SlurmPoller<'a> {
@@ -22,9 +25,9 @@ impl<'a> Poller for SlurmPoller<'a> {
         }
 
         match poll_slurm(&ctx.slurm_jobs) {
-            Ok(poll_result) => {
+            Ok(mut poll_result) => {
                 self.nslurm_fails = 0;
-                ctx.slurm_jobs = Vec::new();
+                ctx.slurm_jobs = self.handle_missing_jobs(&mut poll_result, ctx);
                 for (uid, status) in poll_result {
                     if let Node::Task(task) = &nodes[uid] {
                         self.handle_new_slurm_status(task, status, ctx);
@@ -48,6 +51,7 @@ impl<'a> SlurmPoller<'a> {
         Self {
             cfg,
             nslurm_fails: 0,
+            missing_jobs: HashMap::new(),
         }
     }
 
@@ -100,9 +104,45 @@ impl<'a> SlurmPoller<'a> {
         self.nslurm_fails = 0;
         ctx.slurm_jobs = Vec::new();
     }
+
+    fn handle_missing_jobs(
+        &mut self,
+        poll_result: &mut HashMap<usize, Status>,
+        ctx: &mut Ctx,
+    ) -> Vec<(usize, String)> {
+        let mut new_jobs = Vec::new();
+        for job in ctx.slurm_jobs.drain(..) {
+            let nmiss = self.missing_jobs.entry(job.0).or_insert(0);
+            if poll_result.contains_key(&job.0) {
+                *nmiss = 0;
+                continue;
+            }
+            log::warn!(
+                "Slurm response does not contain job {} (task {})",
+                job.1,
+                job.0
+            );
+            *nmiss += 1;
+            if *nmiss <= self.cfg.grace_period {
+                new_jobs.push(job);
+                continue;
+            }
+
+            log::error!(
+                "job {} (task {}) missing for {nmiss} times, marking as failed.",
+                job.1,
+                job.0
+            );
+            // Reset in case of retries
+            *nmiss = 0;
+            let status = Status::Failed(Failed::FailedToContact(Slurm(job.1)));
+            poll_result.insert(job.0, status);
+        }
+        new_jobs
+    }
 }
 
-pub fn poll_slurm(jobs: &[(usize, String)]) -> Result<Vec<(usize, Status)>, Box<dyn Error>> {
+pub fn poll_slurm(jobs: &[(usize, String)]) -> Result<HashMap<usize, Status>, Box<dyn Error>> {
     let job_ids = jobs
         .iter()
         .map(|x| x.1.as_str())
@@ -111,16 +151,16 @@ pub fn poll_slurm(jobs: &[(usize, String)]) -> Result<Vec<(usize, Status)>, Box<
 
     if job_ids.len() == 0 {
         log::debug!("No running Slurm jobs identified");
-        return Ok(Vec::new());
+        return Ok(HashMap::new());
     }
 
     let stdout = ask_status_to_slurm(&job_ids)?;
-    let mut output = Vec::new();
+    let mut output = HashMap::new();
     for (uid, job_id) in jobs {
         if let Some(status_string) = parse_slurm_status(job_id, &stdout) {
-            log::info!("Slurm job '{job_id}' status: {status_string}");
+            log::info!("Slurm job '{job_id}' status: '{status_string}'");
             let status = get_status_from_string(&status_string, job_id);
-            output.push((*uid, status));
+            output.insert(*uid, status);
         } else {
             log::warn!("Slurm is reachable but it did't return any status");
         }
@@ -199,6 +239,7 @@ mod tests {
         SlurmPoller {
             cfg,
             nslurm_fails: 3,
+            missing_jobs: HashMap::new(),
         }
     }
 
