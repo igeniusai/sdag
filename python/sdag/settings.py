@@ -7,8 +7,22 @@ from pathlib import Path
 from typing import Literal
 
 import tomllib
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import BaseSettings
+
+from sdag.models import Commands
+
+
+class SDAGTag(BaseModel):
+    """Tag configurations.
+
+    Attributes:
+        tag (str): Tag name.
+        cmd (Commands | None): Command. Defaults to None.
+    """
+
+    tag: str
+    cmd: Commands | None = None
 
 
 class Pyproj(BaseModel):
@@ -20,20 +34,24 @@ class Pyproj(BaseModel):
         prepend_compiled_dag_dir (bool): Add the compiled pipeline
             dir automatically if the directory has not been
             specified.
-        local (bool): Set to True to enforce local runs.
+        commands (Commands | None): Commands to execute tasks. If
+            set, it overrides all pipeline commands.
         log_level (Literal["debug", "info", "warning", "error"]):
             Logging level.
     """
 
     dag_dir: str = Field(alias="dag-dir", default="./pipelines")
     compiled_dag_dir: str = Field(alias="compiled-dag-dir", default=".")
-    local: bool = False
+    cmd: Commands | None = None
     prepend_compiled_dag_dir: bool = Field(
         alias="prepend-compiled-dag-dir", default=False
     )
     log_level: Literal["debug", "info", "warning", "error"] = Field(
         alias="log-level", default="info"
     )
+    tags: list[SDAGTag] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra="forbid")
 
 
 @lru_cache

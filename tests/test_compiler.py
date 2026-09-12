@@ -35,6 +35,7 @@ class TestSDAG:
             cache_ignore=None,
             retries=0,
             script=ScriptPath(path=Path("a/path")),
+            tags=[],
         )
 
         sdag.add_task(task)
@@ -107,6 +108,7 @@ class TestDAGCompiler:
             cmd="bash",
             retries=0,
             script=ScriptPath(path=Path()),
+            tags=[],
         )
         compiler.reset()
         root = RootNode(uid=compiler.get_uid(), pipeline_name="dag1")

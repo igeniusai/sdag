@@ -283,6 +283,9 @@ class SlurmOverride(BaseModel):
     time: str | None = None
 
 
+Commands = Literal["bash", "sbatch"]
+
+
 class TaskNode(BaseNode):
     """Task.
 
@@ -297,10 +300,10 @@ class TaskNode(BaseNode):
             during cache validation.
         mode (Literal["wrap", "ext"]): Wrap a Python function or
             an external script.
-        cmd (Literal["bash", "sbatch"]): Command used to launch
-            the script.
+        cmd (Commands): Command used to launch the script.
         retries (int): Retries.
         script (ScriptUnion): Script path or content.
+        tags (list[str]): Task tags.
         kwargs (list[Kwarg]): Input kwargs.
         envs (dict[str, Any]): Environment variables. They
             will be set in the task as strings.
@@ -318,9 +321,10 @@ class TaskNode(BaseNode):
     cache_local: bool
     cache_ignore: list[str] = Field(default_factory=list)
     mode: Literal["wrap", "ext"]
-    cmd: Literal["bash", "sbatch"]
+    cmd: Commands
     retries: int
     script: ScriptUnion
+    tags: list[str] = Field(default_factory=list)
     kwargs: list[Kwarg] = Field(default_factory=list)
     envs: dict[str, Any] = Field(default_factory=dict)
     override: SlurmOverride = Field(

@@ -31,7 +31,7 @@ pub fn describe_pipeline(pipeline_path: &str) {
     let pipeline_path = PathBuf::from(pipeline_path);
     let homedir = settings::find_homedir().expect("Failed to find the home directory");
     let dag = state::read_dag(&pipeline_path).expect("Failed to read DAG - {e}");
-    let cfg = Cfg::new(&homedir, &dag.meta, 1, 0, true);
+    let cfg = Cfg::new(&homedir, &dag.meta, 1, 0);
     let mut descriptions = vec![];
 
     for node in &dag.nodes {

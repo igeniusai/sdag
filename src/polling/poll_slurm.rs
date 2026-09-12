@@ -232,7 +232,7 @@ mod tests {
 
     fn get_cfg() -> Cfg {
         let meta = get_meta();
-        Cfg::new(&PathBuf::from("/a/path"), &meta, 5, 4, false)
+        Cfg::new(&PathBuf::from("/a/path"), &meta, 5, 4)
     }
 
     fn get_poller(cfg: &Cfg) -> SlurmPoller<'_> {
@@ -260,6 +260,7 @@ mod tests {
             script: Script::ScriptPath(ScriptPath {
                 path: "path/to/script".into(),
             }),
+            tags: vec![],
             kwargs: vec![],
             artifacts: vec![],
             children: vec![],

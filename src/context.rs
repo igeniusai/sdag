@@ -127,6 +127,7 @@ mod tests {
                 path: "path/to/script".into(),
             }),
             envs: HashMap::new(),
+            tags: vec![],
             kwargs: vec![],
             artifacts: vec![],
             children: vec![],

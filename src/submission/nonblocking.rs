@@ -250,7 +250,7 @@ mod tests {
     fn get_cfg() -> Cfg {
         let meta = get_meta();
         let homedir = get_tmp_dir();
-        Cfg::new(&homedir, &meta, 5, 4, false)
+        Cfg::new(&homedir, &meta, 5, 4)
     }
 
     fn get_task() -> Task {
@@ -270,6 +270,7 @@ mod tests {
                 content: "echo hello".into(),
             }),
             envs: HashMap::from([("VAR".into(), Value::Bool(true))]),
+            tags: vec![],
             kwargs: vec![],
             artifacts: vec![],
             children: vec![],

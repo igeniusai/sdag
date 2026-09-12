@@ -1,5 +1,4 @@
 use crate::nodes::{Node, Parents};
-use crate::schemas::Cmd;
 
 pub fn find_root_node(nodes: &[Node]) -> Option<usize> {
     for node in nodes {
@@ -26,21 +25,6 @@ pub fn add_children(nodes: &mut [Node]) {
         children.sort();
         children.dedup();
         nodes[uid].set_children(children);
-    }
-}
-
-pub fn apply_global_settings(nodes: &mut [Node], local: bool) {
-    if local {
-        log::info!("Marking all tasks as local");
-        mark_all_tasks_as_local(nodes)
-    }
-}
-
-fn mark_all_tasks_as_local(nodes: &mut [Node]) {
-    for node in nodes {
-        if let Node::Task(task) = node {
-            task.cmd = Cmd::Bash;
-        }
     }
 }
 
@@ -77,6 +61,7 @@ mod tests {
             script: Script::ScriptPath(ScriptPath {
                 path: "path/to/script".into(),
             }),
+            tags: vec![],
             kwargs: vec![],
             artifacts: vec![],
             children: vec![],
@@ -94,16 +79,6 @@ mod tests {
         };
 
         vec![Node::Root(root), Node::Task(task), Node::End(end)]
-    }
-
-    #[test]
-    fn test_mark_all_tasks_as_local() {
-        let mut nodes = get_nodes();
-        mark_all_tasks_as_local(&mut nodes);
-        let Node::Task(task) = &nodes[1] else {
-            panic!();
-        };
-        assert!(matches!(task.cmd, Cmd::Bash))
     }
 
     #[test]
