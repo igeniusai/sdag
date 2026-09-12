@@ -25,8 +25,6 @@ def cli():
         .add_view_subparser()
         .add_list_subparser()
         .add_describe_subparser()
-        .add_skip_subparser()
-        .add_continue_subparser()
         .get_parser()
     )
 

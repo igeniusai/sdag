@@ -7,7 +7,6 @@ from typing import Any, Self
 from sdag._version import __version__
 from sdag.commands import (
     compile_pipeline,
-    continue_breakpoint,
     describe_pipeline,
     kill_pipeline,
     list_pipelines,
@@ -16,7 +15,6 @@ from sdag.commands import (
     retry_run,
     run_pipeline,
     run_task,
-    skip_breakpoint,
     view_pipeline,
 )
 
@@ -99,13 +97,6 @@ class ParserBuilder:
                 " [tool.sdag] field of the pyproject.toml file. It can be"
                 " equal to a valid compiled graph path to skip compilation."
             ),
-        )
-
-        run_parser.add_argument(
-            "--debug",
-            action=BooleanOptionalAction,
-            default=False,
-            help="Add a breakpoint if any of the tasks fails.",
         )
 
         self._add_log_level(run_parser)
@@ -323,38 +314,6 @@ class ParserBuilder:
         self._add_compilation_args(describe_parser)
         self._add_log_level(describe_parser)
         describe_parser.set_defaults(fn=describe_pipeline)
-
-        return self
-
-    def add_skip_subparser(self) -> Self:
-        """Add the pipeline skip command.
-
-        Returns:
-            Self: Parser builder.
-        """
-        skip_parser = self._subparsers.add_parser(
-            "skip", help="Skip a breakpoint."
-        )
-
-        self._add_pipeline_name_and_hash_or_json(skip_parser)
-        self._add_log_level(skip_parser)
-        skip_parser.set_defaults(fn=skip_breakpoint)
-
-        return self
-
-    def add_continue_subparser(self) -> Self:
-        """Add the pipeline continue command.
-
-        Returns:
-            Self: Parser builder.
-        """
-        continue_parser = self._subparsers.add_parser(
-            "continue", help="Continue a breakpoint."
-        )
-
-        self._add_pipeline_name_and_hash_or_json(continue_parser)
-        self._add_log_level(continue_parser)
-        continue_parser.set_defaults(fn=continue_breakpoint)
 
         return self
 

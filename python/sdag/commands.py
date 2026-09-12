@@ -211,7 +211,6 @@ def run_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
         time_between_polls=args.time_between_polls,
         log_level=args.log_level,
         local=local,
-        debug=args.debug,
     )
 
 
@@ -401,7 +400,6 @@ def run_task(args: Namespace, extras: dict[str, Any]) -> None:
         fn_name=task.fn.__name__,
         cache=task.cache,
         cache_local=task.cache_local,
-        debug=False,
         mode=task.mode,
         cmd=task.cmd,
         retries=0,
@@ -454,61 +452,3 @@ def describe_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
         path = compile_pipeline(args, extras)
 
     core.describe_pipeline(str(path), log_level=args.log_level)
-
-
-def skip_breakpoint(args: Namespace, extras: dict[str, Any]) -> None:
-    """Skip a breakpoint and mark the task as failed.
-
-    Args:
-        args (Namespace): Parsed args.
-        extras (dict[str, Any]): Extra args (not allowed).
-
-    Raises:
-        ExtraCLIArgsError: Extra argument used.
-    """
-    if extras:
-        raise ExtraCLIArgsError(extras)
-
-    if args.pipeline.endswith(".json"):
-        dag = _parse_compiled_pipeline(args.pipeline)
-        pipeline_name = dag.meta.pipeline_name
-        pipeline_hash = dag.meta.hash
-
-    else:
-        pipeline_name = args.pipeline
-        pipeline_hash = args.hash
-
-    core.skip_breakpoint(
-        pipeline_name=pipeline_name,
-        pipeline_hash=pipeline_hash,
-        log_level=args.log_level,
-    )
-
-
-def continue_breakpoint(args: Namespace, extras: dict[str, Any]) -> None:
-    """Reset the task and unlock the scheduler.
-
-    Args:
-        args (Namespace): Parsed args.
-        extras (dict[str, Any]): Extra arguments (not allowed).
-
-    Raises:
-        ExtraCLIArgsError: Extra argument used.
-    """
-    if extras:
-        raise ExtraCLIArgsError(extras)
-
-    if args.pipeline.endswith(".json"):
-        dag = _parse_compiled_pipeline(args.pipeline)
-        pipeline_name = dag.meta.pipeline_name
-        pipeline_hash = dag.meta.hash
-
-    else:
-        pipeline_name = args.pipeline
-        pipeline_hash = args.hash
-
-    core.continue_breakpoint(
-        pipeline_name=pipeline_name,
-        pipeline_hash=pipeline_hash,
-        log_level=args.log_level,
-    )

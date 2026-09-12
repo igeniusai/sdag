@@ -1,6 +1,5 @@
 use pyo3::prelude::*;
 mod banner;
-mod breakpoint;
 mod cache_pruning;
 mod context;
 mod dag_setup;
@@ -30,7 +29,6 @@ mod core {
         max_concurrency: "int",
         time_between_polls: "int",
         local: "bool",
-        debug: "bool",
         log_level: "str",
     ) -> "None")]
     pub fn run(
@@ -38,17 +36,10 @@ mod core {
         max_concurrency: usize,
         time_between_polls: u64,
         local: bool,
-        debug: bool,
         log_level: &str,
     ) {
         settings::configure_logging(log_level);
-        scheduler::run(
-            pipeline_path,
-            max_concurrency,
-            time_between_polls,
-            local,
-            debug,
-        )
+        scheduler::run(pipeline_path, max_concurrency, time_between_polls, local)
     }
 
     #[pyfunction]
@@ -161,27 +152,5 @@ mod core {
     pub fn describe_pipeline(pipeline_path: &str, log_level: &str) {
         settings::configure_logging(log_level);
         describe::describe_pipeline(pipeline_path)
-    }
-
-    #[pyfunction]
-    #[pyo3(signature=(
-        pipeline_name: "str",
-        pipeline_hash: "str",
-        log_level: "str",
-    ) -> "None")]
-    pub fn continue_breakpoint(pipeline_name: &str, pipeline_hash: &str, log_level: &str) {
-        settings::configure_logging(log_level);
-        breakpoint::create_continue_lock(pipeline_name, pipeline_hash);
-    }
-
-    #[pyfunction]
-    #[pyo3(signature=(
-        pipeline_name: "str",
-        pipeline_hash: "str",
-        log_level: "str",
-    ) -> "None")]
-    pub fn skip_breakpoint(pipeline_name: &str, pipeline_hash: &str, log_level: &str) {
-        settings::configure_logging(log_level);
-        breakpoint::create_skip_lock(pipeline_name, pipeline_hash);
     }
 }

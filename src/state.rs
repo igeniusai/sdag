@@ -194,38 +194,6 @@ pub fn get_static_input(kwargs: &[Kwarg], parents: &[Parent]) -> HashMap<String,
     static_input
 }
 
-pub fn rm_continue_lock_if_present(dagdir: &Path) {
-    let path = dagdir.join(FileNames::Continue.as_str());
-    let _ = fs::remove_file(path);
-}
-
-pub fn is_breakpoint_continued(dagdir: &Path) -> bool {
-    let path = dagdir.join(FileNames::Continue.as_str());
-    path.exists()
-}
-
-pub fn create_continue_file(dagdir: &Path) -> io::Result<()> {
-    let path = dagdir.join(FileNames::Continue.as_str());
-    fs::File::create(path)?;
-    Ok(())
-}
-
-pub fn rm_skip_lock_if_present(dagdir: &Path) {
-    let path = dagdir.join(FileNames::Skip.as_str());
-    let _ = fs::remove_file(path);
-}
-
-pub fn is_breakpoint_skipped(dagdir: &Path) -> bool {
-    let path = dagdir.join(FileNames::Skip.as_str());
-    path.exists()
-}
-
-pub fn create_skip_file(dagdir: &Path) -> io::Result<()> {
-    let path = dagdir.join(FileNames::Skip.as_str());
-    fs::File::create(path)?;
-    Ok(())
-}
-
 /// Add the dynamic input to the input data
 fn get_dynamic_input(uid: usize, dagdir: &Path) -> io::Result<Value> {
     let path = dagdir.join(uid.to_string());
@@ -326,7 +294,6 @@ mod tests {
             max_concurrency: 5,
             sleep_time: Duration::from_secs(2),
             local: false,
-            debug: false,
         };
 
         let meta = DAGMeta {
@@ -462,7 +429,6 @@ mod tests {
             cache: true,
             cache_local: false,
             cache_ignore: vec![],
-            debug: false,
             mode: ExecMode::Wrap,
             cmd: Cmd::Bash,
             retries: 0,

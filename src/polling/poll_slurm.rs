@@ -232,7 +232,7 @@ mod tests {
 
     fn get_cfg() -> Cfg {
         let meta = get_meta();
-        Cfg::new(&PathBuf::from("/a/path"), &meta, 5, 4, false, false)
+        Cfg::new(&PathBuf::from("/a/path"), &meta, 5, 4, false)
     }
 
     fn get_poller(cfg: &Cfg) -> SlurmPoller<'_> {
@@ -253,7 +253,6 @@ mod tests {
             cache: false,
             cache_local: false,
             cache_ignore: vec![],
-            debug: false,
             mode: ExecMode::Wrap,
             cmd: Cmd::Sbatch,
             retries: 0,

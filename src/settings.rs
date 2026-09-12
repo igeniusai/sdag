@@ -20,7 +20,6 @@ pub struct Cfg {
     pub max_concurrency: usize,
     pub sleep_time: Duration,
     pub local: bool,
-    pub debug: bool,
 }
 
 impl Cfg {
@@ -30,7 +29,6 @@ impl Cfg {
         max_concurrency: usize,
         time_between_polls: u64,
         local: bool,
-        debug: bool,
     ) -> Self {
         let dagdir = homedir
             .join("pipelines")
@@ -48,7 +46,6 @@ impl Cfg {
             timestamp,
             max_concurrency,
             local,
-            debug,
             homedir: homedir.into(),
             sleep_time: Duration::from_secs(time_between_polls),
             grace_period: 5,
@@ -119,7 +116,7 @@ mod tests {
             kwargs: HashMap::new(),
         };
         let home_path = PathBuf::from("./a/path");
-        let cfg = Cfg::new(&home_path, &meta, 5, 2, false, false);
+        let cfg = Cfg::new(&home_path, &meta, 5, 2, false);
 
         assert_eq!(cfg.homedir, home_path);
         assert_eq!(

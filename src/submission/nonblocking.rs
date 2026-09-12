@@ -243,7 +243,7 @@ mod tests {
     fn get_cfg() -> Cfg {
         let meta = get_meta();
         let homedir = get_tmp_dir();
-        Cfg::new(&homedir, &meta, 5, 4, false, false)
+        Cfg::new(&homedir, &meta, 5, 4, false)
     }
 
     fn get_task() -> Task {
@@ -256,7 +256,6 @@ mod tests {
             cache: false,
             cache_local: false,
             cache_ignore: vec![],
-            debug: false,
             mode: ExecMode::Wrap,
             cmd: Cmd::Bash,
             retries: 0,

@@ -29,14 +29,10 @@ pub fn add_children(nodes: &mut [Node]) {
     }
 }
 
-pub fn apply_global_settings(nodes: &mut [Node], local: bool, debug: bool) {
+pub fn apply_global_settings(nodes: &mut [Node], local: bool) {
     if local {
         log::info!("Marking all tasks as local");
         mark_all_tasks_as_local(nodes)
-    }
-    if debug {
-        log::info!("Marking all tasks as local");
-        mark_all_tasks_as_debuggable(nodes)
     }
 }
 
@@ -44,14 +40,6 @@ fn mark_all_tasks_as_local(nodes: &mut [Node]) {
     for node in nodes {
         if let Node::Task(task) = node {
             task.cmd = Cmd::Bash;
-        }
-    }
-}
-
-fn mark_all_tasks_as_debuggable(nodes: &mut [Node]) {
-    for node in nodes {
-        if let Node::Task(task) = node {
-            task.debug = true;
         }
     }
 }
@@ -81,7 +69,6 @@ mod tests {
             cache: true,
             cache_local: false,
             cache_ignore: vec![],
-            debug: false,
             mode: ExecMode::Wrap,
             cmd: Cmd::Sbatch,
             retries: 0,
@@ -115,16 +102,6 @@ mod tests {
             panic!();
         };
         assert!(matches!(task.cmd, Cmd::Bash))
-    }
-
-    #[test]
-    fn test_mark_all_tasks_as_debuggable() {
-        let mut nodes = get_nodes();
-        mark_all_tasks_as_debuggable(&mut nodes);
-        let Node::Task(task) = &nodes[1] else {
-            panic!();
-        };
-        assert!(task.debug)
     }
 
     #[test]
