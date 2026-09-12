@@ -389,9 +389,6 @@ def run_task(args: Namespace, extras: dict[str, Any]) -> None:
         extras (dict[str, Any]): Extra arguments used for compilation.
     """
     task = get_task(name=args.task, pipeline_name=args.pipeline)
-    pyproj = parse_pyproject()
-    _apply_pyproj_to_task(task, pyproj)
-
     task = TaskNode(
         uid=0,
         root_uid=-1,
@@ -407,6 +404,8 @@ def run_task(args: Namespace, extras: dict[str, Any]) -> None:
         kwargs=[Kwarg(key=k, value=v) for k, v in extras.items()],
     )
 
+    pyproj = parse_pyproject()
+    _apply_pyproj_to_task(task, pyproj)
     task_serialized = task.model_dump_json(warnings="none", by_alias=True)
     core.run_single_task(task_serialized, log_level=args.log_level)
 
