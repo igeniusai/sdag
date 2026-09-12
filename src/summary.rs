@@ -149,6 +149,7 @@ mod tests {
     use crate::nodes::Task;
     use crate::schemas::{Cmd, ExecMode, Script, ScriptPath, SlurmOverride};
     use crate::status::{Completed, Failed, JobType};
+    use std::collections::HashMap;
     use tabled::assert::assert_table;
 
     fn get_nodes() -> Vec<Node> {
@@ -164,6 +165,7 @@ mod tests {
             mode: ExecMode::Wrap,
             cmd: Cmd::Sbatch,
             retries: 0,
+            envs: HashMap::new(),
             script: Script::ScriptPath(ScriptPath {
                 path: "path/to/script".into(),
             }),

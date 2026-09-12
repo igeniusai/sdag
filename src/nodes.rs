@@ -1,6 +1,9 @@
+use std::collections::HashMap;
+
 use crate::schemas::{Artifact, Cmd, ExecMode, Kwarg, Parent, ParentKind, Script, SlurmOverride};
 use crate::status::{Completed, Status};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 pub trait Children {
     fn children(&self) -> &[usize];
@@ -110,6 +113,9 @@ pub struct Task {
     pub retries: usize,
     /// script path.
     pub script: Script,
+    /// Environemnt variables to be set.
+    #[serde(default = "HashMap::new")]
+    pub envs: HashMap<String, Value>,
     /// Slurm override
     #[serde(default = "SlurmOverride::new")]
     pub slurm_override: SlurmOverride,

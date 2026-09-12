@@ -431,6 +431,7 @@ mod tests {
             cache_ignore: vec![],
             mode: ExecMode::Wrap,
             cmd: Cmd::Bash,
+            envs: HashMap::new(),
             retries: 0,
             script: Script::ScriptPath(ScriptPath {
                 path: "path/to/script".into(),

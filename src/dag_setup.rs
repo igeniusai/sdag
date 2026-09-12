@@ -49,6 +49,7 @@ mod tests {
     use super::*;
     use crate::nodes::{End, Root, Task};
     use crate::schemas::{Cmd, ExecMode, Parent, ParentKind, Script, ScriptPath, SlurmOverride};
+    use std::collections::HashMap;
 
     fn get_nodes() -> Vec<Node> {
         let root = Root {
@@ -71,6 +72,7 @@ mod tests {
             cache_ignore: vec![],
             mode: ExecMode::Wrap,
             cmd: Cmd::Sbatch,
+            envs: HashMap::new(),
             retries: 0,
             script: Script::ScriptPath(ScriptPath {
                 path: "path/to/script".into(),
