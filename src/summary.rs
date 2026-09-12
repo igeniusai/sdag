@@ -35,6 +35,8 @@ struct Summary<'a> {
     uid: usize,
     /// Task name.
     task: &'a str,
+    /// Pipeline
+    pipeline: &'a str,
     /// Node status.
     status: &'a Status,
     /// Number of tries.
@@ -52,6 +54,7 @@ fn get_summary_table<'a>(nodes: &[Node], ctx: &Ctx) -> Table {
             records.push(Summary {
                 uid: task.uid,
                 task: &task.name,
+                pipeline: &task.pipeline_name,
                 status,
                 try_num,
             });
@@ -214,19 +217,19 @@ mod tests {
         let ctx = get_ctx(&nodes);
         let table = get_summary_table(&nodes, &ctx);
         assert_table!(table,
-        "┌─────┬──────┬────────────────────────┬─────────┐"
-        "│ uid │ task │ status                 │ try_num │"
-        "├─────┼──────┼────────────────────────┼─────────┤"
-        "│   3 │ name │ Not Submitted          │ 3       │"
-        "├─────┼──────┼────────────────────────┼─────────┤"
-        "│   0 │ name │ Completed (job_id=123) │ 0       │"
-        "├─────┼──────┼────────────────────────┼─────────┤"
-        "│   1 │ name │ Failed                 │ 1       │"
-        "├─────┼──────┼────────────────────────┼─────────┤"
-        "│   2 │ name │ Pending (job_id=234)   │ 2       │"
-        "├─────┼──────┼────────────────────────┼─────────┤"
-        "│   4 │ name │ Running (job_id=456)   │ 4       │"
-        "└─────┴──────┴────────────────────────┴─────────┘"
+        "┌─────┬──────┬───────────────┬────────────────────────┬─────────┐"
+        "│ uid │ task │ pipeline      │ status                 │ try_num │"
+        "├─────┼──────┼───────────────┼────────────────────────┼─────────┤"
+        "│   3 │ name │ pipeline_name │ Not Submitted          │ 3       │"
+        "├─────┼──────┼───────────────┼────────────────────────┼─────────┤"
+        "│   0 │ name │ pipeline_name │ Completed (job_id=123) │ 0       │"
+        "├─────┼──────┼───────────────┼────────────────────────┼─────────┤"
+        "│   1 │ name │ pipeline_name │ Failed                 │ 1       │"
+        "├─────┼──────┼───────────────┼────────────────────────┼─────────┤"
+        "│   2 │ name │ pipeline_name │ Pending (job_id=234)   │ 2       │"
+        "├─────┼──────┼───────────────┼────────────────────────┼─────────┤"
+        "│   4 │ name │ pipeline_name │ Running (job_id=456)   │ 4       │"
+        "└─────┴──────┴───────────────┴────────────────────────┴─────────┘"
         );
     }
 
