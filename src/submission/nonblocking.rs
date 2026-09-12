@@ -24,13 +24,14 @@ pub fn submit_slurm(
     let input = state::read_input_from_parents(task, &cfg.dagdir)?;
     let mut cmd = build_command(task, try_num, cfg, meta, &input, &task.envs)?;
     save_input(&input, task, cfg)?;
-    override_sbatch(
-        &mut cmd,
+    let (output, error) = find_output_and_error_paths(
         &task.slurm_override,
-        &task.name,
         &meta.pipeline_name,
+        &task.pipeline_name,
         &cfg.timestamp,
     );
+    state::create_output_and_error_log_dirs(&output, &error);
+    override_sbatch(&mut cmd, &task.slurm_override, &task.name, &output, &error);
     set_script_path(&mut cmd, task, cfg)?;
     let output = cmd.output()?;
 
@@ -131,26 +132,17 @@ fn override_sbatch(
     cmd: &mut Command,
     slurm_override: &SlurmOverride,
     name: &str,
-    pipeline: &str,
-    timestamp: &str,
+    output: &str,
+    error: &str,
 ) {
+    cmd.arg(&format!("--error={error}"));
+    cmd.arg(&format!("--output={output}"));
+
     let mut job_name = name;
     if let Some(user_job_name) = &slurm_override.job_name {
         job_name = user_job_name;
     }
     cmd.arg(&format!("--job-name={job_name}"));
-
-    let mut error = &format!("./logs/{pipeline}/{timestamp}/%x.%j.err");
-    if let Some(user_error) = &slurm_override.error {
-        error = user_error;
-    }
-    cmd.arg(&format!("--error={error}"));
-
-    let mut output = &format!("./logs/{pipeline}/{timestamp}/%x.%j.out");
-    if let Some(user_output) = &slurm_override.output {
-        output = user_output
-    };
-    cmd.arg(&format!("--output={output}"));
 
     if let Some(nodes) = &slurm_override.nodes {
         cmd.arg(&format!("--nodes={nodes}"));
@@ -179,6 +171,26 @@ fn override_sbatch(
     if let Some(time) = &slurm_override.time {
         cmd.arg(&format!("--time={time}"));
     }
+}
+
+fn find_output_and_error_paths(
+    slurm_override: &SlurmOverride,
+    pipeline: &str,
+    subpipeline: &str,
+    timestamp: &str,
+) -> (String, String) {
+    let base = format!("./logs/{pipeline}/{timestamp}/{subpipeline}");
+    let mut output = format!("{base}/%x.%j.out");
+    if let Some(user_output) = &slurm_override.output {
+        output = user_output.to_string()
+    };
+
+    let mut error = format!("{base}/%x.%j.err");
+    if let Some(user_error) = &slurm_override.error {
+        error = user_error.to_string();
+    }
+
+    (output, error)
 }
 
 fn set_script_path(cmd: &mut Command, task: &Task, cfg: &Cfg) -> io::Result<()> {
@@ -325,5 +337,28 @@ mod tests {
         let mut child = submit_local(&task, 1, &cfg, &meta).unwrap();
         let status = child.wait().unwrap();
         assert!(status.success());
+    }
+
+    #[test]
+    fn find_default_log_paths() {
+        let slurm_override = SlurmOverride::default();
+        let (output, error) =
+            find_output_and_error_paths(&slurm_override, "pipe", "subpipe", "1900-01-01");
+
+        assert_eq!(output, "./logs/pipe/1900-01-01/subpipe/%x.%j.out");
+        assert_eq!(error, "./logs/pipe/1900-01-01/subpipe/%x.%j.err");
+    }
+
+    #[test]
+    fn find_custom_log_paths() {
+        let mut slurm_override = SlurmOverride::default();
+        slurm_override.output = Some("output.out".into());
+        slurm_override.error = Some("error.err".into());
+
+        let (output, error) =
+            find_output_and_error_paths(&slurm_override, "pipe", "subpipe", "1900-01-01");
+
+        assert_eq!(output, "output.out");
+        assert_eq!(error, "error.err");
     }
 }

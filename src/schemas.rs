@@ -149,7 +149,7 @@ pub struct Checkpoint<'a> {
     pub try_nums: Cow<'a, [usize]>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 pub struct SlurmOverride {
     pub job_name: Option<String>,
     pub nodes: Option<usize>,

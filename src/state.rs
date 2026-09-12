@@ -12,7 +12,7 @@ use std::error::Error;
 use std::fs;
 use std::io;
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Parse the DAG from the input JSON.
 pub fn read_dag(path: &Path) -> Result<DAG, String> {
@@ -192,6 +192,22 @@ pub fn get_static_input(kwargs: &[Kwarg], parents: &[Parent]) -> HashMap<String,
     }
 
     static_input
+}
+
+/// Create the output and error log directories
+pub fn create_output_and_error_log_dirs(output: &str, error: &str) {
+    let path_out = PathBuf::from(&output);
+    let path_err = PathBuf::from(&error);
+    if let Some(output_dir) = path_out.parent() {
+        if let Err(e) = fs::create_dir_all(output_dir) {
+            log::warn!("Failed to create output log directory: {e}");
+        }
+    }
+    if let Some(error_dir) = path_err.parent() {
+        if let Err(e) = fs::create_dir_all(error_dir) {
+            log::warn!("Failed to create error log directory: {e}");
+        }
+    }
 }
 
 /// Add the dynamic input to the input data
@@ -453,5 +469,19 @@ mod tests {
 
         let input = read_input_from_parents(&task, &path).unwrap();
         assert_eq!(input, expected);
+    }
+
+    #[test]
+    fn create_output_and_error_logdirs() {
+        let path = get_tmp_dir();
+        let out_dir = path.join("out");
+        let err_dir = path.join("err");
+        let path_out = out_dir.join("123.log");
+        let path_err = err_dir.join("123.log");
+
+        create_output_and_error_log_dirs(&path_out.to_string_lossy(), &path_err.to_string_lossy());
+
+        assert!(out_dir.is_dir());
+        assert!(err_dir.is_dir());
     }
 }
