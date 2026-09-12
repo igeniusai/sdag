@@ -91,6 +91,7 @@ fn poll_local(child: &mut Child) -> Status {
 mod test {
     use super::*;
     use crate::schemas::{Cmd, Script, ScriptPath, SlurmOverride};
+    use std::collections::HashMap;
     use std::process::Command;
 
     fn get_task(uid: usize) -> Task {
@@ -106,6 +107,7 @@ mod test {
             mode: ExecMode::Wrap,
             cmd: Cmd::Bash,
             retries: 0,
+            envs: HashMap::new(),
             script: Script::ScriptPath(ScriptPath {
                 path: "path/to/script".into(),
             }),

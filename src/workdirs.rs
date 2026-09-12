@@ -203,6 +203,7 @@ mod tests {
             mode: ExecMode::Wrap,
             cmd: Cmd::Sbatch,
             retries: 0,
+            envs: HashMap::new(),
             script: Script::ScriptPath(ScriptPath {
                 path: "path/to/script".into(),
             }),

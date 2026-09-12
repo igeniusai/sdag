@@ -136,6 +136,7 @@ mod tests {
     use super::*;
     use crate::schemas::{Cmd, ExecMode, ParentKind, Script, ScriptPath, SlurmOverride};
     use crate::status::{Failed, JobType};
+    use std::collections::HashMap;
 
     fn get_ctx(nodes: &[Node]) -> Ctx {
         Ctx::new(nodes).unwrap()
@@ -217,6 +218,7 @@ mod tests {
             mode: ExecMode::Wrap,
             cmd: Cmd::Sbatch,
             retries: 0,
+            envs: HashMap::new(),
             script: Script::ScriptPath(ScriptPath {
                 path: "path/to/script".into(),
             }),

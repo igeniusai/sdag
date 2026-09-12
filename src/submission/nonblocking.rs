@@ -22,7 +22,7 @@ pub fn submit_slurm(
     meta: &DAGMeta,
 ) -> Result<String, Box<dyn Error>> {
     let input = state::read_input_from_parents(task, &cfg.dagdir)?;
-    let mut cmd = build_command(task, try_num, cfg, meta, &input)?;
+    let mut cmd = build_command(task, try_num, cfg, meta, &input, &task.envs)?;
     save_input(&input, task, cfg)?;
     override_sbatch(
         &mut cmd,
@@ -60,7 +60,7 @@ pub fn submit_local(
 ) -> Result<Child, Box<dyn Error>> {
     log::info!("Submitting local task '{}'", task.uid);
     let input = state::read_input_from_parents(task, &cfg.dagdir)?;
-    let mut cmd = build_command(task, try_num, cfg, meta, &input)?;
+    let mut cmd = build_command(task, try_num, cfg, meta, &input, &task.envs)?;
     set_script_path(&mut cmd, task, cfg)?;
     save_input(&input, task, cfg)?;
 
@@ -78,7 +78,7 @@ pub fn submit_local_blocking(
 ) -> Result<Output, Box<dyn Error>> {
     log::info!("Submitting local task '{}'", task.uid);
     let input = state::read_input_from_parents(task, &cfg.dagdir)?;
-    let mut cmd = build_command(task, try_num, cfg, meta, &input)?;
+    let mut cmd = build_command(task, try_num, cfg, meta, &input, &task.envs)?;
     set_script_path(&mut cmd, task, cfg)?;
     save_input(&input, task, cfg)?;
 
@@ -94,9 +94,19 @@ fn build_command(
     cfg: &Cfg,
     meta: &DAGMeta,
     input: &HashMap<String, Value>,
+    envs: &HashMap<String, Value>,
 ) -> io::Result<Command> {
     let input_kwargs = serde_json::to_string(&meta.kwargs)?;
     let mut cmd = Command::new(task.cmd.to_string());
+
+    for (env_name, env_val) in envs.iter() {
+        cmd.env(env_name, convert_env_to_string(env_val));
+    }
+
+    if let ExecMode::Ext = task.mode {
+        set_input_as_envs(&mut cmd, &input);
+    }
+
     cmd.env("SDAG_TRY_NUM", try_num.to_string())
         .env("SDAG_PIPELINE_DIR", &cfg.dagdir)
         .env("SDAG_PIPELINE_NAME", &meta.pipeline_name)
@@ -106,10 +116,6 @@ fn build_command(
         .env("SDAG_UID", task.uid.to_string())
         .env("SDAG_TASK_FN", &task.fn_name)
         .env("SDAG_TASK_NAME", &task.name);
-
-    if let ExecMode::Ext = task.mode {
-        set_input_as_envs(&mut cmd, &input)?;
-    }
 
     Ok(cmd)
 }
@@ -191,19 +197,20 @@ fn set_script_path(cmd: &mut Command, task: &Task, cfg: &Cfg) -> io::Result<()> 
     Ok(())
 }
 
-fn set_input_as_envs(cmd: &mut Command, input: &HashMap<String, Value>) -> io::Result<()> {
+fn set_input_as_envs(cmd: &mut Command, input: &HashMap<String, Value>) {
     for (key, value) in input.iter() {
-        let val = match value {
-            Value::Bool(v) => v.to_string(),
-            Value::String(v) => v.to_string(),
-            Value::Number(v) => v.to_string(),
-            Value::Null => String::new(),
-            _ => serde_json::to_string(&value)?,
-        };
+        let val = convert_env_to_string(value);
         let upper_key = key.to_uppercase();
         cmd.env(upper_key, val);
     }
-    Ok(())
+}
+
+fn convert_env_to_string(value: &Value) -> String {
+    match value {
+        Value::Null => String::new(),
+        Value::String(v) => v.to_string(),
+        _ => value.to_string(),
+    }
 }
 
 fn find_submitted_job_id(output: &str) -> Option<String> {
@@ -262,6 +269,7 @@ mod tests {
             script: Script::Script(ScriptContent {
                 content: "echo hello".into(),
             }),
+            envs: HashMap::from([("VAR".into(), Value::Bool(true))]),
             kwargs: vec![],
             artifacts: vec![],
             children: vec![],

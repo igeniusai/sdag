@@ -108,6 +108,7 @@ mod tests {
     use super::*;
     use crate::nodes::Task;
     use crate::schemas::{Cmd, ExecMode, Script, ScriptPath, SlurmOverride};
+    use std::collections::HashMap;
 
     fn get_tasks() -> Vec<Task> {
         let task0 = Task {
@@ -125,6 +126,7 @@ mod tests {
             script: Script::ScriptPath(ScriptPath {
                 path: "path/to/script".into(),
             }),
+            envs: HashMap::new(),
             kwargs: vec![],
             artifacts: vec![],
             children: vec![],

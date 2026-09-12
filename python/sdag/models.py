@@ -302,6 +302,8 @@ class TaskNode(BaseNode):
         retries (int): Retries.
         script (ScriptUnion): Script path or content.
         kwargs (list[Kwarg]): Input kwargs.
+        envs (dict[str, Any]): Environment variables. They
+            will be set in the task as strings.
         override (SlurmOverride): Override Slurm resources.
         output_artifacts (list[ArtifactEdge]): Artifacts.
         _artifact_containers (dict[str, ArtifactContainer]):
@@ -320,6 +322,7 @@ class TaskNode(BaseNode):
     retries: int
     script: ScriptUnion
     kwargs: list[Kwarg] = Field(default_factory=list)
+    envs: dict[str, Any] = Field(default_factory=dict)
     override: SlurmOverride = Field(
         default_factory=SlurmOverride, serialization_alias="slurm_override"
     )
