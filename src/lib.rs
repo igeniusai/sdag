@@ -28,18 +28,16 @@ mod core {
         pipeline_path: "str",
         max_concurrency: "int",
         time_between_polls: "int",
-        local: "bool",
         log_level: "str",
     ) -> "None")]
     pub fn run(
         pipeline_path: &str,
         max_concurrency: usize,
         time_between_polls: u64,
-        local: bool,
         log_level: &str,
     ) {
         settings::configure_logging(log_level);
-        scheduler::run(pipeline_path, max_concurrency, time_between_polls, local)
+        scheduler::run(pipeline_path, max_concurrency, time_between_polls)
     }
 
     #[pyfunction]

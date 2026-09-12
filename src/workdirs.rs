@@ -207,6 +207,7 @@ mod tests {
             script: Script::ScriptPath(ScriptPath {
                 path: "path/to/script".into(),
             }),
+            tags: vec![],
             kwargs: vec![],
             artifacts: vec![],
             children: vec![],
@@ -322,7 +323,7 @@ mod tests {
         };
 
         let homedir = path.join("home");
-        let cfg = Cfg::new(&homedir, &meta, 3, 5, false);
+        let cfg = Cfg::new(&homedir, &meta, 3, 5);
         create_dir_structure(&cfg, &nodes).unwrap();
 
         assert!(cfg.homedir.exists());

@@ -249,6 +249,7 @@ class Task:
         cache_ignore: list[str] | None,
         retries: int,
         script: ScriptUnion,
+        tags: list[str],
     ):
         """Initialize the task wrapper.
 
@@ -263,6 +264,7 @@ class Task:
                 ignored during cache validation.
             retries (int): Number of retries.
             script (ScriptUnion): Submission script.
+            tags (list[str]): Tags.
         """
         self.fn = fn
         self.name = name
@@ -273,6 +275,7 @@ class Task:
         self.cache_ignore = cache_ignore if cache_ignore is not None else []
         self.retries = retries
         self.script = script
+        self.tags = tags
 
     def __call__(self, *args: NodeUnion, **kwargs: Any) -> TaskNode:
         """Call the task to get a node in the graph.
@@ -295,6 +298,7 @@ class Task:
             cmd=self.cmd,
             retries=self.retries,
             script=self.script,
+            tags=self.tags,
         )
 
         for parent in args:
@@ -479,6 +483,7 @@ class Pipeline:
         cache_local: bool = False,  # noqa: FBT002
         cache_ignore: list[str] | None = None,
         retries: int = 0,
+        tags: list[str] | None = None,
     ) -> Callable[[Callable], Task]:
         """Local task decorator.
 
@@ -497,6 +502,8 @@ class Pipeline:
             cache_ignore (list[str] | None): List of fields ignored
                 during cache validation.
             retries: (int): Number of retries. Defaults to 0.
+            tags (list[str] | None): Task tags, they can be used to
+                configure sets of tasks globally.
 
         Returns:
             Callable[[Callable], Task]: Task wrapper.
@@ -527,6 +534,7 @@ class Pipeline:
                 cache_ignore=cache_ignore,
                 retries=retries,
                 script=script_obj,
+                tags=tags if tags is not None else [],
             )
             self.add_task(task)
 
@@ -587,6 +595,7 @@ def task(
     cache_local: bool = False,  # noqa: FBT002
     cache_ignore: list[str] | None = None,
     retries: int = 0,
+    tags: list[str] | None = None,
 ) -> Callable[[Callable], Task]:
     """Local task decorator.
 
@@ -607,6 +616,8 @@ def task(
         cache_ignore (list[str] | None): List of fields ignored
             during cache validation. Defaults to None.
         retries: (int): Number of retries. Defaults to 0.
+        tags (list[str] | None): Task tags, they can be used to
+            configure sets of tasks globally.
 
     Returns:
         Callable[[Callable], Task]: Task wrapper.
@@ -629,6 +640,7 @@ def task(
             cache_ignore=cache_ignore,
             retries=retries,
             script=script_obj,
+            tags=tags if tags is not None else [],
         )
         master.add_task(task)
 

@@ -111,6 +111,7 @@ mod test {
             script: Script::ScriptPath(ScriptPath {
                 path: "path/to/script".into(),
             }),
+            tags: vec![],
             kwargs: vec![],
             artifacts: vec![],
             children: vec![],

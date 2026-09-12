@@ -122,6 +122,9 @@ pub struct Task {
     /// Static input kwargs.
     #[serde(default = "Vec::new")]
     pub kwargs: Vec<Kwarg>,
+    /// Task tags.
+    #[serde(default = "Vec::new")]
+    pub tags: Vec<String>,
     // Output artifacts.
     pub artifacts: Vec<Artifact>,
     // Output artifacts.

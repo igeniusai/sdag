@@ -2,7 +2,6 @@ def run(
     pipeline_path: str,
     max_concurrency: int,
     time_between_polls: int,
-    local: bool,
     log_level: str,
 ) -> None: ...
 def restart_run(
