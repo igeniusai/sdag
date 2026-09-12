@@ -13,7 +13,7 @@ pub fn handle_retries(task: &Task, ctx: &mut Ctx, failure: Failed) {
     let try_num = &ctx.try_nums[task.uid];
     if *try_num > task.retries {
         log::error!(
-            "Task '{}': Maxmum number of retries '{}' reached, marking as failed.",
+            "Task '{}': Maximum number of retries '{}' reached, marking as failed.",
             task.uid,
             task.retries
         );
