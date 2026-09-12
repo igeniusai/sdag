@@ -234,7 +234,6 @@ class Task:
         cache_local (bool): Activate local caching.
         cache_ignore (list[str]): list of fields ignored
             during cache validation.
-        debug (bool): Interactive debugging.
         retries (int): Number of retries.
         script (ScriptUnion): Submission script.
     """
@@ -248,7 +247,6 @@ class Task:
         cache: bool,
         cache_local: bool,
         cache_ignore: list[str] | None,
-        debug: bool,
         retries: int,
         script: ScriptUnion,
     ):
@@ -263,7 +261,6 @@ class Task:
             cache_local (bool): Activate local caching.
             cache_ignore (list[str] | None): list of fields
                 ignored during cache validation.
-            debug (bool): Interactive debugging.
             retries (int): Number of retries.
             script (ScriptUnion): Submission script.
         """
@@ -274,7 +271,6 @@ class Task:
         self.cache = cache
         self.cache_local = cache_local
         self.cache_ignore = cache_ignore if cache_ignore is not None else []
-        self.debug = debug
         self.retries = retries
         self.script = script
 
@@ -295,7 +291,6 @@ class Task:
             cache=self.cache,
             cache_local=self.cache_local,
             cache_ignore=self.cache_ignore,
-            debug=self.debug,
             mode=self.mode,
             cmd=self.cmd,
             retries=self.retries,
@@ -483,7 +478,6 @@ class Pipeline:
         mode: Literal["wrap", "ext"] = "wrap",
         cache_local: bool = False,  # noqa: FBT002
         cache_ignore: list[str] | None = None,
-        debug: bool = False,  # noqa: FBT002
         retries: int = 0,
     ) -> Callable[[Callable], Task]:
         """Local task decorator.
@@ -502,7 +496,6 @@ class Pipeline:
                 context of the pipeline. Defaults to False.
             cache_ignore (list[str] | None): List of fields ignored
                 during cache validation.
-            debug (bool): Enable interactive debugging.
             retries: (int): Number of retries. Defaults to 0.
 
         Returns:
@@ -532,7 +525,6 @@ class Pipeline:
                 cache=False,
                 cache_local=cache_local,
                 cache_ignore=cache_ignore,
-                debug=debug,
                 retries=retries,
                 script=script_obj,
             )
@@ -594,7 +586,6 @@ def task(
     cache: bool = False,  # noqa: FBT002
     cache_local: bool = False,  # noqa: FBT002
     cache_ignore: list[str] | None = None,
-    debug: bool = False,  # noqa: FBT002
     retries: int = 0,
 ) -> Callable[[Callable], Task]:
     """Local task decorator.
@@ -615,7 +606,6 @@ def task(
             context of the pipeline. Defaults to False.
         cache_ignore (list[str] | None): List of fields ignored
             during cache validation. Defaults to None.
-        debug (bool): Enable interactive debugging.
         retries: (int): Number of retries. Defaults to 0.
 
     Returns:
@@ -637,7 +627,6 @@ def task(
             cache=cache,
             cache_local=cache_local,
             cache_ignore=cache_ignore,
-            debug=debug,
             retries=retries,
             script=script_obj,
         )

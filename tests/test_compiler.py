@@ -33,7 +33,6 @@ class TestSDAG:
             cache=False,
             cache_local=False,
             cache_ignore=None,
-            debug=False,
             retries=0,
             script=ScriptPath(path=Path("a/path")),
         )
@@ -81,7 +80,6 @@ class TestDAGCompiler:
             fn_name="task",
             cache=False,
             cache_local=False,
-            debug=False,
             mode="wrap",
             cmd="bash",
             retries=0,
@@ -105,7 +103,6 @@ class TestDAGCompiler:
             fn_name="task",
             cache=False,
             cache_local=False,
-            debug=False,
             mode="wrap",
             cmd="bash",
             retries=0,

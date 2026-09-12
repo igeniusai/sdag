@@ -22,7 +22,7 @@ pub fn run_task(task_serialized: &str) {
     };
 
     let is_local = matches!(task.cmd, Cmd::Bash);
-    let cfg = Cfg::new(&homedir, &meta, 1, 0, is_local, task.debug);
+    let cfg = Cfg::new(&homedir, &meta, 1, 0, is_local);
     let nodes = vec![Node::Task(task.clone())];
     workdirs::create_dir_structure(&cfg, &nodes).expect("Failed to create directories");
     submit_job(&task, &cfg, &meta);

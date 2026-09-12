@@ -1,4 +1,3 @@
-use crate::breakpoint::Debugger;
 use crate::context::Ctx;
 use crate::nodes::Node;
 use crate::polling::{LocalPoller, Poller, SlurmPoller};
@@ -19,13 +18,7 @@ use std::sync::mpsc::Sender;
 use std::sync::{Mutex, Once};
 use std::time::Duration;
 
-pub fn run(
-    pipeline_path: &str,
-    max_concurrency: usize,
-    time_between_polls: u64,
-    local: bool,
-    debug: bool,
-) {
+pub fn run(pipeline_path: &str, max_concurrency: usize, time_between_polls: u64, local: bool) {
     let pipeline_path = PathBuf::from(pipeline_path);
     let dag = state::read_dag(&pipeline_path).expect("Failed to read DAG - {e}");
     log::info!(
@@ -38,16 +31,9 @@ pub fn run(
     nodes.sort_by_key(|n| n.get_uid());
 
     let homedir = settings::find_homedir().expect("Failed to find the home directory");
-    let cfg = Cfg::new(
-        &homedir,
-        &meta,
-        max_concurrency,
-        time_between_polls,
-        local,
-        debug,
-    );
+    let cfg = Cfg::new(&homedir, &meta, max_concurrency, time_between_polls, local);
 
-    dag_setup::apply_global_settings(&mut nodes, cfg.local, cfg.debug);
+    dag_setup::apply_global_settings(&mut nodes, cfg.local);
     dag_setup::add_children(&mut nodes);
     workdirs::create_dir_structure(&cfg, &nodes).expect("Failed to create dagdir");
     if let Err(e) = state::copy_dag_in_dagdir(&pipeline_path, &cfg.dagdir) {
@@ -120,7 +106,6 @@ fn scheduling_loop(nodes: &[Node], ctx: &mut Ctx, cfg: &Cfg, meta: &DAGMeta) {
     let mut submitter = Submitter::new(&cfg, &meta);
     let mut slurm_poller = SlurmPoller::new(&cfg);
     let mut local_poller = LocalPoller;
-    let mut debugger = Debugger::new(&nodes, &meta.pipeline_name, &meta.hash);
 
     let root_uid = dag_setup::find_root_node(nodes).expect("Failed to find the root node");
     ctx.updated.push_back(root_uid);
@@ -132,7 +117,6 @@ fn scheduling_loop(nodes: &[Node], ctx: &mut Ctx, cfg: &Cfg, meta: &DAGMeta) {
     while !state::is_scheduler_killed(&cfg.dagdir) {
         slurm_poller.poll(&nodes, ctx);
         local_poller.poll(&nodes, ctx);
-        debugger.break_if_failed(cfg, ctx);
         visitor.visit(ctx);
         submitter.submit(&nodes, ctx);
 

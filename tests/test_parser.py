@@ -3,7 +3,6 @@ from typing import Any
 import pytest
 from sdag.commands import (
     compile_pipeline,
-    continue_breakpoint,
     describe_pipeline,
     kill_pipeline,
     list_pipelines,
@@ -11,7 +10,6 @@ from sdag.commands import (
     restart_run,
     run_pipeline,
     run_task,
-    skip_breakpoint,
     view_pipeline,
 )
 from sdag.parser import ExtraArgumentParser, ParserBuilder
@@ -254,37 +252,3 @@ class TestParaserBuilder:
         assert args.dst_dir == "a/path"
         assert args.name == "output.json"
         assert args.fn is describe_pipeline
-
-    def test_skip(self, builder: ParserBuilder) -> None:
-        parser = builder.add_skip_subparser().get_parser()
-        args = parser.parse_args(
-            [
-                "skip",
-                "target",
-                "--hash",
-                "xyz",
-                "-l",
-                "debug",
-            ]
-        )
-
-        assert args.log_level == "debug"
-        assert args.pipeline == "target"
-        assert args.hash == "xyz"
-        assert args.fn is skip_breakpoint
-
-    def test_continue(self, builder: ParserBuilder) -> None:
-        parser = builder.add_continue_subparser().get_parser()
-        args = parser.parse_args(
-            [
-                "continue",
-                "target",
-                "-l",
-                "debug",
-            ]
-        )
-
-        assert args.log_level == "debug"
-        assert args.pipeline == "target"
-        assert args.hash == "last"
-        assert args.fn is continue_breakpoint

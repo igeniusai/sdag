@@ -115,7 +115,6 @@ def test_prune_cache_from_json(
                 "pipeline_name": "dag",
                 "cache": True,
                 "cache_local": False,
-                "debug": False,
                 "mode": "ext",
                 "cmd": "bash",
                 "try_num": 1,
@@ -138,7 +137,6 @@ def test_prune_cache_from_json(
                 "pipeline_name": "dag",
                 "cache": False,
                 "cache_local": True,
-                "debug": False,
                 "mode": "ext",
                 "cmd": "bash",
                 "try_num": 1,
@@ -251,7 +249,6 @@ def test_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
                 "pipeline_name": "dag",
                 "cache": False,
                 "cache_local": False,
-                "debug": False,
                 "mode": "ext",
                 "cmd": "bash",
                 "try_num": 1,
@@ -333,7 +330,6 @@ def test_run_pipeline_with_caching(
                 "pipeline_name": "dag",
                 "cache": True,
                 "cache_local": True,
-                "debug": False,
                 "mode": "ext",
                 "cmd": "bash",
                 "try_num": 1,
@@ -380,52 +376,3 @@ def test_run_pipeline_with_caching(
     assert (cache_local_path / "output.json").exists()
     assert (cache_local_path / "input.json").exists()
     assert (cache_local_path / "meta.json").exists()
-
-
-@pytest.mark.usefixtures("set_home")
-def test_skip_breakpoint(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test the breakpoint skip.
-
-    Args:
-        tmp_path (Path): Temporary path fixture.
-        monkeypatch (pytest.MonkeyPatch): Patcher.
-    """
-    pipeline_name = "pipeline"
-    pipeline_hash = "xyz"
-    pipeline_path = (
-        tmp_path / ".sdag" / "pipelines" / pipeline_name / pipeline_hash
-    )
-    pipeline_path.mkdir(parents=True, exist_ok=True)
-
-    monkeypatch.setattr(
-        "sys.argv", ["sdag", "skip", pipeline_name, "--hash", pipeline_hash]
-    )
-    cli()
-    assert pipeline_path.joinpath("skip.lock").is_file()
-
-
-@pytest.mark.usefixtures("set_home")
-def test_continue_breakpoint(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test continue breakpoint.
-
-    Args:
-        tmp_path (Path): Temporary path fixture.
-        monkeypatch (pytest.MonkeyPatch): Patcher.
-    """
-    pipeline_name = "pipeline"
-    pipeline_hash = "xyz"
-    pipeline_path = (
-        tmp_path / ".sdag" / "pipelines" / pipeline_name / pipeline_hash
-    )
-    pipeline_path.mkdir(parents=True, exist_ok=True)
-
-    monkeypatch.setattr(
-        "sys.argv",
-        ["sdag", "continue", pipeline_name, "--hash", pipeline_hash],
-    )
-    cli()
-    assert pipeline_path.joinpath("continue.lock").is_file()

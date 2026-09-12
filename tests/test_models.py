@@ -13,7 +13,6 @@ def task() -> TaskNode:
         fn_name="task_fn",
         cache=False,
         cache_local=False,
-        debug=False,
         mode="ext",
         cmd="bash",
         retries=0,

@@ -374,7 +374,6 @@ class TestPipeline:
             fn_name="task",
             cache=False,
             cache_local=False,
-            debug=False,
             mode="wrap",
             cmd="bash",
             retries=0,
@@ -430,7 +429,6 @@ class TestTask:
             cache=False,
             cache_local=False,
             cache_ignore=None,
-            debug=False,
         )
 
         sig = inspect.signature(fn)
@@ -455,7 +453,6 @@ class TestTask:
             cache=False,
             cache_local=False,
             cache_ignore=None,
-            debug=False,
         )
 
         kwargs = {"a": "a", "b": "/path", "custom_kw": 10}
@@ -465,7 +462,6 @@ class TestTask:
             name="fn",
             cache=True,
             cache_local=False,
-            debug=False,
             mode="wrap",
             cmd="sbatch",
             retries=2,
@@ -518,7 +514,6 @@ class TestTask:
             cache=False,
             cache_local=False,
             cache_ignore=None,
-            debug=False,
         )
 
         kwargs = {"a": original}
@@ -542,7 +537,6 @@ class TestTask:
             cache=False,
             cache_local=False,
             cache_ignore=None,
-            debug=False,
         )
 
         original = "hello.txt"
@@ -568,7 +562,6 @@ class TestTask:
             cache=False,
             cache_local=False,
             cache_ignore=None,
-            debug=False,
         )
 
         argnode = RootNode(uid=1)
@@ -604,7 +597,6 @@ class TestTask:
             cache=False,
             cache_local=False,
             cache_ignore=None,
-            debug=False,
         )
 
         artifact_path = "/path/to/artifact"
@@ -614,7 +606,6 @@ class TestTask:
             name="fn",
             cache=True,
             cache_local=False,
-            debug=False,
             mode="wrap",
             cmd="sbatch",
             retries=2,

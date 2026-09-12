@@ -161,7 +161,6 @@ mod tests {
             cache: true,
             cache_local: false,
             cache_ignore: vec![],
-            debug: false,
             mode: ExecMode::Wrap,
             cmd: Cmd::Sbatch,
             retries: 0,

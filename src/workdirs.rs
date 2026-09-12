@@ -15,8 +15,6 @@ pub enum FileNames {
     DAG,
     Kill,
     Script,
-    Continue,
-    Skip,
 }
 
 impl FileNames {
@@ -29,8 +27,6 @@ impl FileNames {
             Self::DAG => "dag.json",
             Self::Kill => "kill.lock",
             Self::Script => "script.sh",
-            Self::Continue => "continue.lock",
-            Self::Skip => "skip.lock",
         }
     }
 }
@@ -204,7 +200,6 @@ mod tests {
             cache: true,
             cache_local: false,
             cache_ignore: vec![],
-            debug: false,
             mode: ExecMode::Wrap,
             cmd: Cmd::Sbatch,
             retries: 0,
@@ -326,7 +321,7 @@ mod tests {
         };
 
         let homedir = path.join("home");
-        let cfg = Cfg::new(&homedir, &meta, 3, 5, false, false);
+        let cfg = Cfg::new(&homedir, &meta, 3, 5, false);
         create_dir_structure(&cfg, &nodes).unwrap();
 
         assert!(cfg.homedir.exists());

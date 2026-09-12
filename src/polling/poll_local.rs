@@ -103,7 +103,6 @@ mod test {
             cache: false,
             cache_local: false,
             cache_ignore: vec![],
-            debug: false,
             mode: ExecMode::Wrap,
             cmd: Cmd::Bash,
             retries: 0,
