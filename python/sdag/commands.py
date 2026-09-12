@@ -390,8 +390,7 @@ def run_task(args: Namespace, extras: dict[str, Any]) -> None:
     """
     task = get_task(name=args.task, pipeline_name=args.pipeline)
     pyproj = parse_pyproject()
-    if pyproj.local or args.local:
-        task.cmd = "bash"
+    _apply_pyproj_to_task(task, pyproj)
 
     task = TaskNode(
         uid=0,
@@ -463,14 +462,22 @@ def _apply_pyproj_configs(dag: DAG, pyproj: Pyproj) -> None:
         pyproj (Pyproj): Parsed pyproject.toml.
     """
     for task in dag.nodes:
-        if task.kind != "task":
-            continue
+        if task.kind == "task":
+            _apply_pyproj_to_task(task, pyproj)
 
-        cmd = pyproj.cmd
-        for tag_name in task.tags:
-            for tag in pyproj.tags:
-                if tag.tag == tag_name and tag.cmd is not None:
-                    cmd = tag.cmd
 
-        if cmd is not None:
-            task.cmd = cmd
+def _apply_pyproj_to_task(task: TaskNode, pyproj: Pyproj) -> None:
+    """Apply pyproject settings to a task.
+
+    Args:
+        task (TaskNode): Task node.
+        pyproj (Pyproj): Parsed pyproject.
+    """
+    cmd = pyproj.cmd
+    for tag_name in task.tags:
+        for tag in pyproj.tags:
+            if tag.tag == tag_name and tag.cmd is not None:
+                cmd = tag.cmd
+
+    if cmd is not None:
+        task.cmd = cmd
