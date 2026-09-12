@@ -174,3 +174,6 @@ target/
 # internal pipelines
 compiled-pipelines
 python/sdag/pipelines
+
+# debugging stuff
+debug/
