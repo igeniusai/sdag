@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use crate::schemas::{Artifact, Cmd, ExecMode, Kwarg, Parent, ParentKind, Script, SlurmOverride};
+use crate::schemas::{
+    Artifact, Cmd, ExecMode, Kwarg, Parent, ParentKind, Scope, Script, SlurmOverride,
+};
 use crate::status::{Completed, Status};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -100,8 +102,8 @@ pub struct Task {
     pub pipeline_name: String,
     /// Caching.
     pub cache: bool,
-    /// Local caching.
-    pub cache_local: bool,
+    /// Local or global task
+    pub scope: Scope,
     /// Local caching.
     pub cache_size: usize,
     /// Fields excluded by caching

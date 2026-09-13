@@ -74,6 +74,16 @@ impl fmt::Display for Cmd {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum Scope {
+    /// Local task
+    #[serde(rename = "local")]
+    Local,
+    /// Global task
+    #[serde(rename = "global")]
+    Global,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ScriptContent {
     pub content: String,
 }

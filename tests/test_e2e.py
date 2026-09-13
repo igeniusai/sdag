@@ -112,9 +112,9 @@ def test_prune_cache_from_json(
                 "kind": "task",
                 "fn_name": "task",
                 "name": "task_global",
+                "scope": "global",
                 "pipeline_name": "dag",
                 "cache": True,
-                "cache_local": False,
                 "mode": "ext",
                 "cmd": "bash",
                 "try_num": 1,
@@ -132,11 +132,11 @@ def test_prune_cache_from_json(
             {
                 "uid": 2,
                 "kind": "task",
+                "scope": "local",
                 "fn_name": "task",
                 "name": "task_local",
                 "pipeline_name": "dag",
-                "cache": False,
-                "cache_local": True,
+                "cache": True,
                 "mode": "ext",
                 "cmd": "bash",
                 "try_num": 1,
@@ -248,10 +248,10 @@ def test_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
                 "name": "task",
                 "pipeline_name": "dag",
                 "cache": False,
-                "cache_local": False,
                 "cache_size": 1,
                 "mode": "ext",
                 "cmd": "bash",
+                "scope": "global",
                 "try_num": 1,
                 "retries": 0,
                 "script": {"kind": "script_path", "path": str(script_path)},
@@ -294,7 +294,7 @@ def test_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.usefixtures("set_home")
-def test_run_pipeline_with_caching(
+def test_run_pipeline_with_global_caching(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test pipeline execution and task caching.
@@ -329,8 +329,8 @@ def test_run_pipeline_with_caching(
                 "fn_name": "task",
                 "name": "task",
                 "pipeline_name": "dag",
+                "scope": "global",
                 "cache": True,
-                "cache_local": True,
                 "cache_size": 1,
                 "mode": "ext",
                 "cmd": "bash",
@@ -374,6 +374,83 @@ def test_run_pipeline_with_caching(
     assert (cache_dir / "output.json").exists()
     assert (cache_dir / "input.json").exists()
     assert (cache_dir / "meta.json").exists()
+
+
+@pytest.mark.usefixtures("set_home")
+def test_run_pipeline_with_local_caching(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test pipeline execution and task caching.
+
+    This also verifies the task name is used instead
+    of fname.
+
+    Args:
+        tmp_path (Path): Temporary path fixture.
+        monkeypatch (pytest.MonkeyPatch): Patcher.
+    """
+    script_path = tmp_path / "submit.sh"
+    pipeline_path = tmp_path / "pipeline.json"
+
+    with script_path.open("w") as f:
+        f.write("echo hello")
+
+    pipeline = {
+        "meta": {
+            "pipeline_name": "dag",
+            "timestamp": "2025-12-30T11:30:46.343072",
+            "hash": "xyzk",
+            "extra": {},
+            "kwargs": {},
+            "import_path": "path.to.pipeline:fn",
+        },
+        "nodes": [
+            {"uid": 0, "pipeline_name": "dag", "kind": "root"},
+            {
+                "uid": 1,
+                "kind": "task",
+                "fn_name": "task",
+                "name": "task",
+                "pipeline_name": "dag",
+                "scope": "local",
+                "cache": True,
+                "cache_size": 1,
+                "mode": "ext",
+                "cmd": "bash",
+                "try_num": 1,
+                "retries": 0,
+                "script": {"kind": "script_path", "path": str(script_path)},
+                "kwargs": [{"key": "k", "value": "v"}],
+                "parents": [
+                    {
+                        "kind": {"kind": "logical"},
+                        "uid": 0,
+                    }
+                ],
+                "artifacts": [],
+            },
+            {
+                "uid": 2,
+                "pipeline_name": "dag",
+                "kind": "end",
+                "parents": [
+                    {
+                        "kind": {"kind": "logical"},
+                        "uid": 1,
+                    }
+                ],
+            },
+        ],
+    }
+
+    with pipeline_path.open("w") as f:
+        json.dump(pipeline, f)
+
+    monkeypatch.setattr(
+        "sys.argv",
+        ["sdag", "run", f"{pipeline_path}", "-t", "0"],
+    )
+    cli()
 
     base_cache_local_path = (
         tmp_path / ".sdag" / ".cache" / "local" / "dag" / "task"

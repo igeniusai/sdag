@@ -14,37 +14,33 @@ import sdag.core as core
 from sdag.compiler import master
 from sdag.discovery import find_all_pipelines, find_pipeline_by_name
 from sdag.exceptions import DAGNotFoundError, ExtraCLIArgsError
-from sdag.models import DAG, Kwarg, TaskNode
+from sdag.models import DAG, CacheableTask, Kwarg, TaskNode
 from sdag.settings import Pyproj, parse_pyproject
 from sdag.wrappers import Task
 
 logger = logging.getLogger(__name__)
 
 
-def _find_cacheable_tasks(
-    dag: DAG, local: bool
-) -> tuple[list[str], list[str]]:
+def _find_cacheable_tasks(dag: DAG) -> list[CacheableTask]:
     """Find tasks with caching enabled.
 
     Args:
         dag (DAG): DAG.
-        local (bool): Set to True to select locally cached tasks,
-            otherwise set to False.
+        scope (Literal["local", "global"]): Task scope.
 
     Returns:
-        tuple[list[str], list[str]]: Cacheable tasks and their
-            pipelines.
+        list[CacheableTask]: Info about tasks with caching
+            enabled.
     """
-    tasks: list[str] = []
-    pipelines: list[str] = []
+    tasks: list[CacheableTask] = []
     for node in dag.nodes:
-        if node.kind == "task":
-            cacheable = node.cache_local if local else node.cache
-            if cacheable:
-                tasks.append(node.name)
-                pipelines.append(node.pipeline_name)
+        if node.kind == "task" and node.cache:
+            cacheable = CacheableTask(
+                name=node.name, pipeline=node.pipeline_name, scope=node.scope
+            )
+            tasks.append(cacheable)
 
-    return tasks, pipelines
+    return tasks
 
 
 def compile_and_return_dag(
@@ -328,20 +324,12 @@ def prune_cache(args: Namespace, extras: dict[str, Any]) -> None:
             input_kwargs=extras,
         )
 
-        tasks, _ = _find_cacheable_tasks(dag, local=False)
+        tasks = _find_cacheable_tasks(dag)
         for task in tasks:
+            pipeline_name = task.pipeline if task.scope == "local" else None
             core.prune_cache(
-                task_name=task,
-                pipeline_name=None,
-                allow_full_prune=False,
-                log_level=args.log_level,
-            )
-
-        tasks, pipelines = _find_cacheable_tasks(dag, local=True)
-        for task, pipeline in zip(tasks, pipelines, strict=True):
-            core.prune_cache(
-                task_name=task,
-                pipeline_name=pipeline,
+                task_name=task.name,
+                pipeline_name=pipeline_name,
                 allow_full_prune=False,
                 log_level=args.log_level,
             )

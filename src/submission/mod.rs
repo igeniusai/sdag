@@ -200,7 +200,7 @@ impl<'a> Submitter<'a> {
         let res = blocking::submit_save_ext_output(task, &self.cfg);
         let status = match res {
             Ok(_) => {
-                if task.cache || task.cache_local {
+                if task.cache {
                     ctx.jobs.push_back(Job::SaveCache(task.uid));
                 }
                 log::info!("External task {} completed.", task.uid);

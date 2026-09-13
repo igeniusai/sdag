@@ -1,5 +1,5 @@
 use crate::nodes::{Branch, OneOf, Task};
-use crate::schemas::{Parent, ParentKind, TaskOutput};
+use crate::schemas::{Parent, ParentKind, Scope, TaskOutput};
 use crate::settings::Cfg;
 use crate::state;
 use crate::workdirs;
@@ -12,6 +12,10 @@ use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 pub fn submit_validate_cache(task: &Task, cfg: &Cfg) -> bool {
+    if !task.cache {
+        return false;
+    }
+
     let dst_path = cfg.dagdir.join(task.uid.to_string());
     let input = match state::read_input_from_parents(task, &cfg.dagdir) {
         Err(e) => {
@@ -21,42 +25,28 @@ pub fn submit_validate_cache(task: &Task, cfg: &Cfg) -> bool {
         Ok(data) => data,
     };
 
-    if task.cache_local {
-        log::info!("Task {}: Validating local cache", task.uid);
-        let cache_path = cfg
+    log::debug!("Task {}: Validating local cache", task.uid);
+    let cache_path = match &task.scope {
+        Scope::Global => cfg.cachedir.join(&task.name),
+        Scope::Local => cfg
             .local_cachedir
             .join(&task.pipeline_name)
-            .join(&task.name);
-        if validate_cache(task.uid, &input, &cache_path, &dst_path, &task.cache_ignore) {
-            return true;
-        }
-        log::info!("Task {}: Local cache validation failed", task.uid);
-    }
+            .join(&task.name),
+    };
 
-    if task.cache {
-        log::info!("Task {}: Validating global cache", task.uid);
-        let cache_path = cfg.cachedir.join(&task.name);
-        return validate_cache(task.uid, &input, &cache_path, &dst_path, &task.cache_ignore);
-    }
-
-    false
+    return validate_cache(task.uid, &input, &cache_path, &dst_path, &task.cache_ignore);
 }
 
-pub fn submit_save_cache(task: &Task, cfg: &Cfg) -> io::Result<()> {
+pub fn submit_save_cache(task: &Task, cfg: &Cfg) -> io::Result<u64> {
     let src_path = cfg.dagdir.join(task.uid.to_string());
-    if task.cache {
-        let base_dst_path = cfg.cachedir.join(&task.name);
-        find_and_save_cache(&src_path, &base_dst_path, task.cache_size)?;
-    }
-
-    if task.cache_local {
-        let base_dst_path = cfg
+    let base_dst_path = match &task.scope {
+        Scope::Global => cfg.cachedir.join(&task.name),
+        Scope::Local => cfg
             .local_cachedir
             .join(&task.pipeline_name)
-            .join(&task.name);
-        find_and_save_cache(&src_path, &base_dst_path, task.cache_size)?;
-    }
-    Ok(())
+            .join(&task.name),
+    };
+    find_and_save_cache(&src_path, &base_dst_path, task.cache_size)
 }
 
 pub fn submit_branch(branch: &Branch, cfg: &Cfg) -> Result<bool, String> {

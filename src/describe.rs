@@ -1,4 +1,5 @@
 use crate::nodes::{Node, Task};
+use crate::schemas::Scope;
 use crate::schemas::{Artifact, ParentKind};
 use crate::settings::{self, Cfg};
 use crate::state;
@@ -66,56 +67,43 @@ fn get_description<'a>(task: &'a Task, cfg: &Cfg) -> TaskDescription<'a> {
 }
 
 fn check_caching(task: &Task, cfg: &Cfg, input: &HashMap<String, Value>) -> bool {
+    if !task.cache {
+        return false;
+    }
+
     let is_dynamic = task
         .parents
         .iter()
         .any(|p| matches!(p.kind, ParentKind::Output { .. }));
 
+    // TODO Likely incorrect
     if is_dynamic {
         return false;
     }
 
-    if task.cache_local {
-        let cache_path = cfg
+    let cache_path = match &task.scope {
+        Scope::Global => cfg.cachedir.join(&task.name),
+        Scope::Local => cfg
             .local_cachedir
             .join(&task.pipeline_name)
-            .join(&task.name);
-        let path_str = cache_path.to_string_lossy();
-        match blocking::compare_input_with_cache(input, &cache_path, &task.cache_ignore) {
-            Ok(Some(_)) => return true,
-            Ok(None) => {
-                log::info!(
-                    "Task {}: Local cache at '{path_str}' doesn't match",
-                    task.uid
-                )
-            }
-            Err(e) => {
-                log::warn!(
-                    "Task {}: Failed to compare local cache at '{path_str}' - {e}",
-                    task.uid
-                );
-            }
+            .join(&task.name),
+    };
+
+    let path_str = cache_path.to_string_lossy();
+    match blocking::compare_input_with_cache(input, &cache_path, &task.cache_ignore) {
+        Ok(Some(_)) => true,
+        Ok(None) => {
+            log::info!("Task {}: cache at '{path_str}' doesn't match", task.uid);
+            false
+        }
+        Err(e) => {
+            log::warn!(
+                "Task {}: Failed to compare cache at '{path_str}' - {e}",
+                task.uid
+            );
+            false
         }
     }
-
-    if task.cache {
-        let cache_path = cfg.cachedir.join(&task.name);
-        let path_str = cache_path.to_string_lossy();
-        match blocking::compare_input_with_cache(input, &cache_path, &task.cache_ignore) {
-            Ok(Some(_)) => return true,
-            Ok(None) => {
-                log::info!("Task {}: cache at '{path_str}' doesn't match", task.uid)
-            }
-            Err(e) => {
-                log::warn!(
-                    "Task {}: Failed to compare cache at '{path_str}' - {e}",
-                    task.uid
-                );
-            }
-        }
-    }
-
-    false
 }
 
 fn get_artifacts(artifacts: &[Artifact]) -> String {
