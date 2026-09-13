@@ -278,7 +278,7 @@ class Task:
         self.name = name
         self.cmd: Literal["sbatch", "bash"] = cmd
         self.mode: Literal["wrap", "ext"] = mode
-        self.scope = scope
+        self.scope: Literal["local", "global"] = scope
         self.cache = cache
         self.cache_ignore = cache_ignore if cache_ignore is not None else []
         self.cache_size = cache_size
