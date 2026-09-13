@@ -54,6 +54,7 @@ mod tests {
             cache: true,
             cache_local: false,
             cache_ignore: vec![],
+            cache_size: 1,
             mode: ExecMode::Wrap,
             cmd: Cmd::Sbatch,
             envs: HashMap::new(),

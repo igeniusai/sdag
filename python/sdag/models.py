@@ -298,6 +298,9 @@ class TaskNode(BaseNode):
         cache_local (bool): Cache task gloabally.
         cache_ignore (list[str]): list of fields ignored
             during cache validation.
+        cache_size (int): Cache size. Ignore if caching is disabled.
+            set to 0 to allow for infinite cache size. Defaults
+            to 1.
         mode (Literal["wrap", "ext"]): Wrap a Python function or
             an external script.
         cmd (Commands): Command used to launch the script.
@@ -320,6 +323,7 @@ class TaskNode(BaseNode):
     cache: bool
     cache_local: bool
     cache_ignore: list[str] = Field(default_factory=list)
+    cache_size: int = 1
     mode: Literal["wrap", "ext"]
     cmd: Commands
     retries: int

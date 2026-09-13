@@ -249,6 +249,7 @@ def test_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
                 "pipeline_name": "dag",
                 "cache": False,
                 "cache_local": False,
+                "cache_size": 1,
                 "mode": "ext",
                 "cmd": "bash",
                 "try_num": 1,
@@ -330,6 +331,7 @@ def test_run_pipeline_with_caching(
                 "pipeline_name": "dag",
                 "cache": True,
                 "cache_local": True,
+                "cache_size": 1,
                 "mode": "ext",
                 "cmd": "bash",
                 "try_num": 1,
@@ -367,12 +369,16 @@ def test_run_pipeline_with_caching(
     )
     cli()
 
-    cache_path = tmp_path / ".sdag" / ".cache" / "global" / "task"
-    assert (cache_path / "output.json").exists()
-    assert (cache_path / "input.json").exists()
-    assert (cache_path / "meta.json").exists()
+    base_cache_path = tmp_path / ".sdag" / ".cache" / "global" / "task"
+    cache_dir = next(base_cache_path.iterdir())
+    assert (cache_dir / "output.json").exists()
+    assert (cache_dir / "input.json").exists()
+    assert (cache_dir / "meta.json").exists()
 
-    cache_local_path = tmp_path / ".sdag" / ".cache" / "local" / "dag" / "task"
-    assert (cache_local_path / "output.json").exists()
-    assert (cache_local_path / "input.json").exists()
-    assert (cache_local_path / "meta.json").exists()
+    base_cache_local_path = (
+        tmp_path / ".sdag" / ".cache" / "local" / "dag" / "task"
+    )
+    cache_local_dir = next(base_cache_local_path.iterdir())
+    assert (cache_local_dir / "output.json").exists()
+    assert (cache_local_dir / "input.json").exists()
+    assert (cache_local_dir / "meta.json").exists()

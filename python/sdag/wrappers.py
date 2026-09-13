@@ -234,6 +234,8 @@ class Task:
         cache_local (bool): Activate local caching.
         cache_ignore (list[str]): list of fields ignored
             during cache validation.
+        cache_size (int): Cache size. Ignore if caching is disabled.
+            set to 0 to allow for infinite cache size.
         retries (int): Number of retries.
         script (ScriptUnion): Submission script.
     """
@@ -247,6 +249,7 @@ class Task:
         cache: bool,
         cache_local: bool,
         cache_ignore: list[str] | None,
+        cache_size: int,
         retries: int,
         script: ScriptUnion,
         tags: list[str],
@@ -262,6 +265,9 @@ class Task:
             cache_local (bool): Activate local caching.
             cache_ignore (list[str] | None): list of fields
                 ignored during cache validation.
+            cache_size (int): Cache size. Ignore if caching is
+                disabled. set to 0 to allow for infinite cache
+                size.
             retries (int): Number of retries.
             script (ScriptUnion): Submission script.
             tags (list[str]): Tags.
@@ -273,6 +279,7 @@ class Task:
         self.cache = cache
         self.cache_local = cache_local
         self.cache_ignore = cache_ignore if cache_ignore is not None else []
+        self.cache_size = cache_size
         self.retries = retries
         self.script = script
         self.tags = tags
@@ -294,6 +301,7 @@ class Task:
             cache=self.cache,
             cache_local=self.cache_local,
             cache_ignore=self.cache_ignore,
+            cache_size=self.cache_size,
             mode=self.mode,
             cmd=self.cmd,
             retries=self.retries,
@@ -482,6 +490,7 @@ class Pipeline:
         mode: Literal["wrap", "ext"] = "wrap",
         cache_local: bool = False,  # noqa: FBT002
         cache_ignore: list[str] | None = None,
+        cache_size: int = 1,
         retries: int = 0,
         tags: list[str] | None = None,
     ) -> Callable[[Callable], Task]:
@@ -501,6 +510,9 @@ class Pipeline:
                 context of the pipeline. Defaults to False.
             cache_ignore (list[str] | None): List of fields ignored
                 during cache validation.
+            cache_size (int): Cache size. Ignore if caching is
+                disabled. set to 0 to allow for infinite cache
+                size.
             retries: (int): Number of retries. Defaults to 0.
             tags (list[str] | None): Task tags, they can be used to
                 configure sets of tasks globally.
@@ -532,6 +544,7 @@ class Pipeline:
                 cache=False,
                 cache_local=cache_local,
                 cache_ignore=cache_ignore,
+                cache_size=cache_size,
                 retries=retries,
                 script=script_obj,
                 tags=tags if tags is not None else [],
@@ -594,6 +607,7 @@ def task(
     cache: bool = False,  # noqa: FBT002
     cache_local: bool = False,  # noqa: FBT002
     cache_ignore: list[str] | None = None,
+    cache_size: int = 1,
     retries: int = 0,
     tags: list[str] | None = None,
 ) -> Callable[[Callable], Task]:
@@ -615,6 +629,9 @@ def task(
             context of the pipeline. Defaults to False.
         cache_ignore (list[str] | None): List of fields ignored
             during cache validation. Defaults to None.
+        cache_size (int): Cache size. Ignore if caching is
+            disabled. set to 0 to allow for infinite cache
+            size.
         retries: (int): Number of retries. Defaults to 0.
         tags (list[str] | None): Task tags, they can be used to
             configure sets of tasks globally.
@@ -638,6 +655,7 @@ def task(
             cache=cache,
             cache_local=cache_local,
             cache_ignore=cache_ignore,
+            cache_size=cache_size,
             retries=retries,
             script=script_obj,
             tags=tags if tags is not None else [],
