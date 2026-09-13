@@ -49,12 +49,11 @@ pub fn find_pipeline_folder(homedir: &Path, pipeline_name: &str, hash: &str) -> 
 }
 
 pub fn get_subfolder_creation_dates(base_path: &Path) -> io::Result<Vec<(PathBuf, SystemTime)>> {
-    log::info!("Checking older DAG directories");
     let mut folders = Vec::new();
     for entry in fs::read_dir(base_path)? {
         let path = entry?.path();
         if path.is_dir() {
-            log::debug!("Detected old DAG directory {}", path.to_string_lossy());
+            log::debug!("Detected old directory {}", path.to_string_lossy());
             let meta = fs::metadata(&path)?;
             let modified = meta.modified()?;
             folders.push((path, modified))
@@ -200,6 +199,7 @@ mod tests {
             cache: true,
             cache_local: false,
             cache_ignore: vec![],
+            cache_size: 1,
             mode: ExecMode::Wrap,
             cmd: Cmd::Sbatch,
             retries: 0,

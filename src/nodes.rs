@@ -102,6 +102,8 @@ pub struct Task {
     pub cache: bool,
     /// Local caching.
     pub cache_local: bool,
+    /// Local caching.
+    pub cache_size: usize,
     /// Fields excluded by caching
     #[serde(default = "Vec::new")]
     pub cache_ignore: Vec<String>,

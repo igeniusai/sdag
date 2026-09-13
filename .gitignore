@@ -172,6 +172,7 @@ target/
 .ruff_cache/
 
 # internal pipelines
+.sdag/
 compiled-pipelines
 python/sdag/pipelines
 

@@ -33,6 +33,7 @@ class TestSDAG:
             cache=False,
             cache_local=False,
             cache_ignore=None,
+            cache_size=1,
             retries=0,
             script=ScriptPath(path=Path("a/path")),
             tags=[],

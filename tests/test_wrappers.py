@@ -429,6 +429,7 @@ class TestTask:
             cache=False,
             cache_local=False,
             cache_ignore=None,
+            cache_size=1,
             tags=[],
         )
 
@@ -454,6 +455,7 @@ class TestTask:
             cache=False,
             cache_local=False,
             cache_ignore=None,
+            cache_size=1,
             tags=[],
         )
 
@@ -516,6 +518,7 @@ class TestTask:
             cache=False,
             cache_local=False,
             cache_ignore=None,
+            cache_size=1,
             tags=[],
         )
 
@@ -540,6 +543,7 @@ class TestTask:
             cache=False,
             cache_local=False,
             cache_ignore=None,
+            cache_size=1,
             tags=[],
         )
 
@@ -566,6 +570,7 @@ class TestTask:
             cache=False,
             cache_local=False,
             cache_ignore=None,
+            cache_size=1,
             tags=[],
         )
 
@@ -602,6 +607,7 @@ class TestTask:
             cache=False,
             cache_local=False,
             cache_ignore=None,
+            cache_size=1,
             tags=[],
         )
 

@@ -187,7 +187,6 @@ impl<'a> Submitter<'a> {
 
         let status = if blocking::submit_validate_cache(&task, &self.cfg) {
             log::info!("Task {} is cached.", task.uid);
-            ctx.jobs.push_front(Job::SaveCache(task.uid));
             Status::Completed(Completed::Cached)
         } else {
             log::info!("Task {}: Cache validation failed.", task.uid);

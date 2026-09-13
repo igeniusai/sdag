@@ -89,6 +89,7 @@ pub fn save_task_output(path: &Path, output: &TaskOutput) -> io::Result<()> {
 }
 
 pub fn copy_task_data(src: &Path, dst: &Path) -> io::Result<u64> {
+    let _ = fs::remove_dir_all(dst);
     fs::create_dir_all(dst)?;
     let output_file = FileNames::Output.as_str();
     let output_from = src.join(output_file);
@@ -444,6 +445,7 @@ mod tests {
             cache: true,
             cache_local: false,
             cache_ignore: vec![],
+            cache_size: 1,
             mode: ExecMode::Wrap,
             cmd: Cmd::Bash,
             envs: HashMap::new(),

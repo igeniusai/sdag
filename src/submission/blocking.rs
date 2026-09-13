@@ -2,11 +2,14 @@ use crate::nodes::{Branch, OneOf, Task};
 use crate::schemas::{Parent, ParentKind, TaskOutput};
 use crate::settings::Cfg;
 use crate::state;
+use crate::workdirs;
 use log;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::fs;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use uuid::Uuid;
 
 pub fn submit_validate_cache(task: &Task, cfg: &Cfg) -> bool {
     let dst_path = cfg.dagdir.join(task.uid.to_string());
@@ -42,16 +45,16 @@ pub fn submit_validate_cache(task: &Task, cfg: &Cfg) -> bool {
 pub fn submit_save_cache(task: &Task, cfg: &Cfg) -> io::Result<()> {
     let src_path = cfg.dagdir.join(task.uid.to_string());
     if task.cache {
-        let dst_path = cfg.cachedir.join(&task.name);
-        state::copy_task_data(&src_path, &dst_path)?;
+        let base_dst_path = cfg.cachedir.join(&task.name);
+        find_and_save_cache(&src_path, &base_dst_path, task.cache_size)?;
     }
 
     if task.cache_local {
-        let dst_path = cfg
+        let base_dst_path = cfg
             .local_cachedir
             .join(&task.pipeline_name)
             .join(&task.name);
-        state::copy_task_data(&src_path, &dst_path)?;
+        find_and_save_cache(&src_path, &base_dst_path, task.cache_size)?;
     }
     Ok(())
 }
@@ -93,18 +96,18 @@ pub fn validate_cache(
     dst_path: &Path,
     cache_ignore: &[String],
 ) -> bool {
-    match compare_input_with_cache(uid, &input, &cache_path, cache_ignore) {
+    match compare_input_with_cache(&input, &cache_path, cache_ignore) {
         Err(e) => {
             log::info!("Task {uid}: Cache validation failed - {e}");
             false
         }
-        Ok(false) => {
+        Ok(None) => {
             log::info!("Task {uid}: Cached data doesn't match the input");
             false
         }
-        Ok(true) => {
+        Ok(Some(path)) => {
             log::info!("Task {uid}: Cached data matches input");
-            if let Err(e) = state::copy_task_data(cache_path, dst_path) {
+            if let Err(e) = state::copy_task_data(&path, dst_path) {
                 log::error!("Task {uid}: Failed to save cached task data - {e}");
                 return false;
             }
@@ -114,25 +117,42 @@ pub fn validate_cache(
 }
 
 pub fn compare_input_with_cache(
-    uid: usize,
     input: &HashMap<String, Value>,
     cache_path: &Path,
     cache_ignore: &[String],
+) -> io::Result<Option<PathBuf>> {
+    for entry in fs::read_dir(cache_path)? {
+        let path = entry?.path();
+        if !path.is_dir() {
+            continue;
+        }
+        if let Ok(true) = compare_single_cache(&path, input, cache_ignore) {
+            return Ok(Some(path));
+        }
+    }
+    Ok(None)
+}
+
+fn compare_single_cache(
+    path: &Path,
+    input: &HashMap<String, Value>,
+    cache_ignore: &[String],
 ) -> io::Result<bool> {
-    let mut cached_input = state::read_input(cache_path)?;
+    let mut cached_input = state::read_input(path)?;
     replace_cache_ignored_value(&mut cached_input, input, cache_ignore);
 
+    let path_str = path.to_string_lossy();
     if *input != cached_input {
-        log::info!("Task {uid}: Cache invalidated as input doesn't match the cached one.");
-        log::debug!("Task {uid}:\ninput:\n{input:?};\ncached input:\n{cached_input:?}");
+        log::info!("Cache {path_str} invalidated as input doesn't match the cached one.");
+        log::debug!("input:\n{input:?};\ncached input:\n{cached_input:?}");
         return Ok(false);
     }
 
-    let output = state::read_output(cache_path)?;
+    let output = state::read_output(path)?;
     for artifact in &output.artifacts {
         if !artifact.path.exists() {
             log::info!(
-                "Task {uid}: Artifact {} does not exist, cache validation failed",
+                "Cache {path_str}: Artifact {} does not exist, cache validation failed",
                 artifact.path.to_string_lossy()
             );
             return Ok(false);
@@ -162,4 +182,35 @@ fn replace_cache_ignored_value(
             cached_input.insert(key.clone(), value.clone());
         }
     }
+}
+
+fn find_and_save_cache(
+    src_path: &Path,
+    base_dst_path: &Path,
+    cache_size: usize,
+) -> io::Result<u64> {
+    let hash = Uuid::new_v4().to_string();
+    let dst_path = base_dst_path.join(hash);
+    delete_old_cache(base_dst_path, cache_size)?;
+    state::copy_task_data(&src_path, &dst_path)
+}
+
+fn delete_old_cache(base_dst_path: &Path, cache_size: usize) -> io::Result<()> {
+    if !base_dst_path.is_dir() {
+        return Ok(());
+    }
+
+    let subfolders = workdirs::get_subfolder_creation_dates(base_dst_path)?;
+    let nsubfolders = subfolders.len();
+    log::debug!("Currenct cache size: '{}'", nsubfolders);
+
+    let ndel = 1 + nsubfolders as i64 - cache_size as i64;
+    if cache_size > 0 && ndel > 0 {
+        log::debug!("Number of cache folders to be deleted: {}", ndel);
+        for (dir, _) in &subfolders[..ndel as usize] {
+            log::debug!("Removing '{}'", dir.to_string_lossy());
+            fs::remove_dir_all(dir)?;
+        }
+    }
+    Ok(())
 }
