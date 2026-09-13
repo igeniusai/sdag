@@ -230,8 +230,7 @@ class Task:
         name (str): Task name.
         cmd (Literal["sbatch", "bash"]): Task command.
         mode (Literal["wrap", "ext"]): Task mode.
-        cache (bool): Activate global caching.
-        cache_local (bool): Activate local caching.
+        cache (bool): Enable caching.
         cache_ignore (list[str]): list of fields ignored
             during cache validation.
         cache_size (int): Cache size. Ignore if caching is disabled.
@@ -246,8 +245,8 @@ class Task:
         name: str,
         cmd: Literal["sbatch", "bash"],
         mode: Literal["wrap", "ext"],
+        scope: Literal["local", "global"],
         cache: bool,
-        cache_local: bool,
         cache_ignore: list[str] | None,
         cache_size: int,
         retries: int,
@@ -261,8 +260,11 @@ class Task:
             name (str): Task name.
             cmd (Literal["sbatch", "bash"]): Task command.
             mode (Literal["wrap", "ext"]): Task mode.
-            cache (bool): Activate global caching.
-            cache_local (bool): Activate local caching.
+            scope: (Literal["local", "global"]): Task scope.
+                Use 'global' for tasks decorated with the
+                @task decorator, 'local' for tasks decorated
+                with @pipeline.task.
+            cache (bool): Enable caching.
             cache_ignore (list[str] | None): list of fields
                 ignored during cache validation.
             cache_size (int): Cache size. Ignore if caching is
@@ -276,8 +278,8 @@ class Task:
         self.name = name
         self.cmd: Literal["sbatch", "bash"] = cmd
         self.mode: Literal["wrap", "ext"] = mode
+        self.scope: Literal["local", "global"] = scope
         self.cache = cache
-        self.cache_local = cache_local
         self.cache_ignore = cache_ignore if cache_ignore is not None else []
         self.cache_size = cache_size
         self.retries = retries
@@ -298,8 +300,8 @@ class Task:
             uid=compiler.get_uid(),
             fn_name=self.fn.__name__,
             name=self.name,
+            scope=self.scope,
             cache=self.cache,
-            cache_local=self.cache_local,
             cache_ignore=self.cache_ignore,
             cache_size=self.cache_size,
             mode=self.mode,
@@ -488,7 +490,7 @@ class Pipeline:
         name: str | None = None,
         cmd: Literal["sbatch", "bash"] = "sbatch",
         mode: Literal["wrap", "ext"] = "wrap",
-        cache_local: bool = False,  # noqa: FBT002
+        cache: bool = False,  # noqa: FBT002
         cache_ignore: list[str] | None = None,
         cache_size: int = 1,
         retries: int = 0,
@@ -506,8 +508,8 @@ class Pipeline:
             mode (Literal["wrap", "ext"], optional): Use wrap to call the
                 Python function or ext to call an external script.
                 Defaults to "wrap".
-            cache_local (bool, optional): Cache the result in the
-                context of the pipeline. Defaults to False.
+            cache (bool, optional): Enable local caching.
+                Defaults to False.
             cache_ignore (list[str] | None): List of fields ignored
                 during cache validation.
             cache_size (int): Cache size. Ignore if caching is
@@ -539,10 +541,10 @@ class Pipeline:
             task = Task(
                 fn=fn,
                 name=task_name,
+                scope="local",
                 cmd=cmd,
                 mode=mode,
-                cache=False,
-                cache_local=cache_local,
+                cache=cache,
                 cache_ignore=cache_ignore,
                 cache_size=cache_size,
                 retries=retries,
@@ -605,7 +607,6 @@ def task(
     cmd: Literal["sbatch", "bash"] = "sbatch",
     mode: Literal["wrap", "ext"] = "wrap",
     cache: bool = False,  # noqa: FBT002
-    cache_local: bool = False,  # noqa: FBT002
     cache_ignore: list[str] | None = None,
     cache_size: int = 1,
     retries: int = 0,
@@ -623,10 +624,8 @@ def task(
         mode (Literal["wrap", "ext"], optional): Use wrap to call the
             Python function or ext to call an external script.
             Defaults to "wrap".
-        cache (bool, optional): Cache the result globally. Defaults
+        cache (bool, optional): Enable caching. Defaults
             to False.
-        cache_local (bool, optional): Cache the result in the
-            context of the pipeline. Defaults to False.
         cache_ignore (list[str] | None): List of fields ignored
             during cache validation. Defaults to None.
         cache_size (int): Cache size. Ignore if caching is
@@ -650,10 +649,10 @@ def task(
         task = Task(
             fn=fn,
             name=task_name,
+            scope="global",
             cmd=cmd,
             mode=mode,
             cache=cache,
-            cache_local=cache_local,
             cache_ignore=cache_ignore,
             cache_size=cache_size,
             retries=retries,

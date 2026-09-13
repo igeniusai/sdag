@@ -76,7 +76,7 @@ impl<'a> SlurmPoller<'a> {
 
                 ctx.statuses[task.uid] = status;
                 ctx.updated.push_back(task.uid);
-                if task.cache | task.cache_local {
+                if task.cache {
                     ctx.jobs.push_back(Job::SaveCache(task.uid));
                 }
             }
@@ -216,7 +216,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::schemas::{Cmd, DAGMeta, Script, ScriptPath, SlurmOverride};
+    use crate::schemas::{Cmd, DAGMeta, Scope, Script, ScriptPath, SlurmOverride};
     use serde_json::Value;
 
     fn get_meta() -> DAGMeta {
@@ -247,11 +247,11 @@ mod tests {
         Task {
             uid,
             parents: vec![],
+            scope: Scope::Local,
             fn_name: "fn_name".into(),
             name: "name".into(),
             pipeline_name: "pipeline_name".into(),
             cache: false,
-            cache_local: false,
             cache_ignore: vec![],
             cache_size: 1,
             mode: ExecMode::Wrap,

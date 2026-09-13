@@ -145,7 +145,7 @@ pub fn clear_local_cache(task_name: &str, pipeline_name: &str, homedir: &Path) -
         );
         return Ok(());
     } else {
-        log::info!(
+        log::debug!(
             "Deleting task '{}' (pipeline '{}') local cache",
             task_name,
             pipeline_name
@@ -159,7 +159,7 @@ pub fn clear_global_cache(
     allow_full_prune: bool,
     homedir: &Path,
 ) -> io::Result<()> {
-    log::info!("Removing task '{task_name}' global cache");
+    log::debug!("Removing task '{task_name}' global cache");
     let cache_dir = homedir.join(".cache");
     let path = cache_dir.join("global").join(task_name);
     log::debug!("Cache path: '{}'", path.to_string_lossy());
@@ -222,7 +222,7 @@ fn get_dynamic_input(uid: usize, dagdir: &Path) -> io::Result<Value> {
 mod tests {
     use super::*;
     use crate::nodes::End;
-    use crate::schemas::{Cmd, ExecMode, Script, ScriptPath, SlurmOverride};
+    use crate::schemas::{Cmd, ExecMode, Scope, Script, ScriptPath, SlurmOverride};
     use serde_json::{Value, json};
     use std::env;
     use std::path::PathBuf;
@@ -443,7 +443,7 @@ mod tests {
             name: "name".into(),
             pipeline_name: "pipeline_name".into(),
             cache: true,
-            cache_local: false,
+            scope: Scope::Local,
             cache_ignore: vec![],
             cache_size: 1,
             mode: ExecMode::Wrap,

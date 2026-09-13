@@ -12,9 +12,9 @@ def task() -> TaskNode:
         name="task_name",
         fn_name="task_fn",
         cache=False,
-        cache_local=False,
         mode="ext",
         cmd="bash",
+        scope="global",
         retries=0,
         script=ScriptPath(path=Path()),
     )

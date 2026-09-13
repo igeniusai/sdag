@@ -293,9 +293,9 @@ class TaskNode(BaseNode):
         kind (Literal["task"]): Kind.
         parents (list[Parent]): Edges.
         fn_name (str): Function name.
+        scope (Literal["global", "local"]): Task scope.
         name (str): Task name, linked to caching.
         cache (bool): Cache the task locally.
-        cache_local (bool): Cache task gloabally.
         cache_ignore (list[str]): list of fields ignored
             during cache validation.
         cache_size (int): Cache size. Ignore if caching is disabled.
@@ -321,7 +321,7 @@ class TaskNode(BaseNode):
     fn_name: str
     name: str
     cache: bool
-    cache_local: bool
+    scope: Literal["local", "global"]
     cache_ignore: list[str] = Field(default_factory=list)
     cache_size: int = 1
     mode: Literal["wrap", "ext"]
@@ -594,3 +594,19 @@ class CompiledDAG(BaseModel):
     root: RootNode
     end: EndNode
     branches: list[BranchNode] = Field(default_factory=list)
+
+
+class CacheableTask(BaseModel):
+    """Cacheable task.
+
+    Info about tasks with caching enabled.
+
+    Attributes:
+        name (str): Task name.
+        pipeline (str): Pipeline name.
+        scope (Literal["global", "local"]): Task scope.
+    """
+
+    name: str
+    pipeline: str
+    scope: Literal["global", "local"]

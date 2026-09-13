@@ -107,18 +107,18 @@ impl Ctx {
 mod tests {
     use super::*;
     use crate::nodes::Task;
-    use crate::schemas::{Cmd, ExecMode, Script, ScriptPath, SlurmOverride};
+    use crate::schemas::{Cmd, ExecMode, Scope, Script, ScriptPath, SlurmOverride};
     use std::collections::HashMap;
 
     fn get_tasks() -> Vec<Task> {
         let task0 = Task {
             uid: 0,
             parents: vec![],
+            scope: Scope::Local,
             fn_name: "fn_name".into(),
             name: "name".into(),
             pipeline_name: "pipeline_name".into(),
             cache: true,
-            cache_local: false,
             cache_ignore: vec![],
             cache_size: 1,
             mode: ExecMode::Wrap,

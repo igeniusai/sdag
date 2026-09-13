@@ -173,7 +173,7 @@ mod tests {
     use super::*;
     use crate::nodes::Root;
     use crate::schemas::{
-        Cmd, DAGMeta, ExecMode, Parent, ParentKind, Script, ScriptPath, SlurmOverride,
+        Cmd, DAGMeta, ExecMode, Parent, ParentKind, Scope, Script, ScriptPath, SlurmOverride,
     };
     use serde_json::Value;
     use std::collections::HashMap;
@@ -193,11 +193,11 @@ mod tests {
                 uid: 0,
                 kind: ParentKind::Logical,
             }],
+            scope: Scope::Global,
             fn_name: "fn_name".into(),
             name: "name".into(),
             pipeline_name: "pipeline_name".into(),
             cache: true,
-            cache_local: false,
             cache_ignore: vec![],
             cache_size: 1,
             mode: ExecMode::Wrap,

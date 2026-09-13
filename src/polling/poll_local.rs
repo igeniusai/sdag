@@ -56,7 +56,7 @@ impl LocalPoller {
         }
         ctx.running_cacheable.remove(&task.name);
         ctx.updated.push_back(task.uid);
-        if task.cache | task.cache_local {
+        if task.cache {
             log::debug!("task '{}': Queueing cache save", task.uid);
             ctx.jobs.push_back(Job::SaveCache(task.uid));
         }
@@ -90,7 +90,7 @@ fn poll_local(child: &mut Child) -> Status {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::schemas::{Cmd, Script, ScriptPath, SlurmOverride};
+    use crate::schemas::{Cmd, Scope, Script, ScriptPath, SlurmOverride};
     use std::collections::HashMap;
     use std::process::Command;
 
@@ -98,11 +98,11 @@ mod test {
         Task {
             uid,
             parents: vec![],
+            scope: Scope::Local,
             fn_name: "fn_name".into(),
             name: "name".into(),
             pipeline_name: "pipeline_name".into(),
             cache: false,
-            cache_local: false,
             cache_ignore: vec![],
             cache_size: 1,
             mode: ExecMode::Wrap,

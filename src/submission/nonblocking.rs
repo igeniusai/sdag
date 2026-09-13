@@ -235,8 +235,8 @@ fn find_submitted_job_id(output: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schemas::Cmd;
     use crate::schemas::ScriptContent;
+    use crate::schemas::{Cmd, Scope};
     use std::env;
     use std::fs;
     use std::path::PathBuf;
@@ -269,11 +269,11 @@ mod tests {
         Task {
             uid: 0,
             parents: vec![],
+            scope: Scope::Global,
             fn_name: "fn_name".into(),
             name: "name".into(),
             pipeline_name: "pipeline_name".into(),
             cache: false,
-            cache_local: false,
             cache_ignore: vec![],
             cache_size: 1,
             mode: ExecMode::Wrap,

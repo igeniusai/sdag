@@ -9,7 +9,7 @@ from sdag.commands import (
     _get_dag_from_name_import_or_json,
     _parse_compiled_pipeline,
 )
-from sdag.models import DAG, DAGMeta, ScriptPath, TaskNode
+from sdag.models import DAG, CacheableTask, DAGMeta, ScriptPath, TaskNode
 from sdag.settings import Pyproj
 
 
@@ -32,9 +32,9 @@ def dag() -> DAG:
                 "name": "task_global",
                 "pipeline_name": "dag",
                 "cache": True,
-                "cache_local": False,
                 "mode": "ext",
                 "cmd": "bash",
+                "scope": "global",
                 "try_num": 1,
                 "retries": 0,
                 "script": {"kind": "script_path", "path": "script.sh"},
@@ -53,10 +53,10 @@ def dag() -> DAG:
                 "fn_name": "task",
                 "name": "task_local",
                 "pipeline_name": "dag",
-                "cache": False,
-                "cache_local": True,
+                "cache": True,
                 "mode": "ext",
                 "cmd": "bash",
+                "scope": "local",
                 "try_num": 1,
                 "retries": 0,
                 "script": {"kind": "script_path", "path": "script.sh"},
@@ -90,19 +90,13 @@ def dag() -> DAG:
     return DAG.model_validate(dag)
 
 
-@pytest.mark.parametrize(
-    argnames=("local", "tasks", "pipelines"),
-    argvalues=[
-        (False, ["task_global"], ["dag"]),
-        (True, ["task_local"], ["dag"]),
-    ],
-)
-def test_find_cacheable_tasks(
-    local: bool, tasks: list[str], pipelines: list[str], dag: DAG
-) -> None:
-    exp_tasks, exp_pipelines = _find_cacheable_tasks(dag, local=local)
-    assert exp_tasks == tasks
-    assert exp_pipelines == pipelines
+def test_find_cacheable_tasks(dag: DAG) -> None:
+    tasks = _find_cacheable_tasks(dag)
+    tasks.sort(key=lambda x: x.name)
+    assert tasks == [
+        CacheableTask(name="task_global", pipeline="dag", scope="global"),
+        CacheableTask(name="task_local", pipeline="dag", scope="local"),
+    ]
 
 
 def test_find_relative_compiled_path() -> None:
@@ -171,9 +165,9 @@ def test_apply_pyproj_configs(pyproj_dict: dict[str, Any], cmd: str) -> None:
         name="task_name",
         fn_name="task_fn",
         cache=False,
-        cache_local=False,
         mode="ext",
         cmd="sbatch",
+        scope="local",
         retries=0,
         tags=["TAG1", "TAG2"],
         script=ScriptPath(path=Path()),

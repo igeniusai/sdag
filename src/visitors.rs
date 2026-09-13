@@ -71,7 +71,7 @@ impl<'a> Visitor<()> for NodeVisitor<'a> {
 
         let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.statuses);
         if all_parents_completed(&parent_statuses) {
-            if node.cache | node.cache_local {
+            if node.cache {
                 log::debug!("Task '{}': Pushing cache validation", node.uid);
                 ctx.jobs.push_back(Job::ValidateCache(node.uid));
             } else {
@@ -134,7 +134,7 @@ impl<'a> NodeVisitor<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schemas::{Cmd, ExecMode, ParentKind, Script, ScriptPath, SlurmOverride};
+    use crate::schemas::{Cmd, ExecMode, ParentKind, Scope, Script, ScriptPath, SlurmOverride};
     use crate::status::{Failed, JobType};
     use std::collections::HashMap;
 
@@ -209,11 +209,11 @@ mod tests {
         Task {
             uid,
             parents: vec![],
+            scope: Scope::Local,
             fn_name: "fn_name".into(),
             name: "name".into(),
             pipeline_name: "pipeline_name".into(),
             cache: false,
-            cache_local: false,
             cache_ignore: vec![],
             cache_size: 1,
             mode: ExecMode::Wrap,

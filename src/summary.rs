@@ -150,7 +150,7 @@ fn get_final_recap_table(nodes: &[Node], ctx: &Ctx) -> Table {
 mod tests {
     use super::*;
     use crate::nodes::Task;
-    use crate::schemas::{Cmd, ExecMode, Script, ScriptPath, SlurmOverride};
+    use crate::schemas::{Cmd, ExecMode, Scope, Script, ScriptPath, SlurmOverride};
     use crate::status::{Completed, Failed, JobType};
     use std::collections::HashMap;
     use tabled::assert::assert_table;
@@ -161,9 +161,9 @@ mod tests {
             parents: vec![],
             fn_name: "fn_name".into(),
             name: "name".into(),
+            scope: Scope::Local,
             pipeline_name: "pipeline_name".into(),
             cache: true,
-            cache_local: false,
             cache_ignore: vec![],
             cache_size: 1,
             mode: ExecMode::Wrap,
