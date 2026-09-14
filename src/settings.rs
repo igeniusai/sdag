@@ -19,12 +19,14 @@ pub struct Cfg {
     pub max_dagdirs: usize,
     pub max_concurrency: usize,
     pub sleep_time: Duration,
+    pub log_level: String,
 }
 
 impl Cfg {
     pub fn new(
         homedir: &Path,
         meta: &DAGMeta,
+        log_level: &str,
         max_concurrency: usize,
         time_between_polls: u64,
         grace_period: usize,
@@ -49,11 +51,8 @@ impl Cfg {
             max_dagdirs,
             homedir: homedir.into(),
             sleep_time: Duration::from_secs(time_between_polls),
+            log_level: log_level.to_string(),
         }
-    }
-
-    pub fn mock_run(homedir: &Path, meta: &DAGMeta) -> Self {
-        Self::new(homedir, meta, 1, 5, 1, 1)
     }
 }
 
@@ -119,7 +118,7 @@ mod tests {
             kwargs: HashMap::new(),
         };
         let home_path = PathBuf::from("./a/path");
-        let cfg = Cfg::mock_run(&home_path, &meta);
+        let cfg = Cfg::new(&home_path, &meta, "info", 1, 5, 1, 1);
 
         assert_eq!(cfg.homedir, home_path);
         assert_eq!(

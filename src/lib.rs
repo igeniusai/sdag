@@ -47,6 +47,7 @@ mod core {
             time_between_polls,
             slurm_grace_period,
             max_concurrent_runs,
+            log_level,
         )
     }
 
@@ -74,6 +75,7 @@ mod core {
             max_concurrency,
             time_between_polls,
             retry,
+            log_level,
         );
     }
 
@@ -125,10 +127,25 @@ mod core {
     #[pyo3(signature=(
         task_serialized: "str",
         log_level: "str",
+        time_between_polls: "int",
+        slurm_grace_period: "int",
+        max_concurrent_runs: "int",
     ) -> "None")]
-    pub fn run_single_task(task_serialized: &str, log_level: &str) {
+    pub fn run_single_task(
+        task_serialized: &str,
+        log_level: &str,
+        time_between_polls: u64,
+        slurm_grace_period: usize,
+        max_concurrent_runs: usize,
+    ) {
         settings::configure_logging(log_level);
-        run_task::run_task(task_serialized);
+        run_task::run_task(
+            task_serialized,
+            slurm_grace_period,
+            max_concurrent_runs,
+            time_between_polls,
+            log_level,
+        );
     }
 
     #[pyfunction]
@@ -159,6 +176,6 @@ mod core {
     ) -> "None")]
     pub fn describe_pipeline(pipeline_path: &str, log_level: &str) {
         settings::configure_logging(log_level);
-        describe::describe_pipeline(pipeline_path)
+        describe::describe_pipeline(pipeline_path, log_level)
     }
 }

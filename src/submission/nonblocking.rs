@@ -116,7 +116,8 @@ fn build_command(
         .env("SDAG_IMPORT_PATH", &meta.import_path)
         .env("SDAG_UID", task.uid.to_string())
         .env("SDAG_TASK_FN", &task.fn_name)
-        .env("SDAG_TASK_NAME", &task.name);
+        .env("SDAG_TASK_NAME", &task.name)
+        .env("SDAG_LOG_LEVEL", &cfg.log_level);
 
     Ok(cmd)
 }
@@ -262,7 +263,7 @@ mod tests {
     fn get_cfg() -> Cfg {
         let meta = get_meta();
         let homedir = get_tmp_dir();
-        Cfg::mock_run(&homedir, &meta)
+        Cfg::new(&homedir, &meta, "info", 1, 5, 1, 1)
     }
 
     fn get_task() -> Task {

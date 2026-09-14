@@ -15,7 +15,7 @@ from sdag.compiler import master
 from sdag.discovery import find_all_pipelines, find_pipeline_by_name
 from sdag.exceptions import DAGNotFoundError, ExtraCLIArgsError
 from sdag.models import DAG, CacheableTask, Kwarg, TaskNode
-from sdag.settings import Pyproj, parse_pyproject
+from sdag.settings import Pyproj, configure_logging, parse_pyproject
 from sdag.wrappers import Task
 
 logger = logging.getLogger(__name__)
@@ -163,6 +163,10 @@ def compile_pipeline(args: Namespace, extras: dict[str, Any]) -> Path:
     Returns:
         Path: Path where the compiled JSON has been saved.
     """
+    pyproj = parse_pyproject()
+    pyproj.join_cli_args(args)
+    configure_logging(pyproj.log_level)
+
     dag = compile_and_return_dag(
         path=args.pipeline,
         extra_metadata=args.extra_metadata,
@@ -170,13 +174,7 @@ def compile_pipeline(args: Namespace, extras: dict[str, Any]) -> Path:
     )
 
     dag_json = dag.model_dump_json(indent=4, warnings="none", by_alias=True)
-
-    dst_dir = args.dst_dir
-    if dst_dir is None:
-        pyproj = parse_pyproject()
-        dst_dir = pyproj.compiled_dag_dir
-
-    dst_path = Path(dst_dir)
+    dst_path = Path(pyproj.compiled_dag_dir)
     dst_path.mkdir(parents=True, exist_ok=True)
     dag_name = dag.meta.pipeline_name
     dst_name = args.name if args.name is not None else f"{dag_name}.json"
@@ -198,18 +196,20 @@ def run_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
         extras (dict[str, Any]): Extra arguments only used
             if the pipeline must be compiled.
     """
+    pyproj = parse_pyproject()
+    pyproj.join_cli_args(args)
+    configure_logging(pyproj.log_level)
+
     if args.pipeline.endswith(".json"):
         path = _find_compiled_path(args.pipeline)
     else:
         path = compile_pipeline(args, extras)
 
-    pyproj = parse_pyproject()
-
     core.run(
         pipeline_path=str(path),
-        max_concurrency=args.max_concurrency,
-        time_between_polls=args.time_between_polls,
-        log_level=args.log_level,
+        max_concurrency=pyproj.max_concurrency,
+        time_between_polls=pyproj.time_between_polls,
+        log_level=pyproj.log_level,
         slurm_grace_period=pyproj.slurm_grace_period,
         max_concurrent_runs=pyproj.max_concurrent_runs,
     )
@@ -228,6 +228,10 @@ def restart_run(args: Namespace, extras: dict[str, Any]) -> None:
     if extras:
         raise ExtraCLIArgsError(extras)
 
+    pyproj = parse_pyproject()
+    pyproj.join_cli_args(args)
+    configure_logging(pyproj.log_level)
+
     if args.pipeline.endswith(".json"):
         dag = _parse_compiled_pipeline(args.pipeline)
         pipeline_name = dag.meta.pipeline_name
@@ -240,9 +244,9 @@ def restart_run(args: Namespace, extras: dict[str, Any]) -> None:
     core.restart_run(
         pipeline_name=pipeline_name,
         pipeline_hash=pipeline_hash,
-        max_concurrency=args.max_concurrency,
-        time_between_polls=args.time_between_polls,
-        log_level=args.log_level,
+        max_concurrency=pyproj.max_concurrency,
+        time_between_polls=pyproj.time_between_polls,
+        log_level=pyproj.log_level,
         retry=False,
     )
 
@@ -260,6 +264,10 @@ def retry_run(args: Namespace, extras: dict[str, Any]) -> None:
     if extras:
         raise ExtraCLIArgsError(extras)
 
+    pyproj = parse_pyproject()
+    pyproj.join_cli_args(args)
+    configure_logging(pyproj.log_level)
+
     if args.pipeline.endswith(".json"):
         dag = _parse_compiled_pipeline(args.pipeline)
         pipeline_name = dag.meta.pipeline_name
@@ -272,9 +280,9 @@ def retry_run(args: Namespace, extras: dict[str, Any]) -> None:
     core.restart_run(
         pipeline_name=pipeline_name,
         pipeline_hash=pipeline_hash,
-        max_concurrency=args.max_concurrency,
-        time_between_polls=args.time_between_polls,
-        log_level=args.log_level,
+        max_concurrency=pyproj.max_concurrency,
+        time_between_polls=pyproj.time_between_polls,
+        log_level=pyproj.log_level,
         retry=True,
     )
 
@@ -292,6 +300,10 @@ def kill_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
     if extras:
         raise ExtraCLIArgsError(extras)
 
+    pyproj = parse_pyproject()
+    pyproj.join_cli_args(args)
+    configure_logging(pyproj.log_level)
+
     if args.pipeline.endswith(".json"):
         dag = _parse_compiled_pipeline(args.pipeline)
         pipeline_name = dag.meta.pipeline_name
@@ -304,7 +316,7 @@ def kill_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
     core.kill_run(
         pipeline_name=pipeline_name,
         pipeline_hash=pipeline_hash,
-        log_level=args.log_level,
+        log_level=pyproj.log_level,
     )
 
 
@@ -321,6 +333,10 @@ def prune_cache(args: Namespace, extras: dict[str, Any]) -> None:
     if args.pipeline is None and not args.task:
         raise ExtraCLIArgsError(extras)
 
+    pyproj = parse_pyproject()
+    pyproj.join_cli_args(args)
+    configure_logging(pyproj.log_level)
+
     if args.pipeline is not None and not args.task:
         dag = _get_dag_from_name_import_or_json(
             path=args.pipeline,
@@ -335,7 +351,7 @@ def prune_cache(args: Namespace, extras: dict[str, Any]) -> None:
                 task_name=task.name,
                 pipeline_name=pipeline_name,
                 allow_full_prune=False,
-                log_level=args.log_level,
+                log_level=pyproj.log_level,
             )
 
     else:
@@ -348,7 +364,7 @@ def prune_cache(args: Namespace, extras: dict[str, Any]) -> None:
                 task_name=task,
                 pipeline_name=name,
                 allow_full_prune=True,
-                log_level=args.log_level,
+                log_level=pyproj.log_level,
             )
 
 
@@ -362,6 +378,10 @@ def view_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
     """
     from sdag.visualization import MermaidGenerator
 
+    pyproj = parse_pyproject()
+    pyproj.join_cli_args(args)
+    configure_logging(pyproj.log_level)
+
     dag = _get_dag_from_name_import_or_json(
         path=args.pipeline,
         extra_metadata=args.extra_metadata,
@@ -370,7 +390,7 @@ def view_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
 
     mermaid_gen = MermaidGenerator(squeeze=args.squeeze)
     mermaid = mermaid_gen.generate_mermaid_string(dag)
-    core.view_pipeline(mermaid=mermaid, log_level=args.log_level)
+    core.view_pipeline(mermaid=mermaid, log_level=pyproj.log_level)
 
 
 def run_task(args: Namespace, extras: dict[str, Any]) -> None:
@@ -380,6 +400,10 @@ def run_task(args: Namespace, extras: dict[str, Any]) -> None:
         args (Namespace): Parsed args.
         extras (dict[str, Any]): Extra arguments used for compilation.
     """
+    pyproj = parse_pyproject()
+    pyproj.join_cli_args(args)
+    configure_logging(pyproj.log_level)
+
     task = get_task(name=args.task, pipeline_name=args.pipeline)
     task = TaskNode(
         uid=0,
@@ -399,7 +423,13 @@ def run_task(args: Namespace, extras: dict[str, Any]) -> None:
     pyproj = parse_pyproject()
     _apply_pyproj_to_task(task, pyproj)
     task_serialized = task.model_dump_json(warnings="none", by_alias=True)
-    core.run_single_task(task_serialized, log_level=args.log_level)
+    core.run_single_task(
+        task_serialized,
+        log_level=args.log_level,
+        time_between_polls=pyproj.time_between_polls,
+        slurm_grace_period=pyproj.slurm_grace_period,
+        max_concurrent_runs=pyproj.max_concurrent_runs,
+    )
 
 
 def list_pipelines(args: Namespace, extras: dict[str, Any]) -> None:
@@ -417,6 +447,10 @@ def list_pipelines(args: Namespace, extras: dict[str, Any]) -> None:
     """
     if extras:
         raise ExtraCLIArgsError(extras)
+
+    pyproj = parse_pyproject()
+    pyproj.join_cli_args(args)
+    configure_logging(pyproj.log_level)
 
     if args.pipeline is not None:
         core.print_runs(pipeline_name=args.pipeline, log_level=args.log_level)
@@ -437,12 +471,16 @@ def describe_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
         args (Namespace): Parsed args.
         extras (dict[str, Any]): Extra arguments used for compiling.
     """
+    pyproj = parse_pyproject()
+    pyproj.join_cli_args(args)
+    configure_logging(pyproj.log_level)
+
     if args.pipeline.endswith(".json"):
         path = _find_compiled_path(args.pipeline)
     else:
         path = compile_pipeline(args, extras)
 
-    core.describe_pipeline(str(path), log_level=args.log_level)
+    core.describe_pipeline(str(path), log_level=pyproj.log_level)
 
 
 def _apply_pyproj_configs(dag: DAG, pyproj: Pyproj) -> None:

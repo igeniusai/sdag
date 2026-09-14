@@ -24,6 +24,7 @@ pub fn run(
     time_between_polls: u64,
     slurm_grace_period: usize,
     max_concurrent_runs: usize,
+    log_level: &str,
 ) {
     let pipeline_path = PathBuf::from(pipeline_path);
     let dag = state::read_dag(&pipeline_path).expect("Failed to read DAG - {e}");
@@ -40,6 +41,7 @@ pub fn run(
     let cfg = Cfg::new(
         &homedir,
         &meta,
+        log_level,
         max_concurrency,
         time_between_polls,
         slurm_grace_period,
@@ -63,6 +65,7 @@ pub fn restart_run(
     max_concurrency: usize,
     time_between_polls: u64,
     retry: bool,
+    log_level: &str,
 ) {
     let homedir = settings::find_homedir().expect("Failed to find the home directory");
     let Some(path) = workdirs::find_pipeline_folder(&homedir, name, hash) else {
@@ -82,9 +85,9 @@ pub fn restart_run(
 
     let mut ctx = Ctx::from_checkpoint(&nodes, statuses, try_nums);
     let mut cfg = ckpt.cfg.into_owned();
-
     cfg.max_concurrency = max_concurrency;
     cfg.sleep_time = Duration::from_secs(time_between_polls);
+    cfg.log_level = log_level.to_string();
 
     scheduling_loop(&nodes, &mut ctx, &cfg, &meta);
 }

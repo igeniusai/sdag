@@ -4,7 +4,6 @@ import pytest
 from sdag.settings import (
     EnvLoggerFormatter,
     configure_logging,
-    get_log_level,
     parse_pyproject,
 )
 
@@ -12,14 +11,6 @@ from sdag.settings import (
 def test_configure_logging() -> None:
     """Check nothing weird shows up."""
     configure_logging(log_level="info")
-
-
-@pytest.mark.parametrize(
-    argnames=("log_level_in", "log_level_out"),
-    argvalues=[(None, "info"), ("debug", "debug")],
-)
-def test_get_log_level(log_level_in: str | None, log_level_out: str) -> None:
-    assert get_log_level(log_level_in) == log_level_out
 
 
 def test_parse_pyproject(tmp_path: Path) -> None:
