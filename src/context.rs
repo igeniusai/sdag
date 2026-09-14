@@ -132,7 +132,7 @@ mod tests {
             kwargs: vec![],
             artifacts: vec![],
             children: vec![],
-            slurm_override: SlurmOverride::new(),
+            slurm: SlurmOverride::default(),
         };
 
         let mut task1 = task0.clone();

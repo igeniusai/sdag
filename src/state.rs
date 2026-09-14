@@ -460,7 +460,7 @@ mod tests {
             }],
             artifacts: vec![],
             children: vec![],
-            slurm_override: SlurmOverride::new(),
+            slurm: SlurmOverride::default(),
         };
 
         let expected = HashMap::from([

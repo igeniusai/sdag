@@ -310,7 +310,7 @@ class TaskNode(BaseNode):
         kwargs (list[Kwarg]): Input kwargs.
         envs (dict[str, Any]): Environment variables. They
             will be set in the task as strings.
-        override (SlurmOverride): Override Slurm resources.
+        slurm (SlurmOverride): Override Slurm resources.
         output_artifacts (list[ArtifactEdge]): Artifacts.
         _artifact_containers (dict[str, ArtifactContainer]):
             Used to add edges to the graph.
@@ -331,9 +331,7 @@ class TaskNode(BaseNode):
     tags: list[str] = Field(default_factory=list)
     kwargs: list[Kwarg] = Field(default_factory=list)
     envs: dict[str, Any] = Field(default_factory=dict)
-    override: SlurmOverride = Field(
-        default_factory=SlurmOverride, serialization_alias="slurm_override"
-    )
+    slurm: SlurmOverride = Field(default_factory=SlurmOverride)
     output_artifacts: list[ArtifactEdge] = Field(
         default_factory=list, serialization_alias="artifacts"
     )

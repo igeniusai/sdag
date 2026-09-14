@@ -121,8 +121,8 @@ pub struct Task {
     #[serde(default = "HashMap::new")]
     pub envs: HashMap<String, Value>,
     /// Slurm override
-    #[serde(default = "SlurmOverride::new")]
-    pub slurm_override: SlurmOverride,
+    #[serde(default = "SlurmOverride::default")]
+    pub slurm: SlurmOverride,
     /// Static input kwargs.
     #[serde(default = "Vec::new")]
     pub kwargs: Vec<Kwarg>,
