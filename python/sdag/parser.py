@@ -388,7 +388,7 @@ class ParserBuilder:
             "-t",
             "--time-between-polls",
             type=int,
-            default=5,
+            default=None,
             help="Time between slurm polls (seconds). Defaults to 5s.",
         )
 
@@ -396,7 +396,7 @@ class ParserBuilder:
             "-m",
             "--max-concurrency",
             type=int,
-            default=10,
+            default=None,
             help=(
                 "Maximum number of jobs running at the same time."
                 "Set to 0 for unlimited concurrency. Defaults to 10."

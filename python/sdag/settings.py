@@ -2,6 +2,7 @@
 
 import logging
 import sys
+from argparse import Namespace
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -41,6 +42,8 @@ class Pyproj(BaseModel):
         prepend_compiled_dag_dir (bool): Add the compiled pipeline
             dir automatically if the directory has not been
             specified.
+        time_between_polls (int): Time between successive Slurm polls
+            in seconds. Defaults to 5.
         commands (Commands | None): Commands to execute tasks. If
             set, it overrides all pipeline commands.
         log_level (Literal["debug", "info", "warning", "error"]):
@@ -58,6 +61,10 @@ class Pyproj(BaseModel):
     log_level: Literal["debug", "info", "warning", "error"] = Field(
         alias="log-level", default="info"
     )
+    time_between_polls: int = Field(
+        alias="time-between-polls", default=5, ge=0
+    )
+    max_concurrency: int = Field(alias="max-concurrency", default=0, ge=0)
     slurm_grace_period: int = Field(
         alias="slurm-grace-period", default=5, ge=0
     )
@@ -68,6 +75,26 @@ class Pyproj(BaseModel):
     tags: list[SDAGTag] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid")
+
+    def join_cli_args(self, args: Namespace) -> None:
+        """Join the user preferences into the pyproject.
+
+        Args:
+            args (Namespace): Parsed CLI args.
+        """
+        argdict = args.__dict__
+
+        if argdict.get("log_level") is not None:
+            self.log_level = args.log_level
+
+        if argdict.get("time_between_polls") is not None:
+            self.time_between_polls = args.time_between_polls
+
+        if argdict.get("max_concurrency") is not None:
+            self.max_concurrency = args.max_concurrency
+
+        if argdict.get("compiled_dag_dir") is not None:
+            self.compiled_dag_dir = args.compiled_dag_dir
 
 
 @lru_cache
@@ -115,7 +142,7 @@ class Settings(BaseSettings):
         sdag_task_fn (str): Task function name.
         sdag_task_name (str): Task name, by default it's equal to
             the task name.
-        sdag_try_num: Number of times the task has been executed.
+        sdag_try_num (int): Number of times the task has been executed.
     """
 
     sdag_pipeline_dir: Path
@@ -127,6 +154,7 @@ class Settings(BaseSettings):
     sdag_task_name: str
     sdag_task_fn: str
     sdag_try_num: int
+    sdag_log_level: str
 
 
 @lru_cache
@@ -157,24 +185,6 @@ def get_compile_settings() -> CompileSettings:
         CompileSettings: Cached compilation settings.
     """
     return CompileSettings()
-
-
-def get_log_level(log_level: str | None = None) -> str:
-    """Get the sdag log level.
-
-    If not set by the user, it is read from the pyproject.toml.
-
-    Args:
-        log_level (str | None, optional): Logging level.
-            Defaults to None.
-
-    Returns:
-        str: Log level.
-    """
-    if log_level is None:
-        pyproj = parse_pyproject()
-        log_level = pyproj.log_level
-    return log_level
 
 
 class LogColor(StrEnum):

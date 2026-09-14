@@ -3,7 +3,7 @@
 import logging
 
 from sdag.exceptions import CLIError
-from sdag.settings import configure_logging, get_log_level
+from sdag.settings import configure_logging
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +34,6 @@ def cli():
     if "log_level" not in args or "fn" not in args:
         raise CLIError
 
-    args.log_level = get_log_level(args.log_level)
-    configure_logging(args.log_level)
     args.fn(args, extra_args)
 
 
@@ -57,12 +55,11 @@ def sdag_execute(configure_logger: bool = True) -> None:  # noqa: FBT002
     from sdag.settings import get_cached_settings
 
     start = perf_counter()
+    settings = get_cached_settings()
 
     if configure_logger:
-        log_level = get_log_level()
-        configure_logging(log_level)
+        configure_logging(settings.sdag_log_level)
 
-    settings = get_cached_settings()
     logger.info(
         "Task: '%s'\nFunction: '%s'\nNode: '%s'"
         "\nPipeline: '%s'\nTry number: '%s'",

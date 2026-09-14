@@ -232,7 +232,7 @@ mod tests {
 
     fn get_cfg() -> Cfg {
         let meta = get_meta();
-        Cfg::mock_run(&PathBuf::from("/a/path"), &meta)
+        Cfg::new(&PathBuf::from("/a/path"), &meta, "info", 1, 5, 1, 1)
     }
 
     fn get_poller(cfg: &Cfg) -> SlurmPoller<'_> {

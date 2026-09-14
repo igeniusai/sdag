@@ -310,6 +310,7 @@ mod tests {
             max_dagdirs: 1,
             max_concurrency: 5,
             sleep_time: Duration::from_secs(2),
+            log_level: "info".into(),
         };
 
         let meta = DAGMeta {

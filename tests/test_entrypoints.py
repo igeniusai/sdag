@@ -58,4 +58,6 @@ def test_task_execution(tmp_path: Path) -> None:
     os.environ["SDAG_TASK_NAME"] = "foo"
     os.environ["SDAG_TASK_FN"] = "foo"
     os.environ["SDAG_TRY_NUM"] = "1"
+    os.environ["SDAG_LOG_LEVEL"] = "info"
+
     sdag_execute()
