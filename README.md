@@ -5,7 +5,7 @@
 DAGs for Slurm.
 
 [![CI](https://github.com/igeniusai/sdag/actions/workflows/ci.yaml/badge.svg)](https://github.com/igeniusai/sdag/actions/workflows/ci.yaml)
-[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-brightgreen)](https://github.com/igeniusai/sdag/blob/main/pyproject.toml)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-brightgreen)](https://github.com/igeniusai/sdag/blob/main/pyproject.toml)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://github.com/microsoft/pyright)
 
