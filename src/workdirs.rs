@@ -211,7 +211,7 @@ mod tests {
             kwargs: vec![],
             artifacts: vec![],
             children: vec![],
-            slurm_override: SlurmOverride::new(),
+            slurm: SlurmOverride::default(),
         }
     }
 

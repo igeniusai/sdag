@@ -174,23 +174,3 @@ pub struct SlurmOverride {
     pub mem: Option<String>,
     pub time: Option<String>,
 }
-
-// TODO use default
-impl SlurmOverride {
-    pub fn new() -> Self {
-        SlurmOverride {
-            job_name: None,
-            nodes: None,
-            partition: None,
-            qos: None,
-            gpus_per_node: None,
-            ntasks_per_node: None,
-            output: None,
-            error: None,
-            account: None,
-            cpus_per_task: None,
-            mem: None,
-            time: None,
-        }
-    }
-}
