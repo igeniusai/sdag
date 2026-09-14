@@ -1,12 +1,19 @@
 """Settings."""
 
 import logging
-from enum import StrEnum
+import sys
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-import tomllib
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+
+    import tomllib
+else:
+    import tomli as tomllib
+    from strenum import StrEnum
+
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import BaseSettings
 
