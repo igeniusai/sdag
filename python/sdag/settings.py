@@ -41,14 +41,23 @@ class Pyproj(BaseModel):
     """
 
     dag_dir: str = Field(alias="dag-dir", default="./pipelines")
-    compiled_dag_dir: str = Field(alias="compiled-dag-dir", default=".")
+    compiled_dag_dir: str = Field(
+        alias="compiled-dag-dir", default="./compiled-pipelines"
+    )
     cmd: Commands | None = None
     prepend_compiled_dag_dir: bool = Field(
-        alias="prepend-compiled-dag-dir", default=False
+        alias="prepend-compiled-dag-dir", default=True
     )
     log_level: Literal["debug", "info", "warning", "error"] = Field(
         alias="log-level", default="info"
     )
+    slurm_grace_period: int = Field(
+        alias="slurm-grace-period", default=5, ge=0
+    )
+    max_concurrent_runs: int = Field(
+        alias="max-concurrent-runs", default=20, gt=0
+    )
+
     tags: list[SDAGTag] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid")

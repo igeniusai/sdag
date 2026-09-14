@@ -262,7 +262,7 @@ mod tests {
     fn get_cfg() -> Cfg {
         let meta = get_meta();
         let homedir = get_tmp_dir();
-        Cfg::new(&homedir, &meta, 5, 4)
+        Cfg::mock_run(&homedir, &meta)
     }
 
     fn get_task() -> Task {

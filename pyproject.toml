@@ -120,6 +120,4 @@ sdag-execute = "sdag.entrypoints:sdag_execute"
 
 [tool.sdag]
 dag-dir = "python/sdag/pipelines"
-compiled-dag-dir = "compiled-pipelines"
-prepend-compiled-dag-dir = true
 log-level = "info"

@@ -18,7 +18,13 @@ use std::sync::mpsc::Sender;
 use std::sync::{Mutex, Once};
 use std::time::Duration;
 
-pub fn run(pipeline_path: &str, max_concurrency: usize, time_between_polls: u64) {
+pub fn run(
+    pipeline_path: &str,
+    max_concurrency: usize,
+    time_between_polls: u64,
+    slurm_grace_period: usize,
+    max_concurrent_runs: usize,
+) {
     let pipeline_path = PathBuf::from(pipeline_path);
     let dag = state::read_dag(&pipeline_path).expect("Failed to read DAG - {e}");
     log::info!(
@@ -31,7 +37,14 @@ pub fn run(pipeline_path: &str, max_concurrency: usize, time_between_polls: u64)
     nodes.sort_by_key(|n| n.get_uid());
 
     let homedir = settings::find_homedir().expect("Failed to find the home directory");
-    let cfg = Cfg::new(&homedir, &meta, max_concurrency, time_between_polls);
+    let cfg = Cfg::new(
+        &homedir,
+        &meta,
+        max_concurrency,
+        time_between_polls,
+        slurm_grace_period,
+        max_concurrent_runs,
+    );
 
     dag_setup::add_children(&mut nodes);
     workdirs::create_dir_structure(&cfg, &nodes).expect("Failed to create dagdir");

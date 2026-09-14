@@ -3,6 +3,8 @@ def run(
     max_concurrency: int,
     time_between_polls: int,
     log_level: str,
+    slurm_grace_period: int,
+    max_concurrent_runs: int,
 ) -> None: ...
 def restart_run(
     pipeline_name: str,
