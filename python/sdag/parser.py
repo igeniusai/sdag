@@ -1,8 +1,14 @@
 """sdag parser."""
 
 import json
+import sys
 from argparse import ArgumentParser, BooleanOptionalAction
-from typing import Any, Self
+from typing import Any
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 from sdag._version import __version__
 from sdag.commands import (

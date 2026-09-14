@@ -2,9 +2,15 @@
 
 import inspect
 import logging
+import sys
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Literal, Self
+from typing import Any, Literal
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 from sdag.compiler import compiler, master
 from sdag.exceptions import (

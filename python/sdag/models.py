@@ -1,9 +1,16 @@
 """sdag models."""
 
 import random
+import sys
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Any, Literal, Self, TypeVar
+from typing import Annotated, Any, Literal, TypeVar
 
 from pydantic import (
     BaseModel,
