@@ -323,7 +323,7 @@ mod tests {
         };
 
         let homedir = path.join("home");
-        let cfg = Cfg::new(&homedir, &meta, 3, 5);
+        let cfg = Cfg::mock_run(&homedir, &meta);
         create_dir_structure(&cfg, &nodes).unwrap();
 
         assert!(cfg.homedir.exists());

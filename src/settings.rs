@@ -27,6 +27,8 @@ impl Cfg {
         meta: &DAGMeta,
         max_concurrency: usize,
         time_between_polls: u64,
+        grace_period: usize,
+        max_dagdirs: usize,
     ) -> Self {
         let dagdir = homedir
             .join("pipelines")
@@ -43,11 +45,15 @@ impl Cfg {
             local_cachedir,
             timestamp,
             max_concurrency,
+            grace_period,
+            max_dagdirs,
             homedir: homedir.into(),
             sleep_time: Duration::from_secs(time_between_polls),
-            grace_period: 5,
-            max_dagdirs: 10,
         }
+    }
+
+    pub fn mock_run(homedir: &Path, meta: &DAGMeta) -> Self {
+        Self::new(homedir, meta, 1, 5, 1, 1)
     }
 }
 
@@ -113,7 +119,7 @@ mod tests {
             kwargs: HashMap::new(),
         };
         let home_path = PathBuf::from("./a/path");
-        let cfg = Cfg::new(&home_path, &meta, 5, 2);
+        let cfg = Cfg::mock_run(&home_path, &meta);
 
         assert_eq!(cfg.homedir, home_path);
         assert_eq!(

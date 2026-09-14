@@ -203,11 +203,15 @@ def run_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
     else:
         path = compile_pipeline(args, extras)
 
+    pyproj = parse_pyproject()
+
     core.run(
         pipeline_path=str(path),
         max_concurrency=args.max_concurrency,
         time_between_polls=args.time_between_polls,
         log_level=args.log_level,
+        slurm_grace_period=pyproj.slurm_grace_period,
+        max_concurrent_runs=pyproj.max_concurrent_runs,
     )
 
 

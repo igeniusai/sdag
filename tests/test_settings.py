@@ -28,6 +28,8 @@ def test_parse_pyproject(tmp_path: Path) -> None:
     compiled-dag-dir = "path/to/compiled"
     prepend-compiled-dag-dir = true
     log-level = "debug"
+    slurm-grace-period = 50
+    max-concurrent-runs = 2
     cmd = "bash"
 
     [[tool.sdag.tags]]
@@ -44,6 +46,8 @@ def test_parse_pyproject(tmp_path: Path) -> None:
     assert pyproj.prepend_compiled_dag_dir
     assert pyproj.cmd == "bash"
     assert pyproj.log_level == "debug"
+    assert pyproj.slurm_grace_period == 50
+    assert pyproj.max_concurrent_runs == 2
     assert pyproj.tags[0].tag == "online"
     assert pyproj.tags[0].cmd == "sbatch"
 
