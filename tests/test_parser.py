@@ -47,9 +47,7 @@ class TestExtraArgumentParser:
                 ["--cfg1", "test", "--cfg2=test", "--default"],
                 {"cfg1": "test", "cfg2": "test", "default": True},
             ),
-            # A stray "--" (leaked by argparse when an option with a
-            # value directly precedes the CLI's own "--" separator) is
-            # ignored rather than parsed as a kwarg
+            # -- is ignored
             (["--", "--cfg=test"], {"cfg": "test"}),
         ],
     )
