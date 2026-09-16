@@ -13,10 +13,7 @@ from typing import Any
 import sdag.core as core
 from sdag.compiler import master
 from sdag.discovery import find_all_pipelines, find_pipeline_by_name
-from sdag.exceptions import (
-    DAGNotFoundError,
-    ExtraCLIArgsError,
-)
+from sdag.exceptions import DAGNotFoundError, ExtraCLIArgsError
 from sdag.models import DAG, CacheableTask, Kwarg, TaskNode
 from sdag.pyproj import apply_pyproj_configs, apply_pyproj_to_task, get_pyproj
 from sdag.settings import configure_logging
