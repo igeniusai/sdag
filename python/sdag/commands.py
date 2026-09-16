@@ -13,7 +13,10 @@ from typing import Any
 import sdag.core as core
 from sdag.compiler import master
 from sdag.discovery import find_all_pipelines, find_pipeline_by_name
-from sdag.exceptions import DAGNotFoundError, ExtraCLIArgsError
+from sdag.exceptions import (
+    DAGNotFoundError,
+    ExtraCLIArgsError,
+)
 from sdag.models import DAG, CacheableTask, Kwarg, TaskNode
 from sdag.pyproj import apply_pyproj_configs, apply_pyproj_to_task, get_pyproj
 from sdag.settings import configure_logging
@@ -426,7 +429,7 @@ def run_task(args: Namespace, extras: dict[str, Any]) -> None:
     task_serialized = task.model_dump_json(warnings="none", by_alias=True)
     core.run_single_task(
         task_serialized,
-        log_level=args.log_level,
+        log_level=pyproj.log_level,
         time_between_polls=pyproj.time_between_polls,
         slurm_grace_period=pyproj.slurm_grace_period,
         max_concurrent_runs=pyproj.max_concurrent_runs,

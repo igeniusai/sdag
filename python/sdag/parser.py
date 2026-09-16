@@ -257,8 +257,7 @@ class ParserBuilder:
         )
 
         runtask_parser.add_argument(
-            "-p",
-            "--pipeline",
+            "pipeline",
             type=str,
             help=(
                 "Pipeline name or import string (e.g., 'path.to:pipeline_fn')."
@@ -474,6 +473,7 @@ class ExtraArgumentParser:
         Returns:
             dict[str, Any]: Parsed extra arguments.
         """
+        extras = [arg for arg in extras if arg != "--"]
         kwargs: dict[str, Any] = {}
         nextras = len(extras)
         i = 0

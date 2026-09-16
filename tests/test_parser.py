@@ -47,6 +47,10 @@ class TestExtraArgumentParser:
                 ["--cfg1", "test", "--cfg2=test", "--default"],
                 {"cfg1": "test", "cfg2": "test", "default": True},
             ),
+            # A stray "--" (leaked by argparse when an option with a
+            # value directly precedes the CLI's own "--" separator) is
+            # ignored rather than parsed as a kwarg
+            (["--", "--cfg=test"], {"cfg": "test"}),
         ],
     )
     def test_parse_extra(
@@ -204,7 +208,6 @@ class TestParaserBuilder:
             [
                 "runtask",
                 "task",
-                "-p",
                 "pipeline",
                 "--local",
                 "-l",
