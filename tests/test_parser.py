@@ -47,6 +47,8 @@ class TestExtraArgumentParser:
                 ["--cfg1", "test", "--cfg2=test", "--default"],
                 {"cfg1": "test", "cfg2": "test", "default": True},
             ),
+            # -- is ignored
+            (["--", "--cfg=test"], {"cfg": "test"}),
         ],
     )
     def test_parse_extra(
@@ -204,7 +206,6 @@ class TestParaserBuilder:
             [
                 "runtask",
                 "task",
-                "-p",
                 "pipeline",
                 "--local",
                 "-l",

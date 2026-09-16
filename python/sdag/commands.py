@@ -426,7 +426,7 @@ def run_task(args: Namespace, extras: dict[str, Any]) -> None:
     task_serialized = task.model_dump_json(warnings="none", by_alias=True)
     core.run_single_task(
         task_serialized,
-        log_level=args.log_level,
+        log_level=pyproj.log_level,
         time_between_polls=pyproj.time_between_polls,
         slurm_grace_period=pyproj.slurm_grace_period,
         max_concurrent_runs=pyproj.max_concurrent_runs,
