@@ -1,11 +1,5 @@
-from pathlib import Path
-
 import pytest
-from sdag.settings import (
-    EnvLoggerFormatter,
-    configure_logging,
-    parse_pyproject,
-)
+from sdag.settings import EnvLoggerFormatter, configure_logging
 
 
 def test_configure_logging() -> None:
@@ -13,39 +7,14 @@ def test_configure_logging() -> None:
     configure_logging(log_level="info")
 
 
-def test_parse_pyproject(tmp_path: Path) -> None:
-    content = """[tool.sdag]
-    dag-dir = "path/to/dagdir"
-    compiled-dag-dir = "path/to/compiled"
-    prepend-compiled-dag-dir = true
-    log-level = "debug"
-    slurm-grace-period = 50
-    max-concurrent-runs = 2
-    cmd = "bash"
-
-    [[tool.sdag.tags]]
-    tag = "online"
-    cmd = "sbatch"
-    """
-    path = tmp_path / "pyproject.toml"
-    with path.open("w") as f:
-        f.write(content)
-
-    pyproj = parse_pyproject(str(path))
-    assert pyproj.dag_dir == "path/to/dagdir"
-    assert pyproj.compiled_dag_dir == "path/to/compiled"
-    assert pyproj.prepend_compiled_dag_dir
-    assert pyproj.cmd == "bash"
-    assert pyproj.log_level == "debug"
-    assert pyproj.slurm_grace_period == 50
-    assert pyproj.max_concurrent_runs == 2
-    assert pyproj.tags[0].tag == "online"
-    assert pyproj.tags[0].cmd == "sbatch"
-
-
 class TestEnvLoggerFormatter:
     @pytest.fixture
     def formatter(self) -> EnvLoggerFormatter:
+        """Log formatter.
+
+        Returns:
+            EnvLoggerFormatter: Log formatter.
+        """
         return EnvLoggerFormatter()
 
     @pytest.mark.parametrize(
@@ -60,4 +29,11 @@ class TestEnvLoggerFormatter:
     def test_format_logname(
         self, levelname: str, formatted: str, formatter: EnvLoggerFormatter
     ) -> None:
+        """Check the log formatter works as expected.
+
+        Args:
+            levelname (str): Level name ('DEBUG' etc).
+            formatted (str): Expected formatted level name.
+            formatter (EnvLoggerFormatter): Log formatter.
+        """
         assert formatter._format_levelname(levelname) == formatted

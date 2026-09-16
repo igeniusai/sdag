@@ -1,16 +1,13 @@
 from pathlib import Path
-from typing import Any
 
 import pytest
 from sdag.commands import (
-    _apply_pyproj_configs,
     _find_cacheable_tasks,
     _find_compiled_path,
     _get_dag_from_name_import_or_json,
     _parse_compiled_pipeline,
 )
-from sdag.models import DAG, CacheableTask, DAGMeta, ScriptPath, TaskNode
-from sdag.settings import Pyproj
+from sdag.models import DAG, CacheableTask
 
 
 @pytest.fixture
@@ -129,54 +126,3 @@ def test_get_dag_from_name_import_or_json(tmp_path: Path, dag: DAG) -> None:
     )
 
     assert parsed_dag == dag
-
-
-@pytest.mark.parametrize(
-    argnames=("pyproj_dict", "cmd"),
-    argvalues=[
-        # task + null -> task
-        ({}, "sbatch"),
-        # task + global -> global
-        ({"cmd": "bash"}, "bash"),
-        # task + global + null -> global
-        ({"cmd": "bash", "tags": [{"tag": "TAG1"}]}, "bash"),
-        # task + global + TAG1 -> TAG1
-        (
-            {"cmd": "bash", "tags": [{"tag": "TAG1", "cmd": "sbatch"}]},
-            "sbatch",
-        ),
-        # task + global + TAG1 + TAG2 -> TAG2
-        (
-            {
-                "cmd": "bash",
-                "tags": [
-                    {"tag": "TAG1", "cmd": "sbatch"},
-                    {"tag": "TAG2", "cmd": "bash"},
-                ],
-            },
-            "bash",
-        ),
-    ],
-)
-def test_apply_pyproj_configs(pyproj_dict: dict[str, Any], cmd: str) -> None:
-    pyproj = Pyproj.model_validate(pyproj_dict)
-    task = TaskNode(
-        uid=0,
-        name="task_name",
-        fn_name="task_fn",
-        cache=False,
-        mode="ext",
-        cmd="sbatch",
-        scope="local",
-        retries=0,
-        tags=["TAG1", "TAG2"],
-        script=ScriptPath(path=Path()),
-    )
-
-    dag = DAG(
-        meta=DAGMeta(pipeline_name="pipe", hash="xxx"),
-        nodes=[task],
-    )
-
-    _apply_pyproj_configs(dag, pyproj)
-    assert dag.nodes[0].cmd == cmd  # type: ignore

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from sdag.compiler import master
 from sdag.exceptions import DAGNotFoundError
-from sdag.settings import parse_pyproject
+from sdag.pyproj import get_pyproj
 from sdag.wrappers import Pipeline
 
 logger = logging.getLogger(__name__)
@@ -124,7 +124,7 @@ def _find_dag_dir() -> str:
     Returns:
         str: DAG directory.
     """
-    pyproj = parse_pyproject()
+    pyproj = get_pyproj()
     logger.info("Pipelines are searched in: `%s`", pyproj.dag_dir)
     return pyproj.dag_dir
 

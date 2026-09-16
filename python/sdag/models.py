@@ -14,7 +14,9 @@ from typing import Annotated, Any, Literal, TypeVar
 
 from pydantic import (
     BaseModel,
+    ConfigDict,
     Field,
+    NonNegativeInt,
     PrivateAttr,
     field_validator,
     model_validator,
@@ -243,7 +245,7 @@ class BaseNode(BaseModel):
         self.parents.append(parent)
 
     def add_branch_edge(self, parent_uid: int, branch: bool) -> None:
-        """Add a child->parent branch edge.
+        """Add a child -> parent branch edge.
 
         The child depends on one of the branches of an IfNode.
 
@@ -271,23 +273,76 @@ class SlurmOverride(BaseModel):
         output: (str | None): stdout. Defaults to None.
         error: (str | None): stderr. Defaults to None.
         account: (str | None): Account. Defaults to None.
-        cpus_per_task (str | None): CPUs per task. Defaults to None.
+        cpus_per_task (int | None): CPUs per task. Defaults to None.
         mem: (str | None): Memory. Defaults to None.
         time: (str | None): Wall time. Defaults to None.
     """
 
-    job_name: str | None = None
-    nodes: int | None = None
+    job_name: str | None = Field(alias="job-name", default=None)
+    nodes: NonNegativeInt | None = None
     partition: str | None = None
     qos: str | None = None
-    gpus_per_node: int | None = None
-    ntasks_per_node: int | None = None
+    gpus_per_node: NonNegativeInt | None = Field(
+        alias="gpus-per-node", default=None
+    )
+    ntasks_per_node: NonNegativeInt | None = Field(
+        alias="ntasks-per-node", default=None
+    )
     output: str | None = None
     error: str | None = None
     account: str | None = None
-    cpus_per_task: str | None = None
+    cpus_per_task: NonNegativeInt | None = Field(
+        alias="cpus-per-task", default=None
+    )
     mem: str | None = None
     time: str | None = None
+
+    model_config = ConfigDict(
+        extra="forbid", validate_by_alias=True, serialize_by_alias=True
+    )
+
+    def override_from(self, other: Self) -> None:  # noqa: C901
+        """Override slurm configs from another set.
+
+        Args:
+            other (Self): Slurm configurations overriding
+                the current ones in place.
+        """
+        if other.job_name is not None:
+            self.job_name = other.job_name
+
+        if other.nodes is not None:
+            self.nodes = other.nodes
+
+        if other.partition is not None:
+            self.partition = other.partition
+
+        if other.qos is not None:
+            self.qos = other.qos
+
+        if other.gpus_per_node is not None:
+            self.gpus_per_node = other.gpus_per_node
+
+        if other.ntasks_per_node is not None:
+            self.ntasks_per_node = other.ntasks_per_node
+
+        if other.output is not None:
+            self.output = other.output
+
+        if other.error is not None:
+            self.error = other.error
+
+        if other.account is not None:
+            self.account = other.account
+
+        if other.cpus_per_task is not None:
+            self.cpus_per_task = other.cpus_per_task
+
+        if other.mem is not None:
+            self.mem = other.mem
+
+        if other.time is not None:
+            self.time = other.time
 
 
 Commands = Literal["bash", "sbatch"]

@@ -175,6 +175,7 @@ target/
 .sdag/
 compiled-pipelines
 python/sdag/pipelines
+.sdag.toml
 
 # debugging stuff
 debug/
