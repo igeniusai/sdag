@@ -5,7 +5,7 @@ import logging
 import sys
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -39,6 +39,7 @@ from sdag.models import (
     TaskNode,
 )
 from sdag.settings import get_compile_settings
+from sdag.types import Commands, ExecMode, Scope
 
 logger = logging.getLogger(__name__)
 
@@ -234,8 +235,12 @@ class Task:
     Attributes:
         fn (Callable[..., Any]): Task function.
         name (str): Task name.
-        cmd (Literal["sbatch", "bash"]): Task command.
-        mode (Literal["wrap", "ext"]): Task mode.
+        cmd (Commands): Task command.
+        mode (ExecMode): Task mode.
+        scope: (Scope): Task scope.
+            Use 'global' for tasks decorated with the
+            @task decorator, 'local' for tasks decorated
+            with @pipeline.task.
         cache (bool): Enable caching.
         cache_ignore (list[str]): list of fields ignored
             during cache validation.
@@ -249,9 +254,9 @@ class Task:
         self,
         fn: Callable[..., Any],
         name: str,
-        cmd: Literal["sbatch", "bash"],
-        mode: Literal["wrap", "ext"],
-        scope: Literal["local", "global"],
+        cmd: Commands,
+        mode: ExecMode,
+        scope: Scope,
         cache: bool,
         cache_ignore: list[str] | None,
         cache_size: int,
@@ -264,9 +269,9 @@ class Task:
         Args:
             fn (Callable[..., Any]): Task function.
             name (str): Task name.
-            cmd (Literal["sbatch", "bash"]): Task command.
-            mode (Literal["wrap", "ext"]): Task mode.
-            scope: (Literal["local", "global"]): Task scope.
+            cmd (Commands): Task command.
+            mode (ExecMode): Task mode.
+            scope: (Scope): Task scope.
                 Use 'global' for tasks decorated with the
                 @task decorator, 'local' for tasks decorated
                 with @pipeline.task.
@@ -282,9 +287,9 @@ class Task:
         """
         self.fn = fn
         self.name = name
-        self.cmd: Literal["sbatch", "bash"] = cmd
-        self.mode: Literal["wrap", "ext"] = mode
-        self.scope: Literal["local", "global"] = scope
+        self.cmd: Commands = cmd
+        self.mode: ExecMode = mode
+        self.scope: Scope = scope
         self.cache = cache
         self.cache_ignore = cache_ignore if cache_ignore is not None else []
         self.cache_size = cache_size
@@ -494,8 +499,8 @@ class Pipeline:
         self,
         script: str | Path | Script,
         name: str | None = None,
-        cmd: Literal["sbatch", "bash"] = "sbatch",
-        mode: Literal["wrap", "ext"] = "wrap",
+        cmd: Commands = "sbatch",
+        mode: ExecMode = "wrap",
         cache: bool = False,  # noqa: FBT002
         cache_ignore: list[str] | None = None,
         cache_size: int = 1,
@@ -509,9 +514,9 @@ class Pipeline:
                 either or a sdag.Script instance.
             name (str | None, optional): Task name. If null, it will
                 default to the function name. Defaults to None.
-            cmd (Literal["sbatch", "bash"], optional): Command to
+            cmd (Commands, optional): Command to
                 execute the script. Defaults to "sbatch".
-            mode (Literal["wrap", "ext"], optional): Use wrap to call the
+            mode (ExecMode, optional): Use wrap to call the
                 Python function or ext to call an external script.
                 Defaults to "wrap".
             cache (bool, optional): Enable local caching.
@@ -610,8 +615,8 @@ class Pipeline:
 def task(
     script: str | Path | Script,
     name: str | None = None,
-    cmd: Literal["sbatch", "bash"] = "sbatch",
-    mode: Literal["wrap", "ext"] = "wrap",
+    cmd: Commands = "sbatch",
+    mode: ExecMode = "wrap",
     cache: bool = False,  # noqa: FBT002
     cache_ignore: list[str] | None = None,
     cache_size: int = 1,
@@ -625,9 +630,9 @@ def task(
             either or a sdag.Script instance.
         name (str | None, optional): Task name. If null, it will
             default to the function name. Defaults to None.
-        cmd (Literal["sbatch", "bash"], optional): Command to
+        cmd (Commands, optional): Command to
             execute the script. Defaults to "sbatch".
-        mode (Literal["wrap", "ext"], optional): Use wrap to call the
+        mode (ExecMode, optional): Use wrap to call the
             Python function or ext to call an external script.
             Defaults to "wrap".
         cache (bool, optional): Enable caching. Defaults
