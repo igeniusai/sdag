@@ -13,6 +13,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::error::Error;
 use std::io;
+use std::path::PathBuf;
 use std::process::{Child, Command, Output, Stdio};
 
 pub fn submit_slurm(
@@ -194,17 +195,23 @@ fn find_output_and_error_paths(
     (output, error)
 }
 
-fn set_script_path(cmd: &mut Command, task: &Task, cfg: &Cfg) -> io::Result<()> {
+fn set_script_path(cmd: &mut Command, task: &Task, cfg: &Cfg) -> Result<(), String> {
     let path = match &task.script {
         Script::Script(script) => {
             let filename = FileNames::Script.as_str();
             let dir = task.uid.to_string();
             let path = cfg.dagdir.join(dir).join(filename);
-            state::save_script(&script.content, &path)?;
-            &path.to_string_lossy().into()
+            state::save_script(&script.content, &path)
+                .map_err(|e| format!("Failed to save script: {e}"))?;
+            path
         }
-        Script::ScriptPath(script_path) => &script_path.path,
+        Script::ScriptPath(script_path) => PathBuf::from(&script_path.path),
     };
+
+    if !path.is_file() {
+        let msg = format!("Script '{}' does not exist", task.uid);
+        return Err(msg);
+    }
 
     cmd.arg(&path);
     Ok(())
@@ -236,8 +243,8 @@ fn find_submitted_job_id(output: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schemas::ScriptContent;
     use crate::schemas::{Cmd, Scope};
+    use crate::schemas::{ScriptContent, ScriptPath};
     use std::env;
     use std::fs;
     use std::path::PathBuf;
@@ -303,6 +310,19 @@ mod tests {
 
         let script_path = task_dir.join(FileNames::Script.as_str());
         assert!(script_path.is_file())
+    }
+
+    #[test]
+    #[should_panic]
+    fn try_set_nonexistent_script_path() {
+        let mut cmd = Command::new("ls");
+        let mut task = get_task();
+        task.script = Script::ScriptPath(ScriptPath {
+            path: "bad.something".into(),
+        });
+
+        let cfg = get_cfg();
+        set_script_path(&mut cmd, &task, &cfg).unwrap();
     }
 
     #[test]
