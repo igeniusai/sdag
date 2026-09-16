@@ -15,7 +15,8 @@ from sdag.compiler import master
 from sdag.discovery import find_all_pipelines, find_pipeline_by_name
 from sdag.exceptions import DAGNotFoundError, ExtraCLIArgsError
 from sdag.models import DAG, CacheableTask, Kwarg, TaskNode
-from sdag.settings import Pyproj, configure_logging, parse_pyproject
+from sdag.pyproj import apply_pyproj_configs, apply_pyproj_to_task, get_pyproj
+from sdag.settings import configure_logging
 from sdag.wrappers import Task
 
 logger = logging.getLogger(__name__)
@@ -64,8 +65,8 @@ def compile_and_return_dag(
     if extra_metadata is not None:
         dag.meta.extra = json.loads(extra_metadata)
 
-    pyproj = parse_pyproject()
-    _apply_pyproj_configs(dag, pyproj)
+    cfg = get_pyproj()
+    apply_pyproj_configs(dag, cfg)
 
     logger.info("Compiled pipeline '%s' with hash '%s'", path, dag.meta.hash)
 
@@ -85,7 +86,7 @@ def _find_compiled_path(path: str) -> Path:
     """
     if "/" in path:
         return Path(path)
-    pyproj = parse_pyproject()
+    pyproj = get_pyproj()
     if not pyproj.prepend_compiled_dag_dir:
         return Path(path)
     return Path(pyproj.compiled_dag_dir) / path
@@ -163,7 +164,7 @@ def compile_pipeline(args: Namespace, extras: dict[str, Any]) -> Path:
     Returns:
         Path: Path where the compiled JSON has been saved.
     """
-    pyproj = parse_pyproject()
+    pyproj = get_pyproj()
     pyproj.join_cli_args(args)
     configure_logging(pyproj.log_level)
 
@@ -196,7 +197,7 @@ def run_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
         extras (dict[str, Any]): Extra arguments only used
             if the pipeline must be compiled.
     """
-    pyproj = parse_pyproject()
+    pyproj = get_pyproj()
     pyproj.join_cli_args(args)
     configure_logging(pyproj.log_level)
 
@@ -228,7 +229,7 @@ def restart_run(args: Namespace, extras: dict[str, Any]) -> None:
     if extras:
         raise ExtraCLIArgsError(extras)
 
-    pyproj = parse_pyproject()
+    pyproj = get_pyproj()
     pyproj.join_cli_args(args)
     configure_logging(pyproj.log_level)
 
@@ -264,7 +265,7 @@ def retry_run(args: Namespace, extras: dict[str, Any]) -> None:
     if extras:
         raise ExtraCLIArgsError(extras)
 
-    pyproj = parse_pyproject()
+    pyproj = get_pyproj()
     pyproj.join_cli_args(args)
     configure_logging(pyproj.log_level)
 
@@ -300,7 +301,7 @@ def kill_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
     if extras:
         raise ExtraCLIArgsError(extras)
 
-    pyproj = parse_pyproject()
+    pyproj = get_pyproj()
     pyproj.join_cli_args(args)
     configure_logging(pyproj.log_level)
 
@@ -333,7 +334,7 @@ def prune_cache(args: Namespace, extras: dict[str, Any]) -> None:
     if args.pipeline is None and not args.task:
         raise ExtraCLIArgsError(extras)
 
-    pyproj = parse_pyproject()
+    pyproj = get_pyproj()
     pyproj.join_cli_args(args)
     configure_logging(pyproj.log_level)
 
@@ -378,7 +379,7 @@ def view_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
     """
     from sdag.visualization import MermaidGenerator
 
-    pyproj = parse_pyproject()
+    pyproj = get_pyproj()
     pyproj.join_cli_args(args)
     configure_logging(pyproj.log_level)
 
@@ -400,7 +401,7 @@ def run_task(args: Namespace, extras: dict[str, Any]) -> None:
         args (Namespace): Parsed args.
         extras (dict[str, Any]): Extra arguments used for compilation.
     """
-    pyproj = parse_pyproject()
+    pyproj = get_pyproj()
     pyproj.join_cli_args(args)
     configure_logging(pyproj.log_level)
 
@@ -420,8 +421,8 @@ def run_task(args: Namespace, extras: dict[str, Any]) -> None:
         kwargs=[Kwarg(key=k, value=v) for k, v in extras.items()],
     )
 
-    pyproj = parse_pyproject()
-    _apply_pyproj_to_task(task, pyproj)
+    pyproj = get_pyproj()
+    apply_pyproj_to_task(task, pyproj)
     task_serialized = task.model_dump_json(warnings="none", by_alias=True)
     core.run_single_task(
         task_serialized,
@@ -448,7 +449,7 @@ def list_pipelines(args: Namespace, extras: dict[str, Any]) -> None:
     if extras:
         raise ExtraCLIArgsError(extras)
 
-    pyproj = parse_pyproject()
+    pyproj = get_pyproj()
     pyproj.join_cli_args(args)
     configure_logging(pyproj.log_level)
 
@@ -471,7 +472,7 @@ def describe_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
         args (Namespace): Parsed args.
         extras (dict[str, Any]): Extra arguments used for compiling.
     """
-    pyproj = parse_pyproject()
+    pyproj = get_pyproj()
     pyproj.join_cli_args(args)
     configure_logging(pyproj.log_level)
 
@@ -481,32 +482,3 @@ def describe_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
         path = compile_pipeline(args, extras)
 
     core.describe_pipeline(str(path), log_level=pyproj.log_level)
-
-
-def _apply_pyproj_configs(dag: DAG, pyproj: Pyproj) -> None:
-    """Apply pyproject settings to all tasks.
-
-    Args:
-        dag (DAG): Compiled DAG.
-        pyproj (Pyproj): Parsed pyproject.toml.
-    """
-    for task in dag.nodes:
-        if task.kind == "task":
-            _apply_pyproj_to_task(task, pyproj)
-
-
-def _apply_pyproj_to_task(task: TaskNode, pyproj: Pyproj) -> None:
-    """Apply pyproject settings to a task.
-
-    Args:
-        task (TaskNode): Task node.
-        pyproj (Pyproj): Parsed pyproject.
-    """
-    cmd = pyproj.cmd
-    for tag_name in task.tags:
-        for tag in pyproj.tags:
-            if tag.tag == tag_name and tag.cmd is not None:
-                cmd = tag.cmd
-
-    if cmd is not None:
-        task.cmd = cmd

@@ -2,127 +2,15 @@
 
 import logging
 import sys
-from argparse import Namespace
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum
-
-    import tomllib
 else:
-    import tomli as tomllib
     from strenum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import BaseSettings
-
-from sdag.models import Commands
-
-
-class SDAGTag(BaseModel):
-    """Tag configurations.
-
-    Attributes:
-        tag (str): Tag name.
-        cmd (Commands | None): Command. Defaults to None.
-    """
-
-    tag: str
-    cmd: Commands | None = None
-
-
-class Pyproj(BaseModel):
-    """pyproject.toml configs.
-
-    Attributes:
-        dag_dir (str): DAG directory.
-        compiled_dag_dir (str): Compiled DAG directory.
-        prepend_compiled_dag_dir (bool): Add the compiled pipeline
-            dir automatically if the directory has not been
-            specified.
-        time_between_polls (int): Time between successive Slurm polls
-            in seconds. Defaults to 5.
-        commands (Commands | None): Commands to execute tasks. If
-            set, it overrides all pipeline commands.
-        log_level (Literal["debug", "info", "warning", "error"]):
-            Logging level.
-    """
-
-    dag_dir: str = Field(alias="dag-dir", default="./pipelines")
-    compiled_dag_dir: str = Field(
-        alias="compiled-dag-dir", default="./compiled-pipelines"
-    )
-    cmd: Commands | None = None
-    prepend_compiled_dag_dir: bool = Field(
-        alias="prepend-compiled-dag-dir", default=True
-    )
-    log_level: Literal["debug", "info", "warning", "error"] = Field(
-        alias="log-level", default="info"
-    )
-    time_between_polls: int = Field(
-        alias="time-between-polls", default=5, ge=0
-    )
-    max_concurrency: int = Field(alias="max-concurrency", default=0, ge=0)
-    slurm_grace_period: int = Field(
-        alias="slurm-grace-period", default=5, ge=0
-    )
-    max_concurrent_runs: int = Field(
-        alias="max-concurrent-runs", default=20, gt=0
-    )
-
-    tags: list[SDAGTag] = Field(default_factory=list)
-
-    model_config = ConfigDict(extra="forbid")
-
-    def join_cli_args(self, args: Namespace) -> None:
-        """Join the user preferences into the pyproject.
-
-        Args:
-            args (Namespace): Parsed CLI args.
-        """
-        argdict = args.__dict__
-
-        if argdict.get("log_level") is not None:
-            self.log_level = args.log_level
-
-        if argdict.get("time_between_polls") is not None:
-            self.time_between_polls = args.time_between_polls
-
-        if argdict.get("max_concurrency") is not None:
-            self.max_concurrency = args.max_concurrency
-
-        if argdict.get("compiled_dag_dir") is not None:
-            self.compiled_dag_dir = args.compiled_dag_dir
-
-
-@lru_cache
-def parse_pyproject(pyproj_path: str = "pyproject.toml") -> Pyproj:
-    """Parse and cache di pyproject.toml.
-
-    Args:
-        pyproj_path (str, optional): pyproject.toml path.
-            Defaults to "pyproject.toml".
-
-    Returns:
-        Pyproj: Parsed configs.
-    """
-    path = Path(pyproj_path)
-    if not path.is_file():
-        return Pyproj()
-
-    with path.open("rb") as f:
-        pyproj = tomllib.load(f)
-
-    if "tool" not in pyproj:
-        return Pyproj()
-
-    tool_sdag = pyproj["tool"].get("sdag")
-    if tool_sdag is None:
-        return Pyproj()
-
-    return Pyproj.model_validate(tool_sdag)
 
 
 class Settings(BaseSettings):
