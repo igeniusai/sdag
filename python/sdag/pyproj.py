@@ -13,7 +13,8 @@ else:
 
 from pydantic import ConfigDict, Field
 
-from sdag.models import DAG, Commands, ScriptPath, SlurmOverride, TaskNode
+from sdag.models import DAG, ScriptPath, SlurmOverride, TaskNode
+from sdag.types import Commands
 
 
 class SDAGTag(SlurmOverride):

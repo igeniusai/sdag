@@ -24,6 +24,7 @@ from pydantic import (
 
 from sdag.constants import POSIX_ENV_VARIABLES
 from sdag.exceptions import POSIXOverrideError
+from sdag.types import Commands, ExecMode, Scope
 
 
 class ScriptPath(BaseModel):
@@ -345,9 +346,6 @@ class SlurmOverride(BaseModel):
             self.time = other.time
 
 
-Commands = Literal["bash", "sbatch"]
-
-
 class TaskNode(BaseNode):
     """Task.
 
@@ -355,7 +353,7 @@ class TaskNode(BaseNode):
         kind (Literal["task"]): Kind.
         parents (list[Parent]): Edges.
         fn_name (str): Function name.
-        scope (Literal["global", "local"]): Task scope.
+        scope (Scope): Task scope.
         name (str): Task name, linked to caching.
         cache (bool): Cache the task locally.
         cache_ignore (list[str]): list of fields ignored
@@ -363,7 +361,7 @@ class TaskNode(BaseNode):
         cache_size (int): Cache size. Ignore if caching is disabled.
             set to 0 to allow for infinite cache size. Defaults
             to 1.
-        mode (Literal["wrap", "ext"]): Wrap a Python function or
+        mode (ExecMode): Wrap a Python function or
             an external script.
         cmd (Commands): Command used to launch the script.
         retries (int): Retries.
@@ -383,10 +381,10 @@ class TaskNode(BaseNode):
     fn_name: str
     name: str
     cache: bool
-    scope: Literal["local", "global"]
+    scope: Scope
     cache_ignore: list[str] = Field(default_factory=list)
     cache_size: int = 1
-    mode: Literal["wrap", "ext"]
+    mode: ExecMode
     cmd: Commands
     retries: int
     script: ScriptUnion
@@ -664,9 +662,9 @@ class CacheableTask(BaseModel):
     Attributes:
         name (str): Task name.
         pipeline (str): Pipeline name.
-        scope (Literal["global", "local"]): Task scope.
+        scope (Scope): Task scope.
     """
 
     name: str
     pipeline: str
-    scope: Literal["global", "local"]
+    scope: Scope
