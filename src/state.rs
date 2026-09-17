@@ -9,10 +9,11 @@ use serde_json::{Deserializer, Value};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::error::Error;
-use std::fs;
+use std::fs::{self, File};
 use std::io;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 /// Parse the DAG from the input JSON.
 pub fn read_dag(path: &Path) -> Result<DAG, String> {
@@ -209,6 +210,13 @@ pub fn create_output_and_error_log_dirs(output: &str, error: &str) {
             log::warn!("Failed to create error log directory: {e}");
         }
     }
+}
+
+/// Touch the cached task directory to update the modification time
+/// Only works on Unix systems!
+pub fn touch_cached_task_dir(path: &Path) -> std::io::Result<()> {
+    let dir = File::open(path)?;
+    dir.set_modified(SystemTime::now())
 }
 
 /// Add the dynamic input to the input data
@@ -486,5 +494,11 @@ mod tests {
 
         assert!(out_dir.is_dir());
         assert!(err_dir.is_dir());
+    }
+
+    #[test]
+    fn check_folders_can_be_touched() {
+        let dir = get_tmp_dir();
+        touch_cached_task_dir(&dir).unwrap();
     }
 }
