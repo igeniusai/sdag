@@ -1,13 +1,18 @@
-use crate::context::{Ctx, Job};
+use crate::blocking;
+use crate::context::Ctx;
 use crate::nodes::{Node, Task};
 use crate::polling::Poller;
 use crate::schemas::ExecMode;
+use crate::settings::Cfg;
 use crate::status::{Completed, Failed, JobType, Status};
 use crate::submission;
 use std::process::Child;
 
-pub struct LocalPoller;
-impl Poller for LocalPoller {
+pub struct LocalPoller<'a> {
+    pub cfg: &'a Cfg,
+}
+
+impl<'a> Poller for LocalPoller<'a> {
     fn poll(&mut self, nodes: &[Node], ctx: &mut Ctx) {
         let mut local_jobs = Vec::new();
         while let Some((uid, child)) = ctx.local_jobs.pop() {
@@ -19,7 +24,7 @@ impl Poller for LocalPoller {
     }
 }
 
-impl LocalPoller {
+impl<'a> LocalPoller<'a> {
     fn check_status(
         &mut self,
         mut child: Child,
@@ -48,17 +53,19 @@ impl LocalPoller {
     }
 
     fn handle_success(&self, task: &Task, pid: u32, ctx: &mut Ctx) {
-        if let ExecMode::Ext = task.mode {
-            log::debug!("Task '{}': Queuing output save", task.uid);
-            let job_type = JobType::Local(pid);
-            ctx.jobs.push_back(Job::SaveExtOutput(task.uid, job_type));
-            return;
-        }
         ctx.running_cacheable.remove(&task.name);
         ctx.updated.push_back(task.uid);
-        if task.cache {
-            log::debug!("task '{}': Queueing cache save", task.uid);
-            ctx.jobs.push_back(Job::SaveCache(task.uid));
+        if let ExecMode::Ext = task.mode
+            && let Err(e) = blocking::submit_save_ext_output(task, &self.cfg)
+        {
+            log::error!("Task {}: Failed to save external output - {e}", task.uid);
+            ctx.statuses[task.uid] = Status::Failed(Failed::Job(JobType::Local(pid)));
+            return;
+        }
+        if task.cache
+            && let Err(e) = blocking::submit_save_cache(task, &self.cfg)
+        {
+            log::error!("Task {}: Failed to save cache - {e}", task.uid);
         }
     }
 }
@@ -90,9 +97,27 @@ fn poll_local(child: &mut Child) -> Status {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::schemas::{Cmd, Scope, Script, ScriptPath, SlurmOverride};
+    use crate::schemas::{Cmd, DAGMeta, Scope, Script, ScriptPath, SlurmOverride};
+    use serde_json::Value;
     use std::collections::HashMap;
+    use std::path::PathBuf;
     use std::process::Command;
+
+    fn get_meta() -> DAGMeta {
+        DAGMeta {
+            pipeline_name: "pipe".into(),
+            hash: "xxx".into(),
+            timestamp: "1920-01-01T09:20:20".into(),
+            extra: Value::Null,
+            import_path: String::new(),
+            kwargs: HashMap::new(),
+        }
+    }
+
+    fn get_cfg() -> Cfg {
+        let meta = get_meta();
+        Cfg::new(&PathBuf::from("/a/path"), &meta, "info", 1, 5, 1, 1)
+    }
 
     fn get_task(uid: usize) -> Task {
         Task {
@@ -130,6 +155,7 @@ mod test {
 
     #[test]
     fn test_poll() {
+        let cfg = get_cfg();
         let nodes = vec![Node::Task(get_task(0))];
         let mut ctx = Ctx::new(&nodes).unwrap();
 
@@ -137,7 +163,7 @@ mod test {
         child.wait().unwrap();
         ctx.local_jobs.push((0, child));
 
-        let mut poller = LocalPoller;
+        let mut poller = LocalPoller { cfg: &cfg };
         poller.poll(&nodes, &mut ctx);
 
         assert!(matches!(

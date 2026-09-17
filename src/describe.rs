@@ -1,9 +1,9 @@
+use crate::blocking;
 use crate::nodes::{Node, Task};
 use crate::schemas::Scope;
 use crate::schemas::{Artifact, ParentKind};
 use crate::settings::{self, Cfg};
 use crate::state;
-use crate::submission::blocking;
 use serde_json::{self, Value};
 use std::collections::HashMap;
 use std::path::PathBuf;

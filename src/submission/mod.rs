@@ -1,7 +1,7 @@
-pub mod blocking;
+use crate::blocking;
 pub mod nonblocking;
 use crate::context::{Ctx, Job};
-use crate::nodes::{Branch, Node, OneOf, Task};
+use crate::nodes::{Node, Task};
 use crate::schemas::{Cmd, DAGMeta};
 use crate::settings::Cfg;
 use crate::status::{Completed, Failed, JobType, Status};
@@ -54,47 +54,19 @@ impl<'a> Submitter<'a> {
             match job {
                 Job::Task(uid) => {
                     if let Node::Task(task) = &nodes[uid] {
-                        self.submit_task(task, ctx)
+                        self.handle_task_submission(task, ctx)
                     }
                 }
-                Job::Branch(uid) => {
-                    if let Node::Branch(branch) = &nodes[uid] {
-                        self.submit_branch(branch, ctx);
-                    }
-                }
-                Job::OneOf(uid, target) => {
-                    if let Node::OneOf(oneof) = &nodes[uid] {
-                        self.submit_oneof(oneof, target, ctx);
-                    }
-                }
-                Job::SaveCache(uid) => {
+                Job::ValidateCache(uid, already_checked) => {
                     if let Node::Task(task) = &nodes[uid] {
-                        self.submit_save_cache(task, ctx);
-                    }
-                }
-                Job::ValidateCache(uid) => {
-                    if let Node::Task(task) = &nodes[uid] {
-                        self.submit_validate_cache(task, ctx);
-                    }
-                }
-                Job::SaveExtOutput(uid, job_type) => {
-                    if let Node::Task(task) = &nodes[uid] {
-                        self.submit_save_ext_output(task, job_type, ctx);
+                        self.handle_cache_validation(task, ctx, &already_checked);
                     }
                 }
             }
         }
     }
 
-    fn submit_branch(&mut self, branch: &Branch, ctx: &mut Ctx) {
-        ctx.statuses[branch.uid] = match blocking::submit_branch(branch, &self.cfg) {
-            Ok(choice) => Status::Completed(Completed::Branch(choice)),
-            Err(_) => Status::Failed(Failed::Generic),
-        };
-        ctx.updated.push_back(branch.uid);
-    }
-
-    fn submit_task(&mut self, task: &Task, ctx: &mut Ctx) {
+    fn handle_task_submission(&mut self, task: &Task, ctx: &mut Ctx) {
         let nrunning = ctx.nrunning();
         if self.cfg.max_concurrency != 0 && nrunning >= self.cfg.max_concurrency {
             log::info!(
@@ -149,30 +121,7 @@ impl<'a> Submitter<'a> {
         Ok(())
     }
 
-    fn submit_oneof(&mut self, oneof: &OneOf, target: usize, ctx: &mut Ctx) {
-        match blocking::submit_oneof(oneof, target, &self.cfg) {
-            Ok(_) => {
-                log::info!("OneOf '{}': Submission succeeded", oneof.uid);
-                ctx.statuses[oneof.uid] = Status::Completed(Completed::OneOf(target));
-            }
-            Err(e) => {
-                log::info!("OneOf '{}': Submission failed - {e}", oneof.uid);
-                ctx.statuses[oneof.uid] = Status::Failed(Failed::Generic);
-            }
-        }
-        ctx.updated.push_back(oneof.uid);
-    }
-
-    fn submit_save_cache(&mut self, task: &Task, ctx: &mut Ctx) {
-        match blocking::submit_save_cache(&task, &self.cfg) {
-            Ok(_) => log::info!("Task '{}': Cache saved", task.uid),
-            Err(e) => log::error!("Task '{}': Failed to save cache - {e}", task.uid),
-        }
-        ctx.running_cacheable.remove(&task.name);
-        ctx.updated.push_back(task.uid);
-    }
-
-    fn submit_validate_cache(&mut self, task: &Task, ctx: &mut Ctx) {
+    fn handle_cache_validation(&mut self, task: &Task, ctx: &mut Ctx, already_checked: &bool) {
         log::info!("checking task {} cache", task.uid);
         if task.cache && ctx.running_cacheable.contains(&task.name) {
             log::warn!(
@@ -181,38 +130,15 @@ impl<'a> Submitter<'a> {
                 task.uid,
                 task.name
             );
-            self.held_jobs.push_back(Job::ValidateCache(task.uid));
+            self.held_jobs
+                .push_back(Job::ValidateCache(task.uid, false));
             return;
         }
-
-        let status = if blocking::submit_validate_cache(&task, &self.cfg) {
-            log::info!("Task {} is cached.", task.uid);
-            Status::Completed(Completed::Cached)
-        } else {
-            log::info!("Task {}: Cache validation failed.", task.uid);
-            Status::ReadyForSubmission
-        };
-        ctx.statuses[task.uid] = status;
-        ctx.updated.push_back(task.uid);
-    }
-
-    fn submit_save_ext_output(&mut self, task: &Task, job_type: JobType, ctx: &mut Ctx) {
-        let res = blocking::submit_save_ext_output(task, &self.cfg);
-        let status = match res {
-            Ok(_) => {
-                if task.cache {
-                    ctx.jobs.push_back(Job::SaveCache(task.uid));
-                }
-                log::info!("External task {} completed.", task.uid);
-                Status::Completed(Completed::Job(job_type))
-            }
-            Err(_) => {
-                log::error!("Task {}: Failed to save external output", task.uid);
-                Status::Failed(Failed::Job(job_type))
-            }
-        };
-
-        ctx.statuses[task.uid] = status;
-        ctx.updated.push_back(task.uid);
+        if !already_checked && blocking::submit_validate_cache(&task, &self.cfg) {
+            ctx.statuses[task.uid] = Status::Completed(Completed::Cached);
+            return;
+        }
+        ctx.statuses[task.uid] = Status::ReadyForSubmission;
+        ctx.jobs.push_back(Job::Task(task.uid));
     }
 }

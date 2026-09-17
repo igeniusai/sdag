@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 mod banner;
+mod blocking;
 mod cache_pruning;
 mod context;
 mod dag_setup;
