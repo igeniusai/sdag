@@ -85,10 +85,12 @@ ignore = [
 convention = "google"
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["python", "tests"]
 exclude = [
     "**/__pycache__",
     ".venv",
+    "**/node_modules",
+    "**/.*",
 ]
 defineConstant = { DEBUG = true }
 reportMissingImports = "error"
