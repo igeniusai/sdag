@@ -1,4 +1,5 @@
-use crate::context::{Ctx, Job};
+use crate::blocking;
+use crate::context::Ctx;
 use crate::nodes::{Node, Task};
 use crate::polling::Poller;
 use crate::schemas::ExecMode;
@@ -14,7 +15,6 @@ use std::process::Command;
 
 pub struct SlurmPoller<'a> {
     pub cfg: &'a Cfg,
-    pub nslurm_fails: usize,
     missing_jobs: HashMap<usize, usize>,
 }
 
@@ -24,23 +24,18 @@ impl<'a> Poller for SlurmPoller<'a> {
             return;
         }
 
-        match poll_slurm(&ctx.slurm_jobs) {
-            Ok(mut poll_result) => {
-                self.nslurm_fails = 0;
-                ctx.slurm_jobs = self.handle_missing_jobs(&mut poll_result, ctx);
-                for (uid, status) in poll_result {
-                    if let Node::Task(task) = &nodes[uid] {
-                        self.handle_new_slurm_status(task, status, ctx);
-                    }
-                }
-            }
-
+        let mut poll_result = match poll_slurm(&ctx.slurm_jobs) {
+            Ok(poll_result) => poll_result,
             Err(e) => {
                 log::error!("Failed to contact Slurm - {e}");
-                self.nslurm_fails += 1;
-                if self.nslurm_fails >= self.cfg.grace_period {
-                    self.mark_all_jobs_as_failed(ctx);
-                }
+                HashMap::new()
+            }
+        };
+
+        self.handle_missing_jobs(&mut poll_result, ctx);
+        for (uid, status) in poll_result {
+            if let Node::Task(task) = &nodes[uid] {
+                self.handle_new_slurm_status(task, status, ctx);
             }
         }
     }
@@ -50,7 +45,6 @@ impl<'a> SlurmPoller<'a> {
     pub fn new(cfg: &'a Cfg) -> Self {
         Self {
             cfg,
-            nslurm_fails: 0,
             missing_jobs: HashMap::new(),
         }
     }
@@ -66,18 +60,19 @@ impl<'a> SlurmPoller<'a> {
                 submission::handle_retries(task, ctx, failure.clone())
             }
             Status::Completed(Completed::Job(job_type)) => {
-                let _ = ctx.running_cacheable.remove(&task.name);
-                if let ExecMode::Ext = task.mode {
-                    let job_type = job_type.clone();
-                    ctx.statuses[task.uid] = status;
-                    ctx.jobs.push_back(Job::SaveExtOutput(task.uid, job_type));
+                ctx.running_cacheable.remove(&task.name);
+                ctx.updated.push_back(task.uid);
+                if let ExecMode::Ext = task.mode
+                    && let Err(e) = blocking::submit_save_ext_output(task, &self.cfg)
+                {
+                    log::error!("Task {}: Failed to save external output - {e}", task.uid);
+                    ctx.statuses[task.uid] = Status::Failed(Failed::Job(job_type.clone()));
                     return;
                 }
-
-                ctx.statuses[task.uid] = status;
-                ctx.updated.push_back(task.uid);
-                if task.cache {
-                    ctx.jobs.push_back(Job::SaveCache(task.uid));
+                if task.cache
+                    && let Err(e) = blocking::submit_save_cache(task, &self.cfg)
+                {
+                    log::error!("Task {}: Failed to save cache - {e}", task.uid);
                 }
             }
 
@@ -94,22 +89,7 @@ impl<'a> SlurmPoller<'a> {
         }
     }
 
-    fn mark_all_jobs_as_failed(&mut self, ctx: &mut Ctx) {
-        log::error!("Slurm grace period reached, marking all jobs as failed");
-        for (uid, job_id) in &ctx.slurm_jobs {
-            let job_type = JobType::Slurm(job_id.to_string());
-            ctx.statuses[*uid] = Status::Failed(Failed::FailedToContact(job_type));
-            ctx.updated.push_back(*uid);
-        }
-        self.nslurm_fails = 0;
-        ctx.slurm_jobs = Vec::new();
-    }
-
-    fn handle_missing_jobs(
-        &mut self,
-        poll_result: &mut HashMap<usize, Status>,
-        ctx: &mut Ctx,
-    ) -> Vec<(usize, String)> {
+    fn handle_missing_jobs(&mut self, poll_result: &mut HashMap<usize, Status>, ctx: &mut Ctx) {
         let mut new_jobs = Vec::new();
         for job in ctx.slurm_jobs.drain(..) {
             let nmiss = self.missing_jobs.entry(job.0).or_insert(0);
@@ -117,11 +97,13 @@ impl<'a> SlurmPoller<'a> {
                 *nmiss = 0;
                 continue;
             }
+
             log::warn!(
                 "Slurm response does not contain job {} (task {})",
                 job.1,
                 job.0
             );
+
             *nmiss += 1;
             if *nmiss <= self.cfg.grace_period {
                 new_jobs.push(job);
@@ -138,7 +120,8 @@ impl<'a> SlurmPoller<'a> {
             let status = Status::Failed(Failed::FailedToContact(Slurm(job.1)));
             poll_result.insert(job.0, status);
         }
-        new_jobs
+
+        ctx.slurm_jobs = new_jobs;
     }
 }
 
@@ -212,12 +195,17 @@ fn get_status_from_string(status_string: &str, job_id: &str) -> Status {
 
 #[cfg(test)]
 mod tests {
+    use crate::context::Job;
+    use crate::workdirs::FileNames;
     use std::collections::HashMap;
+    use std::fs;
     use std::path::PathBuf;
 
     use super::*;
     use crate::schemas::{Cmd, DAGMeta, Scope, Script, ScriptPath, SlurmOverride};
     use serde_json::Value;
+    use std::env;
+    use uuid::Uuid;
 
     fn get_meta() -> DAGMeta {
         DAGMeta {
@@ -230,15 +218,21 @@ mod tests {
         }
     }
 
+    fn get_tmp_dir() -> PathBuf {
+        let path = env::temp_dir().join(Uuid::new_v4().to_string());
+        fs::create_dir_all(&path).unwrap();
+        path
+    }
+
     fn get_cfg() -> Cfg {
         let meta = get_meta();
-        Cfg::new(&PathBuf::from("/a/path"), &meta, "info", 1, 5, 1, 1)
+        let homedir = get_tmp_dir();
+        Cfg::new(&homedir, &meta, "info", 1, 5, 1, 1)
     }
 
     fn get_poller(cfg: &Cfg) -> SlurmPoller<'_> {
         SlurmPoller {
             cfg,
-            nslurm_fails: 3,
             missing_jobs: HashMap::new(),
         }
     }
@@ -348,20 +342,6 @@ mod tests {
     }
 
     #[test]
-    fn test_mark_all_jobs_as_failed() {
-        let cfg = get_cfg();
-        let mut poller = get_poller(&cfg);
-
-        let task = get_task(0);
-        let nodes = [Node::Task(task)];
-        let mut ctx = get_ctx(&nodes);
-        ctx.slurm_jobs.push((0, "111".into()));
-
-        poller.mark_all_jobs_as_failed(&mut ctx);
-        assert!(matches!(ctx.statuses[0], Status::Failed(_)));
-    }
-
-    #[test]
     fn test_handle_pending_status() {
         let cfg = get_cfg();
         let mut poller = get_poller(&cfg);
@@ -422,20 +402,30 @@ mod tests {
     fn test_handle_completed_with_caching() {
         let cfg = get_cfg();
         let mut poller = get_poller(&cfg);
-
         let mut task = get_task(0);
         task.cache = true;
 
         let nodes = [Node::Task(task.clone())];
         let mut ctx = get_ctx(&nodes);
+        let src_dir = cfg.dagdir.join(task.uid.to_string());
+
+        fs::create_dir_all(&src_dir).unwrap();
+        fs::write(src_dir.join(FileNames::Input.as_str()), "").unwrap();
+        fs::write(src_dir.join(FileNames::Output.as_str()), "").unwrap();
+        fs::write(src_dir.join(FileNames::Meta.as_str()), "").unwrap();
+
         poller.handle_new_slurm_status(
             &task,
             Status::Completed(Completed::Job(JobType::Slurm("123".into()))),
             &mut ctx,
         );
 
-        let job = ctx.jobs.pop_front().unwrap();
-        assert!(matches!(job, Job::SaveCache(0)))
+        let cachedir = cfg
+            .local_cachedir
+            .join(&task.pipeline_name)
+            .join(&task.name);
+
+        assert!(cachedir.exists());
     }
 
     #[test]
@@ -444,16 +434,20 @@ mod tests {
         let mut poller = get_poller(&cfg);
         let mut task = get_task(0);
         task.mode = ExecMode::Ext;
+        task.cache = false;
 
         let nodes = [Node::Task(task.clone())];
         let mut ctx = get_ctx(&nodes);
+        let taskdir = cfg.dagdir.join(task.uid.to_string());
+        fs::create_dir_all(&taskdir).unwrap();
+
         poller.handle_new_slurm_status(
             &task,
             Status::Completed(Completed::Job(JobType::Slurm("123".into()))),
             &mut ctx,
         );
 
-        let job = ctx.jobs.pop_front().unwrap();
-        assert!(matches!(job, Job::SaveExtOutput(0, _)))
+        let output = taskdir.join(FileNames::Output.as_str());
+        assert!(output.exists());
     }
 }

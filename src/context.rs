@@ -7,11 +7,7 @@ use std::process::Child;
 
 pub enum Job {
     Task(usize),
-    OneOf(usize, usize),
-    Branch(usize),
-    ValidateCache(usize),
-    SaveCache(usize),
-    SaveExtOutput(usize, JobType),
+    ValidateCache(usize, bool),
 }
 
 pub struct Ctx {

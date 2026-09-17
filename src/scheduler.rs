@@ -117,10 +117,10 @@ fn scheduling_loop(nodes: &[Node], ctx: &mut Ctx, cfg: &Cfg, meta: &DAGMeta) {
     );
     state::rm_kill_file_if_present(&cfg.dagdir);
 
-    let mut visitor = NodeVisitor { nodes };
-    let mut submitter = Submitter::new(&cfg, &meta);
-    let mut slurm_poller = SlurmPoller::new(&cfg);
-    let mut local_poller = LocalPoller;
+    let mut visitor = NodeVisitor { nodes, cfg };
+    let mut submitter = Submitter::new(cfg, meta);
+    let mut slurm_poller = SlurmPoller::new(cfg);
+    let mut local_poller = LocalPoller { cfg };
 
     let root_uid = dag_setup::find_root_node(nodes).expect("Failed to find the root node");
     ctx.updated.push_back(root_uid);
