@@ -34,7 +34,14 @@ pub fn submit_validate_cache(task: &Task, cfg: &Cfg) -> bool {
             .join(&task.name),
     };
 
-    return validate_cache(task.uid, &input, &cache_path, &dst_path, &task.cache_ignore);
+    let res = validate_cache(task.uid, &input, &cache_path, &dst_path, &task.cache_ignore);
+    if res && let Err(e) = state::touch_cached_task_dir(&cache_path) {
+        log::error!(
+            "Task {}: Failed to update the cache modified date - {e}",
+            task.uid
+        );
+    }
+    res
 }
 
 pub fn submit_save_cache(task: &Task, cfg: &Cfg) -> io::Result<u64> {
