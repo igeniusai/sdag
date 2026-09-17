@@ -213,6 +213,7 @@ def run_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
         log_level=pyproj.log_level,
         slurm_grace_period=pyproj.slurm_grace_period,
         max_concurrent_runs=pyproj.max_concurrent_runs,
+        fail_fast=pyproj.fail_fast,
     )
 
 
@@ -249,6 +250,7 @@ def restart_run(args: Namespace, extras: dict[str, Any]) -> None:
         time_between_polls=pyproj.time_between_polls,
         log_level=pyproj.log_level,
         retry=False,
+        fail_fast=pyproj.fail_fast,
     )
 
 
@@ -285,6 +287,7 @@ def retry_run(args: Namespace, extras: dict[str, Any]) -> None:
         time_between_polls=pyproj.time_between_polls,
         log_level=pyproj.log_level,
         retry=True,
+        fail_fast=pyproj.fail_fast,
     )
 
 

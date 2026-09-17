@@ -185,7 +185,7 @@ mod tests {
     fn get_cfg() -> Cfg {
         let meta = get_meta();
         let homedir = get_tmp_dir();
-        Cfg::new(&homedir, &meta, "info", 1, 5, 1, 1)
+        Cfg::new(&homedir, &meta, "info", 1, 5, 1, 1, false)
     }
 
     fn get_ctx(nodes: &[Node]) -> Ctx {

@@ -319,6 +319,7 @@ mod tests {
             max_concurrency: 5,
             sleep_time: Duration::from_secs(2),
             log_level: "info".into(),
+            fail_fast: false,
         };
 
         let meta = DAGMeta {

@@ -13,6 +13,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::error::Error;
 use std::io;
+use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::{Child, Command, Output, Stdio};
 
@@ -66,7 +67,8 @@ pub fn submit_local(
     set_script_path(&mut cmd, task, cfg)?;
     save_input(&input, task, cfg)?;
 
-    cmd.stdout(Stdio::inherit())
+    cmd.process_group(0)
+        .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
         .map_err(|e| e.into())
@@ -270,7 +272,7 @@ mod tests {
     fn get_cfg() -> Cfg {
         let meta = get_meta();
         let homedir = get_tmp_dir();
-        Cfg::new(&homedir, &meta, "info", 1, 5, 1, 1)
+        Cfg::new(&homedir, &meta, "info", 1, 5, 1, 1, false)
     }
 
     fn get_task() -> Task {

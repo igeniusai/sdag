@@ -109,6 +109,7 @@ class ParserBuilder:
         self._add_compilation_args(run_parser)
         self._add_scheduler_args(run_parser)
         self._add_local_option(run_parser)
+        self._add_fail_fast_option(run_parser)
         run_parser.set_defaults(fn=run_pipeline)
 
         return self
@@ -125,6 +126,7 @@ class ParserBuilder:
         self._add_pipeline_name_and_hash_or_json(restart_parser)
         self._add_log_level(restart_parser)
         self._add_scheduler_args(restart_parser)
+        self._add_fail_fast_option(restart_parser)
         restart_parser.set_defaults(fn=restart_run)
 
         return self
@@ -146,6 +148,7 @@ class ParserBuilder:
         self._add_pipeline_name_and_hash_or_json(restart_parser)
         self._add_log_level(restart_parser)
         self._add_scheduler_args(restart_parser)
+        self._add_fail_fast_option(restart_parser)
         restart_parser.set_defaults(fn=retry_run)
 
         return self
@@ -266,6 +269,7 @@ class ParserBuilder:
 
         self._add_log_level(runtask_parser)
         self._add_local_option(runtask_parser)
+        self._add_fail_fast_option(runtask_parser)
         runtask_parser.set_defaults(fn=run_task)
 
         return self
@@ -413,6 +417,21 @@ class ParserBuilder:
             action=BooleanOptionalAction,
             default=False,
             help="Run tasks locally as nonblocking child processes.",
+        )
+
+    def _add_fail_fast_option(self, subparser: ArgumentParser) -> None:
+        """Add the fail fast flag.
+
+        Args:
+            subparser (ArgumentParser): Parser.
+        """
+        subparser.add_argument(
+            "--fail-fast",
+            action=BooleanOptionalAction,
+            default=False,
+            help=(
+                "Kill the scheduler and all running tasks if any of them fails"
+            ),
         )
 
     def _add_compilation_args(self, subparser: ArgumentParser) -> None:
