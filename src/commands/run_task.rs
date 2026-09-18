@@ -1,8 +1,8 @@
+use crate::engine::submission::nonblocking::{submit_local_blocking, submit_slurm};
 use crate::model::nodes::{Node, Task};
 use crate::model::schemas::{Cmd, DAGMeta};
 use crate::settings::{self, Cfg};
 use crate::store::workdirs;
-use crate::submission::nonblocking::{submit_local_blocking, submit_slurm};
 use chrono::Local;
 use log;
 use serde_json::{self, Value};

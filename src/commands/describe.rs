@@ -1,4 +1,4 @@
-use crate::blocking;
+use crate::engine::submission::blocking;
 use crate::model::nodes::{Node, Task};
 use crate::model::schemas::{Artifact, ParentKind};
 use crate::settings::{self, Cfg};

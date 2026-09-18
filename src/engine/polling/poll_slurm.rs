@@ -1,12 +1,11 @@
-use crate::blocking;
-use crate::context::Ctx;
+use crate::engine::context::Ctx;
+use crate::engine::polling::Poller;
+use crate::engine::submission::{self, blocking};
 use crate::model::nodes::{Node, Task};
 use crate::model::schemas::ExecMode;
 use crate::model::status::JobType::Slurm;
 use crate::model::status::{Completed, Failed, JobType, Status};
-use crate::polling::Poller;
 use crate::settings::Cfg;
-use crate::submission;
 use log;
 use regex::Regex;
 use std::collections::HashMap;
@@ -195,7 +194,7 @@ fn get_status_from_string(status_string: &str, job_id: &str) -> Status {
 
 #[cfg(test)]
 mod tests {
-    use crate::context::Job;
+    use crate::engine::context::Job;
     use crate::store::workdirs::FileNames;
     use std::collections::HashMap;
     use std::fs;

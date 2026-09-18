@@ -1,6 +1,6 @@
 //! Create the summary table out of the nodemap.
 
-use crate::context::Ctx;
+use crate::engine::context::Ctx;
 use crate::model::nodes::Node;
 use tabled::{
     Table, Tabled,

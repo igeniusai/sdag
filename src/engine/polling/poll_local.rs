@@ -1,11 +1,10 @@
-use crate::blocking;
-use crate::context::Ctx;
+use crate::engine::context::Ctx;
+use crate::engine::polling::Poller;
+use crate::engine::submission::{self, blocking};
 use crate::model::nodes::{Node, Task};
 use crate::model::schemas::ExecMode;
 use crate::model::status::{Completed, Failed, JobType, Status};
-use crate::polling::Poller;
 use crate::settings::Cfg;
-use crate::submission;
 use std::process::Child;
 
 pub struct LocalPoller<'a> {

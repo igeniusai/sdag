@@ -1,6 +1,6 @@
+use crate::engine::submission;
 use crate::model::nodes::Node;
 use crate::model::status::{Failed, JobType, Status};
-use crate::submission;
 use log;
 use std::collections::{HashSet, VecDeque};
 use std::process::Child;
