@@ -1,12 +1,12 @@
-use crate::nodes::{Node, Task};
-use crate::schemas::{Cmd, DAGMeta};
+use crate::engine::submission::jobs::{submit_local_blocking, submit_slurm};
+use crate::model::nodes::{Node, Task};
+use crate::model::schemas::{Cmd, DAGMeta};
 use crate::settings::{self, Cfg};
-use crate::submission::nonblocking::{submit_local_blocking, submit_slurm};
-use crate::workdirs;
-use chrono::Local;
+use crate::store::workdirs::{self, DirPaths};
 use log;
 use serde_json::{self, Value};
 use std::collections::HashMap;
+use std::time::Duration;
 use uuid::Uuid;
 
 pub fn run_task(
@@ -16,27 +16,32 @@ pub fn run_task(
     time_between_polls: u64,
     log_level: &str,
 ) {
-    let homedir = settings::find_homedir().expect("Failed to find the home directory");
     let task: Task = serde_json::from_str(task_serialized).expect("Failed to parse task");
     let meta = DAGMeta {
         pipeline_name: task.pipeline_name.clone(),
         hash: get_runtask_hash(&task.name),
-        timestamp: format!("{}", Local::now().format("%Y-%m-%dT%H:%M:%S")),
+        timestamp: settings::get_timestamp(),
         extra: Value::Null,
         import_path: task.pipeline_name.clone(), // TODO
         kwargs: HashMap::new(),
     };
 
-    let cfg = Cfg::new(
-        &homedir,
-        &meta,
-        &log_level,
-        1,
-        time_between_polls,
-        slurm_grace_period,
-        max_concurrent_runs,
-        false,
-    );
+    let homedir = settings::find_homedir().expect("Failed to find the home directory");
+    let paths = DirPaths::new(&homedir, &meta.pipeline_name, &meta.hash);
+    let cfg = Cfg {
+        homedir,
+        dagdir: paths.dagdir,
+        cachedir: paths.cachedir,
+        local_cachedir: paths.local_cachedir,
+        timestamp: settings::get_timestamp(),
+        grace_period: slurm_grace_period,
+        max_dagdirs: max_concurrent_runs,
+        sleep_time: Duration::from_secs(time_between_polls),
+        log_level: log_level.to_string(),
+        max_concurrency: 1,
+        fail_fast: false,
+    };
+
     let nodes = vec![Node::Task(task.clone())];
     workdirs::create_dir_structure(&cfg, &nodes).expect("Failed to create directories");
     submit_job(&task, &cfg, &meta);
@@ -69,7 +74,7 @@ fn get_runtask_hash(task_name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::run_task::get_runtask_hash;
+    use super::*;
 
     #[test]
     fn test_runtask_hash() {

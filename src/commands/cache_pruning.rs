@@ -1,5 +1,5 @@
 use crate::settings;
-use crate::state;
+use crate::store::state;
 use log;
 
 pub fn prune_cache(task_name: &str, pipeline_name: Option<&str>, allow_full_prune: bool) {

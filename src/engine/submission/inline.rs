@@ -1,8 +1,7 @@
-use crate::nodes::{Branch, OneOf, Task};
-use crate::schemas::{Parent, ParentKind, Scope, TaskOutput};
+use crate::model::nodes::{Branch, OneOf, Task};
+use crate::model::schemas::{Parent, ParentKind, TaskOutput};
 use crate::settings::Cfg;
-use crate::state;
-use crate::workdirs;
+use crate::store::{state, workdirs};
 use log;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -26,14 +25,7 @@ pub fn submit_validate_cache(task: &Task, cfg: &Cfg) -> bool {
     };
 
     log::debug!("Task {}: Validating local cache", task.uid);
-    let cache_path = match &task.scope {
-        Scope::Global => cfg.cachedir.join(&task.name),
-        Scope::Local => cfg
-            .local_cachedir
-            .join(&task.pipeline_name)
-            .join(&task.name),
-    };
-
+    let cache_path = workdirs::get_task_cache_path(task, cfg);
     let res = validate_cache(task.uid, &input, &cache_path, &dst_path, &task.cache_ignore);
     if res && let Err(e) = state::touch_cached_task_dir(&cache_path) {
         log::error!(
@@ -46,13 +38,7 @@ pub fn submit_validate_cache(task: &Task, cfg: &Cfg) -> bool {
 
 pub fn submit_save_cache(task: &Task, cfg: &Cfg) -> io::Result<u64> {
     let src_path = cfg.dagdir.join(task.uid.to_string());
-    let base_dst_path = match &task.scope {
-        Scope::Global => cfg.cachedir.join(&task.name),
-        Scope::Local => cfg
-            .local_cachedir
-            .join(&task.pipeline_name)
-            .join(&task.name),
-    };
+    let base_dst_path = workdirs::get_task_cache_path(task, cfg);
     find_and_save_cache(&src_path, &base_dst_path, task.cache_size)
 }
 

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use crate::schemas::{
+use crate::model::schemas::{
     Artifact, Cmd, ExecMode, Kwarg, Parent, ParentKind, Scope, Script, SlurmOverride,
 };
-use crate::status::{Completed, Status};
+use crate::model::status::{Completed, Status};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -87,7 +87,7 @@ impl ProvideStatus for Node {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 pub struct Task {
     // Node unique id.
     pub uid: usize,

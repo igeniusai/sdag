@@ -1,11 +1,10 @@
-use crate::blocking;
-use crate::context::Ctx;
-use crate::nodes::{Node, Task};
-use crate::polling::Poller;
-use crate::schemas::ExecMode;
+use crate::engine::context::Ctx;
+use crate::engine::polling::Poller;
+use crate::engine::submission::{self, inline};
+use crate::model::nodes::{Node, Task};
+use crate::model::schemas::ExecMode;
+use crate::model::status::{Completed, Failed, JobType, Status};
 use crate::settings::Cfg;
-use crate::status::{Completed, Failed, JobType, Status};
-use crate::submission;
 use std::process::Child;
 
 pub struct LocalPoller<'a> {
@@ -56,14 +55,14 @@ impl<'a> LocalPoller<'a> {
         ctx.running_cacheable.remove(&task.name);
         ctx.updated.push_back(task.uid);
         if let ExecMode::Ext = task.mode
-            && let Err(e) = blocking::submit_save_ext_output(task, &self.cfg)
+            && let Err(e) = inline::submit_save_ext_output(task, &self.cfg)
         {
             log::error!("Task {}: Failed to save external output - {e}", task.uid);
             ctx.statuses[task.uid] = Status::Failed(Failed::Job(JobType::Local(pid)));
             return;
         }
         if task.cache
-            && let Err(e) = blocking::submit_save_cache(task, &self.cfg)
+            && let Err(e) = inline::submit_save_cache(task, &self.cfg)
         {
             log::error!("Task {}: Failed to save cache - {e}", task.uid);
         }
@@ -97,52 +96,12 @@ fn poll_local(child: &mut Child) -> Status {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::schemas::{Cmd, DAGMeta, Scope, Script, ScriptPath, SlurmOverride};
-    use serde_json::Value;
-    use std::collections::HashMap;
-    use std::path::PathBuf;
     use std::process::Command;
 
-    fn get_meta() -> DAGMeta {
-        DAGMeta {
-            pipeline_name: "pipe".into(),
-            hash: "xxx".into(),
-            timestamp: "1920-01-01T09:20:20".into(),
-            extra: Value::Null,
-            import_path: String::new(),
-            kwargs: HashMap::new(),
-        }
-    }
-
-    fn get_cfg() -> Cfg {
-        let meta = get_meta();
-        Cfg::new(&PathBuf::from("/a/path"), &meta, "info", 1, 5, 1, 1, false)
-    }
-
     fn get_task(uid: usize) -> Task {
-        Task {
-            uid,
-            parents: vec![],
-            scope: Scope::Local,
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            pipeline_name: "pipeline_name".into(),
-            cache: false,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Bash,
-            retries: 0,
-            envs: HashMap::new(),
-            script: Script::ScriptPath(ScriptPath {
-                path: "path/to/script".into(),
-            }),
-            tags: vec![],
-            kwargs: vec![],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        }
+        let mut task = Task::default();
+        task.uid = uid;
+        task
     }
 
     #[test]
@@ -155,7 +114,7 @@ mod test {
 
     #[test]
     fn test_poll() {
-        let cfg = get_cfg();
+        let cfg = Cfg::default();
         let nodes = vec![Node::Task(get_task(0))];
         let mut ctx = Ctx::new(&nodes).unwrap();
 

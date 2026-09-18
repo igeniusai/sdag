@@ -2,11 +2,10 @@
 //!
 //! The backend executes jobs and polls the status.
 
-use crate::nodes::Task;
-use crate::schemas::{DAGMeta, ExecMode, Script, SlurmOverride};
+use crate::model::nodes::Task;
+use crate::model::schemas::{DAGMeta, ExecMode, Script, SlurmOverride};
 use crate::settings::Cfg;
-use crate::state;
-use crate::workdirs::FileNames;
+use crate::store::{state, workdirs::FileNames};
 use log;
 use regex::Regex;
 use serde_json::Value;
@@ -245,8 +244,8 @@ fn find_submitted_job_id(output: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schemas::{Cmd, Scope};
-    use crate::schemas::{ScriptContent, ScriptPath};
+    use crate::model::schemas::{ScriptContent, ScriptPath};
+    use crate::store::workdirs::DirPaths;
     use std::env;
     use std::fs;
     use std::path::PathBuf;
@@ -270,35 +269,23 @@ mod tests {
     }
 
     fn get_cfg() -> Cfg {
-        let meta = get_meta();
         let homedir = get_tmp_dir();
-        Cfg::new(&homedir, &meta, "info", 1, 5, 1, 1, false)
+        let meta = get_meta();
+        let paths = DirPaths::new(&homedir, &meta.pipeline_name, &meta.hash);
+        let mut cfg = Cfg::default();
+        cfg.dagdir = paths.dagdir;
+        cfg.cachedir = paths.cachedir;
+        cfg.local_cachedir = paths.local_cachedir;
+        cfg
     }
 
     fn get_task() -> Task {
-        Task {
-            uid: 0,
-            parents: vec![],
-            scope: Scope::Global,
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            pipeline_name: "pipeline_name".into(),
-            cache: false,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Bash,
-            retries: 0,
-            script: Script::Script(ScriptContent {
-                content: "echo hello".into(),
-            }),
-            envs: HashMap::from([("VAR".into(), Value::Bool(true))]),
-            tags: vec![],
-            kwargs: vec![],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        }
+        let mut task = Task::default();
+        task.script = Script::Script(ScriptContent {
+            content: "echo hello".into(),
+        });
+        task.envs = HashMap::from([("VAR".into(), Value::Bool(true))]);
+        task
     }
 
     #[test]

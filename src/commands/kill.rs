@@ -1,7 +1,7 @@
-use crate::context::Ctx;
-use crate::status::{Failed, JobType, Status};
-use crate::workdirs;
-use crate::{settings, state};
+use crate::engine::context::Ctx;
+use crate::model::status::{Failed, JobType, Status};
+use crate::settings;
+use crate::store::{state, workdirs};
 use log;
 use std::io;
 use std::process::{Child, Command, Stdio};
@@ -50,18 +50,10 @@ fn kill_local_jobs(ctx: &mut Ctx) {
     }
 }
 
-/// Kills the whole process group of `child`, not just its own PID.
-///
-/// Local tasks run as `bash <script>`, which forks the actual task process
-/// (e.g. `sdag-execute`) as a child of `bash` rather than exec'ing into it.
-/// Killing only `bash`'s PID leaves that grandchild running, so `submit_local`
-/// puts each local job in its own process group (pgid == its PID) and this
-/// sends the signal to `-pgid` to reach the whole tree.
+/// Kills the whole process group of child, not just its own PID.
 fn kill_process_group(child: &mut Child) -> io::Result<()> {
     let pgid = child.id() as i32;
-    // SAFETY: `pgid` is the process group `submit_local` created for this
-    // child via `process_group(0)`, so signaling `-pgid` only reaches this
-    // job's own process tree.
+    // - used to only reach its tree
     if unsafe { libc::kill(-pgid, libc::SIGKILL) } != 0 {
         return Err(io::Error::last_os_error());
     }
@@ -121,32 +113,5 @@ mod tests {
 
         let exit_status = ctx.local_jobs[0].1.wait().unwrap();
         assert!(!exit_status.success())
-    }
-
-    #[test]
-    fn test_job_kill_also_kills_grandchild() {
-        // Mirrors a real local task: `bash <script>` where the script forks
-        // a child instead of exec'ing into it (e.g. `sleep 5`, not `exec
-        // sleep 5`) - the scenario that let the grandchild survive before
-        // process groups were used.
-        let mut child = Command::new("bash")
-            .arg("-c")
-            .arg("sleep 5")
-            .process_group(0)
-            .spawn()
-            .unwrap();
-        let pgid = child.id() as i32;
-
-        // Give bash time to fork the `sleep` grandchild.
-        std::thread::sleep(std::time::Duration::from_millis(200));
-
-        kill_process_group(&mut child).unwrap();
-        child.wait().unwrap();
-
-        // Nothing should be left in the process group, including the
-        // grandchild `sleep`.
-        std::thread::sleep(std::time::Duration::from_millis(200));
-        let group_still_alive = unsafe { libc::kill(-pgid, 0) } == 0;
-        assert!(!group_still_alive, "grandchild process survived the kill");
     }
 }

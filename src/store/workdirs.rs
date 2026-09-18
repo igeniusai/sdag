@@ -1,11 +1,40 @@
-use crate::nodes::{Node, Task};
-use crate::schemas::TaskMeta;
+use crate::model::nodes::{Node, Task};
+use crate::model::schemas::{Scope, TaskMeta};
 use crate::settings::Cfg;
 use log;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+pub fn get_task_cache_path(task: &Task, cfg: &Cfg) -> PathBuf {
+    match task.scope {
+        Scope::Global => cfg.cachedir.join(&task.name),
+        Scope::Local => cfg
+            .local_cachedir
+            .join(&task.pipeline_name)
+            .join(&task.name),
+    }
+}
+
+pub struct DirPaths {
+    pub dagdir: PathBuf,
+    pub cachedir: PathBuf,
+    pub local_cachedir: PathBuf,
+}
+impl DirPaths {
+    pub fn new(homedir: &Path, pipeline_name: &str, hash: &str) -> Self {
+        let dagdir = homedir.join("pipelines").join(pipeline_name).join(hash);
+        let base_cachedir = homedir.join(".cache");
+        let cachedir = base_cachedir.join("global");
+        let local_cachedir = base_cachedir.join("local");
+        Self {
+            dagdir,
+            cachedir,
+            local_cachedir,
+        }
+    }
+}
 
 pub enum FileNames {
     Input,
@@ -171,12 +200,8 @@ fn filter_tasks(nodes: &[Node]) -> Vec<&Task> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nodes::Root;
-    use crate::schemas::{
-        Cmd, DAGMeta, ExecMode, Parent, ParentKind, Scope, Script, ScriptPath, SlurmOverride,
-    };
-    use serde_json::Value;
-    use std::collections::HashMap;
+    use crate::model::nodes::Root;
+    use crate::model::schemas::{Parent, ParentKind};
     use std::env;
     use uuid::Uuid;
 
@@ -187,32 +212,16 @@ mod tests {
     }
 
     fn get_task() -> Task {
-        Task {
-            uid: 1,
-            parents: vec![Parent {
-                uid: 0,
-                kind: ParentKind::Logical,
-            }],
-            scope: Scope::Global,
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            pipeline_name: "pipeline_name".into(),
-            cache: true,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Sbatch,
-            retries: 0,
-            envs: HashMap::new(),
-            script: Script::ScriptPath(ScriptPath {
-                path: "path/to/script".into(),
-            }),
-            tags: vec![],
-            kwargs: vec![],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        }
+        let mut task = Task::default();
+        task.uid = 1;
+        task.parents = vec![Parent {
+            uid: 0,
+            kind: ParentKind::Logical,
+        }];
+        task.fn_name = "fn_name".into();
+        task.name = "name".into();
+        task.pipeline_name = "pipeline_name".into();
+        task
     }
 
     fn get_nodes() -> Vec<Node> {
@@ -313,17 +322,15 @@ mod tests {
     fn test_create_dir_structure() {
         let path = get_tmp_dir();
         let nodes = get_nodes();
-        let meta = DAGMeta {
-            pipeline_name: "pipeline".into(),
-            hash: "xxx".into(),
-            timestamp: "1900-01-01T09:20:20".into(),
-            extra: Value::Null,
-            import_path: String::new(),
-            kwargs: HashMap::new(),
-        };
 
         let homedir = path.join("home");
-        let cfg = Cfg::new(&homedir, &meta, "info", 1, 5, 1, 1, false);
+        let paths = DirPaths::new(&homedir, "pipeline", "xxx");
+        let mut cfg = Cfg::default();
+        cfg.homedir = homedir;
+        cfg.dagdir = paths.dagdir;
+        cfg.cachedir = paths.cachedir;
+        cfg.local_cachedir = paths.local_cachedir;
+
         create_dir_structure(&cfg, &nodes).unwrap();
 
         assert!(cfg.homedir.exists());

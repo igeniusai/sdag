@@ -1,16 +1,17 @@
-use crate::blocking;
-use crate::nodes::{Node, Task};
-use crate::schemas::Scope;
-use crate::schemas::{Artifact, ParentKind};
+use crate::engine::submission::inline;
+use crate::model::nodes::{Node, Task};
+use crate::model::schemas::{Artifact, ParentKind};
 use crate::settings::{self, Cfg};
-use crate::state;
+use crate::store::state;
+use crate::store::workdirs::{self, DirPaths};
 use serde_json::{self, Value};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::engine::summary::get_styled_table;
 use tabled::{
-    Table, Tabled,
-    settings::{Alignment, Style, object::Columns, object::Segment},
+    Tabled,
+    settings::{Alignment, object::Segment},
 };
 
 #[derive(Tabled)]
@@ -28,23 +29,24 @@ struct TaskDescription<'a> {
     kwargs: String,
 }
 
-pub fn describe_pipeline(pipeline_path: &str, log_level: &str) {
+pub fn describe_pipeline(pipeline_path: &str) {
     let pipeline_path = PathBuf::from(pipeline_path);
     let homedir = settings::find_homedir().expect("Failed to find the home directory");
     let dag = state::read_dag(&pipeline_path).expect("Failed to read DAG - {e}");
-    let cfg = Cfg::new(&homedir, &dag.meta, log_level, 1, 0, 0, 1, false);
-    let mut descriptions = vec![];
+    let paths = DirPaths::new(&homedir, &dag.meta.pipeline_name, &dag.meta.hash);
+    let mut cfg = Cfg::default();
+    cfg.dagdir = paths.dagdir;
+    cfg.cachedir = paths.cachedir;
+    cfg.local_cachedir = paths.local_cachedir;
 
+    let mut descriptions = vec![];
     for node in &dag.nodes {
         if let Node::Task(task) = node {
-            let description = get_description(task, &cfg);
+            let description = get_description(&task, &cfg);
             descriptions.push(description);
         }
     }
-
-    let mut table = Table::new(descriptions);
-    table.with(Style::modern());
-    table.modify(Columns::first(), Alignment::right());
+    let mut table = get_styled_table(descriptions);
     table.modify(Segment::all(), Alignment::center_vertical());
     println!("{table}");
 }
@@ -76,21 +78,14 @@ fn check_caching(task: &Task, cfg: &Cfg, input: &HashMap<String, Value>) -> bool
         .iter()
         .any(|p| matches!(p.kind, ParentKind::Output { .. }));
 
-    // TODO Likely incorrect
     if is_dynamic {
+        log::warn!("Cache of dynamic task '{}' cannot be checked", task.uid);
         return false;
     }
 
-    let cache_path = match &task.scope {
-        Scope::Global => cfg.cachedir.join(&task.name),
-        Scope::Local => cfg
-            .local_cachedir
-            .join(&task.pipeline_name)
-            .join(&task.name),
-    };
-
+    let cache_path = workdirs::get_task_cache_path(task, cfg);
     let path_str = cache_path.to_string_lossy();
-    match blocking::compare_input_with_cache(input, &cache_path, &task.cache_ignore) {
+    match inline::compare_input_with_cache(input, &cache_path, &task.cache_ignore) {
         Ok(Some(_)) => true,
         Ok(None) => {
             log::info!("Task {}: cache at '{path_str}' doesn't match", task.uid);

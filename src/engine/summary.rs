@@ -1,13 +1,13 @@
 //! Create the summary table out of the nodemap.
 
-use crate::context::Ctx;
-use crate::nodes::Node;
+use crate::engine::context::Ctx;
+use crate::model::nodes::Node;
 use tabled::{
     Table, Tabled,
     settings::{Alignment, Style, object::Columns},
 };
 
-use crate::status::Status;
+use crate::model::status::Status;
 
 /// Print the recap table
 ///
@@ -26,6 +26,17 @@ pub fn print_summary(nodes: &[Node], ctx: &Ctx, pipeline_name: &str, hash: &str)
         hash,
         table
     )
+}
+
+pub fn get_styled_table<I, T>(records: I) -> Table
+where
+    I: IntoIterator<Item = T>,
+    T: Tabled,
+{
+    let mut table = Table::new(records);
+    table.with(Style::modern());
+    table.modify(Columns::first(), Alignment::right());
+    table
 }
 
 /// Summary table.
@@ -62,11 +73,7 @@ fn get_summary_table<'a>(nodes: &[Node], ctx: &Ctx) -> Table {
     }
 
     records.sort_by_key(|record| (record.status.log_priority(), record.uid));
-
-    let mut table = Table::new(records);
-    table.with(Style::modern());
-    table.modify(Columns::first(), Alignment::right());
-    table
+    get_styled_table(records)
 }
 
 /// Summary table.
@@ -139,46 +146,20 @@ fn get_final_recap_table(nodes: &[Node], ctx: &Ctx) -> Table {
             ntasks: &nnot_submitted,
         },
     ];
-
-    let mut table = Table::new(records);
-    table.with(Style::modern());
-    table.modify(Columns::first(), Alignment::right());
-    table
+    get_styled_table(records)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nodes::Task;
-    use crate::schemas::{Cmd, ExecMode, Scope, Script, ScriptPath, SlurmOverride};
-    use crate::status::{Completed, Failed, JobType};
-    use std::collections::HashMap;
+    use crate::model::nodes::Task;
+    use crate::model::status::{Completed, Failed, JobType};
     use tabled::assert::assert_table;
 
     fn get_nodes() -> Vec<Node> {
-        let task0 = Task {
-            uid: 0,
-            parents: vec![],
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            scope: Scope::Local,
-            pipeline_name: "pipeline_name".into(),
-            cache: true,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Sbatch,
-            retries: 0,
-            envs: HashMap::new(),
-            script: Script::ScriptPath(ScriptPath {
-                path: "path/to/script".into(),
-            }),
-            tags: vec![],
-            kwargs: vec![],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        };
+        let mut task0 = Task::default();
+        task0.name = "name".into();
+        task0.pipeline_name = "pipeline_name".into();
 
         let mut task1 = task0.clone();
         let mut task2 = task0.clone();

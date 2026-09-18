@@ -1,12 +1,12 @@
-use crate::blocking;
-use crate::context::{Ctx, Job};
-use crate::nodes::{Branch, Children, End, Node, OneOf, ProvideStatus, Root, Task};
-use crate::schemas::Parent;
-use crate::settings::Cfg;
-use crate::status::{
+use crate::engine::context::{Ctx, Job};
+use crate::engine::submission::inline;
+use crate::model::nodes::{Branch, Children, End, Node, OneOf, ProvideStatus, Root, Task};
+use crate::model::schemas::Parent;
+use crate::model::status::{
     Completed, Failed, Status, all_parents_completed, all_parents_failed_or_skipped,
     find_completed_parent, some_parents_failed_or_skipped,
 };
+use crate::settings::Cfg;
 
 use std::collections::{HashSet, VecDeque};
 
@@ -52,7 +52,7 @@ impl<'a, 'b> Visitor<()> for NodeVisitor<'a, 'b> {
     fn visit_branch(&mut self, node: &Branch, ctx: &mut Ctx) {
         let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.statuses);
         if all_parents_completed(&parent_statuses) {
-            let status = match blocking::submit_branch(node, &self.cfg) {
+            let status = match inline::submit_branch(node, &self.cfg) {
                 Ok(choice) => Status::Completed(Completed::Branch(choice)),
                 Err(_) => Status::Failed(Failed::Generic),
             };
@@ -82,7 +82,7 @@ impl<'a, 'b> Visitor<()> for NodeVisitor<'a, 'b> {
     fn visit_oneof(&mut self, node: &OneOf, ctx: &mut Ctx) {
         let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.statuses);
         if let Some(uid) = find_completed_parent(&node.parents, &ctx.statuses) {
-            let status = match blocking::submit_oneof(node, uid, &self.cfg) {
+            let status = match inline::submit_oneof(node, uid, &self.cfg) {
                 Ok(_) => Status::Completed(Completed::OneOf(uid)),
                 Err(e) => {
                     log::error!("Node {}: OneOf failed - {e}", node.uid);
@@ -135,7 +135,7 @@ impl<'a, 'b> NodeVisitor<'a, 'b> {
         if all_parents_completed(&parent_statuses) {
             ctx.statuses[task.uid] = Status::ReadyForSubmission;
             if task.cache {
-                if blocking::submit_validate_cache(task, &self.cfg) {
+                if inline::submit_validate_cache(task, &self.cfg) {
                     ctx.statuses[task.uid] = Status::Completed(Completed::Cached);
                     return;
                 }
@@ -153,13 +153,10 @@ impl<'a, 'b> NodeVisitor<'a, 'b> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schemas::{
-        Cmd, DAGMeta, ExecMode, ParentKind, Scope, Script, ScriptPath, SlurmOverride, TaskOutput,
-    };
-    use crate::status::{Failed, JobType};
-    use crate::workdirs::FileNames;
+    use crate::model::schemas::{ParentKind, TaskOutput};
+    use crate::model::status::{Failed, JobType};
+    use crate::store::workdirs::{DirPaths, FileNames};
     use serde_json::Value;
-    use std::collections::HashMap;
     use std::env;
     use std::fs;
     use std::path::PathBuf;
@@ -171,21 +168,15 @@ mod tests {
         path
     }
 
-    fn get_meta() -> DAGMeta {
-        DAGMeta {
-            pipeline_name: "pipe".into(),
-            hash: "xxx".into(),
-            timestamp: "1920-01-01T09:20:20".into(),
-            extra: Value::Null,
-            import_path: String::new(),
-            kwargs: HashMap::new(),
-        }
-    }
-
     fn get_cfg() -> Cfg {
-        let meta = get_meta();
         let homedir = get_tmp_dir();
-        Cfg::new(&homedir, &meta, "info", 1, 5, 1, 1, false)
+        let paths = DirPaths::new(&homedir, "pipeline", "xxx");
+        let mut cfg = Cfg::default();
+        cfg.homedir = homedir;
+        cfg.dagdir = paths.dagdir;
+        cfg.cachedir = paths.cachedir;
+        cfg.local_cachedir = paths.local_cachedir;
+        cfg
     }
 
     fn get_ctx(nodes: &[Node]) -> Ctx {
@@ -256,29 +247,9 @@ mod tests {
     }
 
     fn get_task(uid: usize) -> Task {
-        Task {
-            uid,
-            parents: vec![],
-            scope: Scope::Local,
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            pipeline_name: "pipeline_name".into(),
-            cache: false,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Sbatch,
-            retries: 0,
-            envs: HashMap::new(),
-            script: Script::ScriptPath(ScriptPath {
-                path: "path/to/script".into(),
-            }),
-            tags: vec![],
-            kwargs: vec![],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        }
+        let mut task = Task::default();
+        task.uid = uid;
+        task
     }
 
     #[test]

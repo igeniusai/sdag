@@ -1,9 +1,8 @@
-use crate::context::Ctx;
-use crate::nodes::Node;
-use crate::nodes::Task;
-use crate::schemas::{Checkpoint, DAG, DAGMeta, Kwarg, Parent, ParentKind, TaskOutput};
+use crate::engine::context::Ctx;
+use crate::model::nodes::{Node, Task};
+use crate::model::schemas::{Checkpoint, DAG, DAGMeta, Kwarg, Parent, ParentKind, TaskOutput};
 use crate::settings::Cfg;
-use crate::workdirs::FileNames;
+use crate::store::workdirs::FileNames;
 use serde::Deserialize;
 use serde_json::{Deserializer, Value};
 use std::borrow::Cow;
@@ -229,8 +228,7 @@ fn get_dynamic_input(uid: usize, dagdir: &Path) -> io::Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nodes::End;
-    use crate::schemas::{Cmd, ExecMode, Scope, Script, ScriptPath, SlurmOverride};
+    use crate::model::nodes::End;
     use serde_json::{Value, json};
     use std::env;
     use std::path::PathBuf;
@@ -427,51 +425,32 @@ mod tests {
         fs::create_dir_all(&output_path).unwrap();
         save_task_output(&output_path, &output).unwrap();
 
-        let task = Task {
-            uid: 3,
-            parents: vec![
-                Parent {
-                    uid: 0,
-                    kind: ParentKind::Logical,
+        let mut task = Task::default();
+        task.uid = 3;
+        task.kwargs = vec![Kwarg {
+            key: "key".into(),
+            value: Value::Null,
+        }];
+        task.parents = vec![
+            Parent {
+                uid: 0,
+                kind: ParentKind::Logical,
+            },
+            Parent {
+                uid: 1,
+                kind: ParentKind::Artifact {
+                    key: "artifact".into(),
+                    name: "artifact_name".into(),
+                    path: PathBuf::from("path/to/artifact"),
                 },
-                Parent {
-                    uid: 1,
-                    kind: ParentKind::Artifact {
-                        key: "artifact".into(),
-                        name: "artifact_name".into(),
-                        path: PathBuf::from("path/to/artifact"),
-                    },
+            },
+            Parent {
+                uid: 2,
+                kind: ParentKind::Output {
+                    key: "output".into(),
                 },
-                Parent {
-                    uid: 2,
-                    kind: ParentKind::Output {
-                        key: "output".into(),
-                    },
-                },
-            ],
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            pipeline_name: "pipeline_name".into(),
-            cache: true,
-            scope: Scope::Local,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Bash,
-            envs: HashMap::new(),
-            retries: 0,
-            script: Script::ScriptPath(ScriptPath {
-                path: "path/to/script".into(),
-            }),
-            tags: vec![],
-            kwargs: vec![Kwarg {
-                key: "key".into(),
-                value: Value::Null,
-            }],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        };
+            },
+        ];
 
         let expected = HashMap::from([
             ("key".into(), json!(null)),
