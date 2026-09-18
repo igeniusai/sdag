@@ -1,6 +1,6 @@
 use env_logger::Env;
 
-use crate::schemas::DAGMeta;
+use crate::model::schemas::DAGMeta;
 use chrono::Local;
 use log;
 use serde::{Deserialize, Serialize};

@@ -1,5 +1,5 @@
-use crate::nodes::{Branch, OneOf, Task};
-use crate::schemas::{Parent, ParentKind, TaskOutput};
+use crate::model::nodes::{Branch, OneOf, Task};
+use crate::model::schemas::{Parent, ParentKind, TaskOutput};
 use crate::settings::Cfg;
 use crate::state;
 use crate::workdirs;

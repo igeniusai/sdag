@@ -1,10 +1,10 @@
 use crate::blocking;
 pub mod nonblocking;
 use crate::context::{Ctx, Job};
-use crate::nodes::{Node, Task};
-use crate::schemas::{Cmd, DAGMeta};
+use crate::model::nodes::{Node, Task};
+use crate::model::schemas::{Cmd, DAGMeta};
+use crate::model::status::{Completed, Failed, JobType, Status};
 use crate::settings::Cfg;
-use crate::status::{Completed, Failed, JobType, Status};
 use std::error::Error;
 
 use std::collections::VecDeque;

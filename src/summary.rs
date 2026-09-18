@@ -1,13 +1,13 @@
 //! Create the summary table out of the nodemap.
 
 use crate::context::Ctx;
-use crate::nodes::Node;
+use crate::model::nodes::Node;
 use tabled::{
     Table, Tabled,
     settings::{Alignment, Style, object::Columns},
 };
 
-use crate::status::Status;
+use crate::model::status::Status;
 
 /// Print the recap table
 ///
@@ -149,9 +149,9 @@ fn get_final_recap_table(nodes: &[Node], ctx: &Ctx) -> Table {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nodes::Task;
-    use crate::schemas::{Cmd, ExecMode, Scope, Script, ScriptPath, SlurmOverride};
-    use crate::status::{Completed, Failed, JobType};
+    use crate::model::nodes::Task;
+    use crate::model::schemas::{Cmd, ExecMode, Scope, Script, ScriptPath, SlurmOverride};
+    use crate::model::status::{Completed, Failed, JobType};
     use std::collections::HashMap;
     use tabled::assert::assert_table;
 

@@ -1,5 +1,5 @@
-use crate::nodes::{Node, Task};
-use crate::schemas::{Scope, TaskMeta};
+use crate::model::nodes::{Node, Task};
+use crate::model::schemas::{Scope, TaskMeta};
 use crate::settings::Cfg;
 use log;
 use std::fs;
@@ -181,8 +181,8 @@ fn filter_tasks(nodes: &[Node]) -> Vec<&Task> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nodes::Root;
-    use crate::schemas::{
+    use crate::model::nodes::Root;
+    use crate::model::schemas::{
         Cmd, DAGMeta, ExecMode, Parent, ParentKind, Scope, Script, ScriptPath, SlurmOverride,
     };
     use serde_json::Value;

@@ -1,4 +1,4 @@
-use crate::nodes::{Node, Parents};
+use crate::model::nodes::{Node, Parents};
 
 pub fn find_root_node(nodes: &[Node]) -> Option<usize> {
     for node in nodes {
@@ -31,8 +31,8 @@ pub fn add_children(nodes: &mut [Node]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nodes::{End, Root, Task};
-    use crate::schemas::{
+    use crate::model::nodes::{End, Root, Task};
+    use crate::model::schemas::{
         Cmd, ExecMode, Parent, ParentKind, Scope, Script, ScriptPath, SlurmOverride,
     };
     use std::collections::HashMap;

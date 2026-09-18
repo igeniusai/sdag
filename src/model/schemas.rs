@@ -1,6 +1,6 @@
-use crate::nodes::Node;
+use crate::model::nodes::Node;
+use crate::model::status::Status;
 use crate::settings::Cfg;
-use crate::status::Status;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{borrow::Cow, collections::HashMap, fmt, path::PathBuf};

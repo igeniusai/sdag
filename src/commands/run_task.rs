@@ -1,5 +1,5 @@
-use crate::nodes::{Node, Task};
-use crate::schemas::{Cmd, DAGMeta};
+use crate::model::nodes::{Node, Task};
+use crate::model::schemas::{Cmd, DAGMeta};
 use crate::settings::{self, Cfg};
 use crate::submission::nonblocking::{submit_local_blocking, submit_slurm};
 use crate::workdirs;

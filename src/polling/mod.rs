@@ -1,5 +1,5 @@
 use crate::context::Ctx;
-use crate::nodes::Node;
+use crate::model::nodes::Node;
 mod poll_local;
 mod poll_slurm;
 pub use poll_local::LocalPoller;

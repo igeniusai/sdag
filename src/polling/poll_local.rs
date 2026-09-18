@@ -1,10 +1,10 @@
 use crate::blocking;
 use crate::context::Ctx;
-use crate::nodes::{Node, Task};
+use crate::model::nodes::{Node, Task};
+use crate::model::schemas::ExecMode;
+use crate::model::status::{Completed, Failed, JobType, Status};
 use crate::polling::Poller;
-use crate::schemas::ExecMode;
 use crate::settings::Cfg;
-use crate::status::{Completed, Failed, JobType, Status};
 use crate::submission;
 use std::process::Child;
 
@@ -97,7 +97,7 @@ fn poll_local(child: &mut Child) -> Status {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::schemas::{Cmd, DAGMeta, Scope, Script, ScriptPath, SlurmOverride};
+    use crate::model::schemas::{Cmd, DAGMeta, Scope, Script, ScriptPath, SlurmOverride};
     use serde_json::Value;
     use std::collections::HashMap;
     use std::path::PathBuf;

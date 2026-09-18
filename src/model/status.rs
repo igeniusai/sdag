@@ -1,4 +1,4 @@
-use crate::schemas::Parent;
+use crate::model::schemas::Parent;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::iter::zip;
@@ -163,7 +163,7 @@ pub fn find_completed_parent(parents: &[Parent], statuses: &[Status]) -> Option<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schemas::ParentKind;
+    use crate::model::schemas::ParentKind;
 
     #[test]
     fn test_all_completed() {

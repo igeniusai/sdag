@@ -1,5 +1,5 @@
-use crate::nodes::{Node, Task};
-use crate::schemas::{Artifact, ParentKind};
+use crate::model::nodes::{Node, Task};
+use crate::model::schemas::{Artifact, ParentKind};
 use crate::settings::{self, Cfg};
 use crate::state;
 use crate::{blocking, workdirs};
@@ -36,7 +36,7 @@ pub fn describe_pipeline(pipeline_path: &str, log_level: &str) {
 
     for node in &dag.nodes {
         if let Node::Task(task) = node {
-            let description = get_description(task, &cfg);
+            let description = get_description(&task, &cfg);
             descriptions.push(description);
         }
     }

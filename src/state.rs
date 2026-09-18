@@ -1,7 +1,6 @@
 use crate::context::Ctx;
-use crate::nodes::Node;
-use crate::nodes::Task;
-use crate::schemas::{Checkpoint, DAG, DAGMeta, Kwarg, Parent, ParentKind, TaskOutput};
+use crate::model::nodes::{Node, Task};
+use crate::model::schemas::{Checkpoint, DAG, DAGMeta, Kwarg, Parent, ParentKind, TaskOutput};
 use crate::settings::Cfg;
 use crate::workdirs::FileNames;
 use serde::Deserialize;
@@ -229,8 +228,8 @@ fn get_dynamic_input(uid: usize, dagdir: &Path) -> io::Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nodes::End;
-    use crate::schemas::{Cmd, ExecMode, Scope, Script, ScriptPath, SlurmOverride};
+    use crate::model::nodes::End;
+    use crate::model::schemas::{Cmd, ExecMode, Scope, Script, ScriptPath, SlurmOverride};
     use serde_json::{Value, json};
     use std::env;
     use std::path::PathBuf;

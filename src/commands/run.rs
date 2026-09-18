@@ -1,10 +1,9 @@
 use crate::context::Ctx;
-use crate::dag_setup;
+use crate::model::{dag_setup, status};
 use crate::scheduler;
 use crate::settings;
 use crate::settings::Cfg;
 use crate::state;
-use crate::status;
 use crate::workdirs;
 use std::path::PathBuf;
 use std::time::Duration;

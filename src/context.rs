@@ -1,5 +1,5 @@
-use crate::nodes::Node;
-use crate::status::{Failed, JobType, Status};
+use crate::model::nodes::Node;
+use crate::model::status::{Failed, JobType, Status};
 use crate::submission;
 use log;
 use std::collections::{HashSet, VecDeque};
@@ -102,8 +102,8 @@ impl Ctx {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nodes::Task;
-    use crate::schemas::{Cmd, ExecMode, Scope, Script, ScriptPath, SlurmOverride};
+    use crate::model::nodes::Task;
+    use crate::model::schemas::{Cmd, ExecMode, Scope, Script, ScriptPath, SlurmOverride};
     use std::collections::HashMap;
 
     fn get_tasks() -> Vec<Task> {

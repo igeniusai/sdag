@@ -1,5 +1,5 @@
 use crate::context::Ctx;
-use crate::status::{Failed, JobType, Status};
+use crate::model::status::{Failed, JobType, Status};
 use crate::workdirs;
 use crate::{settings, state};
 use log;

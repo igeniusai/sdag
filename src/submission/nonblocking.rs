@@ -2,8 +2,8 @@
 //!
 //! The backend executes jobs and polls the status.
 
-use crate::nodes::Task;
-use crate::schemas::{DAGMeta, ExecMode, Script, SlurmOverride};
+use crate::model::nodes::Task;
+use crate::model::schemas::{DAGMeta, ExecMode, Script, SlurmOverride};
 use crate::settings::Cfg;
 use crate::state;
 use crate::workdirs::FileNames;
@@ -245,8 +245,8 @@ fn find_submitted_job_id(output: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schemas::{Cmd, Scope};
-    use crate::schemas::{ScriptContent, ScriptPath};
+    use crate::model::schemas::{Cmd, Scope};
+    use crate::model::schemas::{ScriptContent, ScriptPath};
     use std::env;
     use std::fs;
     use std::path::PathBuf;

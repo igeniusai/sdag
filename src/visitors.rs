@@ -1,12 +1,12 @@
 use crate::blocking;
 use crate::context::{Ctx, Job};
-use crate::nodes::{Branch, Children, End, Node, OneOf, ProvideStatus, Root, Task};
-use crate::schemas::Parent;
-use crate::settings::Cfg;
-use crate::status::{
+use crate::model::nodes::{Branch, Children, End, Node, OneOf, ProvideStatus, Root, Task};
+use crate::model::schemas::Parent;
+use crate::model::status::{
     Completed, Failed, Status, all_parents_completed, all_parents_failed_or_skipped,
     find_completed_parent, some_parents_failed_or_skipped,
 };
+use crate::settings::Cfg;
 
 use std::collections::{HashSet, VecDeque};
 
@@ -153,10 +153,10 @@ impl<'a, 'b> NodeVisitor<'a, 'b> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schemas::{
+    use crate::model::schemas::{
         Cmd, DAGMeta, ExecMode, ParentKind, Scope, Script, ScriptPath, SlurmOverride, TaskOutput,
     };
-    use crate::status::{Failed, JobType};
+    use crate::model::status::{Failed, JobType};
     use crate::workdirs::FileNames;
     use serde_json::Value;
     use std::collections::HashMap;
