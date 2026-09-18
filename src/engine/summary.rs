@@ -28,6 +28,17 @@ pub fn print_summary(nodes: &[Node], ctx: &Ctx, pipeline_name: &str, hash: &str)
     )
 }
 
+pub fn get_styled_table<I, T>(records: I) -> Table
+where
+    I: IntoIterator<Item = T>,
+    T: Tabled,
+{
+    let mut table = Table::new(records);
+    table.with(Style::modern());
+    table.modify(Columns::first(), Alignment::right());
+    table
+}
+
 /// Summary table.
 #[derive(Tabled)]
 struct Summary<'a> {
@@ -62,11 +73,7 @@ fn get_summary_table<'a>(nodes: &[Node], ctx: &Ctx) -> Table {
     }
 
     records.sort_by_key(|record| (record.status.log_priority(), record.uid));
-
-    let mut table = Table::new(records);
-    table.with(Style::modern());
-    table.modify(Columns::first(), Alignment::right());
-    table
+    get_styled_table(records)
 }
 
 /// Summary table.
@@ -139,11 +146,7 @@ fn get_final_recap_table(nodes: &[Node], ctx: &Ctx) -> Table {
             ntasks: &nnot_submitted,
         },
     ];
-
-    let mut table = Table::new(records);
-    table.with(Style::modern());
-    table.modify(Columns::first(), Alignment::right());
-    table
+    get_styled_table(records)
 }
 
 #[cfg(test)]

@@ -8,9 +8,10 @@ use serde_json::{self, Value};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::engine::summary::get_styled_table;
 use tabled::{
-    Table, Tabled,
-    settings::{Alignment, Style, object::Columns, object::Segment},
+    Tabled,
+    settings::{Alignment, object::Segment},
 };
 
 #[derive(Tabled)]
@@ -45,10 +46,7 @@ pub fn describe_pipeline(pipeline_path: &str) {
             descriptions.push(description);
         }
     }
-
-    let mut table = Table::new(descriptions);
-    table.with(Style::modern());
-    table.modify(Columns::first(), Alignment::right());
+    let mut table = get_styled_table(descriptions);
     table.modify(Segment::all(), Alignment::center_vertical());
     println!("{table}");
 }

@@ -1,24 +1,19 @@
 //! Create the summary table out of the nodemap.
 
+use crate::engine::summary::get_styled_table;
 use crate::settings;
 use crate::store::workdirs;
 use chrono::{DateTime, Local};
 use std::error::Error;
 use std::iter::zip;
-
-use tabled::{
-    Table, Tabled,
-    settings::{Alignment, Style, object::Columns},
-};
+use tabled::Tabled;
 
 pub fn print_pipelines(names: &[String], paths: &[String]) {
     let mut records = Vec::with_capacity(names.len());
     for (name, path) in zip(names, paths) {
         records.push(PipelineList { name, path });
     }
-    let mut table = Table::new(records);
-    table.with(Style::modern());
-    table.modify(Columns::first(), Alignment::right());
+    let table = get_styled_table(records);
     println!("{table}");
 }
 
@@ -41,10 +36,8 @@ pub fn print_runs(name: &str) -> Result<(), Box<dyn Error>> {
             timestamp: dt_utc,
         });
     }
-    let mut table = Table::new(records);
-    table.with(Style::modern());
-    table.modify(Columns::first(), Alignment::right());
 
+    let table = get_styled_table(records);
     println!("{table}");
     Ok(())
 }
