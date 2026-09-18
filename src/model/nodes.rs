@@ -87,7 +87,7 @@ impl ProvideStatus for Node {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 pub struct Task {
     // Node unique id.
     pub uid: usize,

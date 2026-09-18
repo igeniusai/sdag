@@ -244,7 +244,6 @@ fn find_submitted_job_id(output: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::schemas::{Cmd, Scope};
     use crate::model::schemas::{ScriptContent, ScriptPath};
     use crate::store::workdirs;
     use std::env;
@@ -283,29 +282,12 @@ mod tests {
     }
 
     fn get_task() -> Task {
-        Task {
-            uid: 0,
-            parents: vec![],
-            scope: Scope::Global,
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            pipeline_name: "pipeline_name".into(),
-            cache: false,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Bash,
-            retries: 0,
-            script: Script::Script(ScriptContent {
-                content: "echo hello".into(),
-            }),
-            envs: HashMap::from([("VAR".into(), Value::Bool(true))]),
-            tags: vec![],
-            kwargs: vec![],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        }
+        let mut task = Task::default();
+        task.script = Script::Script(ScriptContent {
+            content: "echo hello".into(),
+        });
+        task.envs = HashMap::from([("VAR".into(), Value::Bool(true))]);
+        task
     }
 
     #[test]

@@ -103,36 +103,12 @@ impl Ctx {
 mod tests {
     use super::*;
     use crate::model::nodes::Task;
-    use crate::model::schemas::{Cmd, ExecMode, Scope, Script, ScriptPath, SlurmOverride};
-    use std::collections::HashMap;
+    use crate::model::schemas::Cmd;
 
     fn get_tasks() -> Vec<Task> {
-        let task0 = Task {
-            uid: 0,
-            parents: vec![],
-            scope: Scope::Local,
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            pipeline_name: "pipeline_name".into(),
-            cache: true,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Bash,
-            retries: 0,
-            script: Script::ScriptPath(ScriptPath {
-                path: "path/to/script".into(),
-            }),
-            envs: HashMap::new(),
-            tags: vec![],
-            kwargs: vec![],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        };
-
-        let mut task1 = task0.clone();
-        let mut task2 = task0.clone();
+        let task0 = Task::default();
+        let mut task1 = Task::default();
+        let mut task2 = Task::default();
         task1.uid = 1;
         task2.uid = 2;
         task1.cmd = Cmd::Sbatch;

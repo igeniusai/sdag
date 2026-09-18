@@ -96,34 +96,12 @@ fn poll_local(child: &mut Child) -> Status {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::model::schemas::{Cmd, Scope, Script, ScriptPath, SlurmOverride};
-    use std::collections::HashMap;
     use std::process::Command;
 
     fn get_task(uid: usize) -> Task {
-        Task {
-            uid,
-            parents: vec![],
-            scope: Scope::Local,
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            pipeline_name: "pipeline_name".into(),
-            cache: false,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Bash,
-            retries: 0,
-            envs: HashMap::new(),
-            script: Script::ScriptPath(ScriptPath {
-                path: "path/to/script".into(),
-            }),
-            tags: vec![],
-            kwargs: vec![],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        }
+        let mut task = Task::default();
+        task.uid = uid;
+        task
     }
 
     #[test]

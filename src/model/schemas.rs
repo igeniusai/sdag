@@ -44,6 +44,12 @@ pub enum ExecMode {
     Ext,
 }
 
+impl Default for ExecMode {
+    fn default() -> Self {
+        Self::Wrap
+    }
+}
+
 /// Task static input kwargs.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Kwarg {
@@ -72,6 +78,11 @@ impl fmt::Display for Cmd {
         write!(f, "{cmd}")
     }
 }
+impl Default for Cmd {
+    fn default() -> Self {
+        Self::Bash
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum Scope {
@@ -81,6 +92,11 @@ pub enum Scope {
     /// Global task
     #[serde(rename = "global")]
     Global,
+}
+impl Default for Scope {
+    fn default() -> Self {
+        Self::Local
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -98,6 +114,11 @@ pub struct ScriptPath {
 pub enum Script {
     Script(ScriptContent),
     ScriptPath(ScriptPath),
+}
+impl Default for Script {
+    fn default() -> Self {
+        Self::Script(ScriptContent { content: "".into() })
+    }
 }
 
 /// Artifacts.

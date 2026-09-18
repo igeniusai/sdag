@@ -32,10 +32,7 @@ pub fn add_children(nodes: &mut [Node]) {
 mod tests {
     use super::*;
     use crate::model::nodes::{End, Root, Task};
-    use crate::model::schemas::{
-        Cmd, ExecMode, Parent, ParentKind, Scope, Script, ScriptPath, SlurmOverride,
-    };
-    use std::collections::HashMap;
+    use crate::model::schemas::{Parent, ParentKind};
 
     fn get_nodes() -> Vec<Node> {
         let root = Root {
@@ -44,32 +41,13 @@ mod tests {
             parents: Vec::new(),
             children: Vec::new(),
         };
-        let task = Task {
-            uid: 1,
-            parents: vec![Parent {
-                uid: 0,
-                kind: ParentKind::Logical,
-            }],
-            scope: Scope::Global,
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            pipeline_name: "pipeline_name".into(),
-            cache: true,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Sbatch,
-            envs: HashMap::new(),
-            retries: 0,
-            script: Script::ScriptPath(ScriptPath {
-                path: "path/to/script".into(),
-            }),
-            tags: vec![],
-            kwargs: vec![],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        };
+        let mut task = Task::default();
+        task.uid = 1;
+        task.parents = vec![Parent {
+            uid: 0,
+            kind: ParentKind::Logical,
+        }];
+
         let end = End {
             uid: 2,
             pipeline_name: "pipeline".into(),

@@ -150,35 +150,13 @@ fn get_final_recap_table(nodes: &[Node], ctx: &Ctx) -> Table {
 mod tests {
     use super::*;
     use crate::model::nodes::Task;
-    use crate::model::schemas::{Cmd, ExecMode, Scope, Script, ScriptPath, SlurmOverride};
     use crate::model::status::{Completed, Failed, JobType};
-    use std::collections::HashMap;
     use tabled::assert::assert_table;
 
     fn get_nodes() -> Vec<Node> {
-        let task0 = Task {
-            uid: 0,
-            parents: vec![],
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            scope: Scope::Local,
-            pipeline_name: "pipeline_name".into(),
-            cache: true,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Sbatch,
-            retries: 0,
-            envs: HashMap::new(),
-            script: Script::ScriptPath(ScriptPath {
-                path: "path/to/script".into(),
-            }),
-            tags: vec![],
-            kwargs: vec![],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        };
+        let mut task0 = Task::default();
+        task0.name = "name".into();
+        task0.pipeline_name = "pipeline_name".into();
 
         let mut task1 = task0.clone();
         let mut task2 = task0.clone();

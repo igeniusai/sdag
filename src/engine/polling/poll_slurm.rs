@@ -203,7 +203,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::*;
-    use crate::model::schemas::{Cmd, Scope, Script, ScriptPath, SlurmOverride};
+    use crate::model::schemas::Cmd;
 
     fn get_poller(cfg: &Cfg) -> SlurmPoller<'_> {
         SlurmPoller {
@@ -231,29 +231,10 @@ mod tests {
     }
 
     fn get_task(uid: usize) -> Task {
-        Task {
-            uid,
-            parents: vec![],
-            scope: Scope::Local,
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            pipeline_name: "pipeline_name".into(),
-            cache: false,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Sbatch,
-            retries: 0,
-            envs: HashMap::new(),
-            script: Script::ScriptPath(ScriptPath {
-                path: "path/to/script".into(),
-            }),
-            tags: vec![],
-            kwargs: vec![],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        }
+        let mut task = Task::default();
+        task.cmd = Cmd::Sbatch;
+        task.uid = uid;
+        task
     }
 
     fn get_ctx(nodes: &[Node]) -> Ctx {

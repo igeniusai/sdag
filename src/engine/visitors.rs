@@ -153,13 +153,10 @@ impl<'a, 'b> NodeVisitor<'a, 'b> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::schemas::{
-        Cmd, ExecMode, ParentKind, Scope, Script, ScriptPath, SlurmOverride, TaskOutput,
-    };
+    use crate::model::schemas::{ParentKind, TaskOutput};
     use crate::model::status::{Failed, JobType};
     use crate::store::workdirs::{FileNames, get_cache_paths, get_dagdir};
     use serde_json::Value;
-    use std::collections::HashMap;
     use std::env;
     use std::fs;
     use std::path::PathBuf;
@@ -251,29 +248,9 @@ mod tests {
     }
 
     fn get_task(uid: usize) -> Task {
-        Task {
-            uid,
-            parents: vec![],
-            scope: Scope::Local,
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            pipeline_name: "pipeline_name".into(),
-            cache: false,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Sbatch,
-            retries: 0,
-            envs: HashMap::new(),
-            script: Script::ScriptPath(ScriptPath {
-                path: "path/to/script".into(),
-            }),
-            tags: vec![],
-            kwargs: vec![],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        }
+        let mut task = Task::default();
+        task.uid = uid;
+        task
     }
 
     #[test]

@@ -193,11 +193,8 @@ fn filter_tasks(nodes: &[Node]) -> Vec<&Task> {
 mod tests {
     use super::*;
     use crate::model::nodes::Root;
-    use crate::model::schemas::{
-        Cmd, ExecMode, Parent, ParentKind, Scope, Script, ScriptPath, SlurmOverride,
-    };
+    use crate::model::schemas::{Parent, ParentKind};
     use crate::store::workdirs;
-    use std::collections::HashMap;
     use std::env;
     use uuid::Uuid;
 
@@ -208,32 +205,16 @@ mod tests {
     }
 
     fn get_task() -> Task {
-        Task {
-            uid: 1,
-            parents: vec![Parent {
-                uid: 0,
-                kind: ParentKind::Logical,
-            }],
-            scope: Scope::Global,
-            fn_name: "fn_name".into(),
-            name: "name".into(),
-            pipeline_name: "pipeline_name".into(),
-            cache: true,
-            cache_ignore: vec![],
-            cache_size: 1,
-            mode: ExecMode::Wrap,
-            cmd: Cmd::Sbatch,
-            retries: 0,
-            envs: HashMap::new(),
-            script: Script::ScriptPath(ScriptPath {
-                path: "path/to/script".into(),
-            }),
-            tags: vec![],
-            kwargs: vec![],
-            artifacts: vec![],
-            children: vec![],
-            slurm: SlurmOverride::default(),
-        }
+        let mut task = Task::default();
+        task.uid = 1;
+        task.parents = vec![Parent {
+            uid: 0,
+            kind: ParentKind::Logical,
+        }];
+        task.fn_name = "fn_name".into();
+        task.name = "name".into();
+        task.pipeline_name = "pipeline_name".into();
+        task
     }
 
     fn get_nodes() -> Vec<Node> {
