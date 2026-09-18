@@ -196,7 +196,7 @@ fn get_status_from_string(status_string: &str, job_id: &str) -> Status {
 #[cfg(test)]
 mod tests {
     use crate::context::Job;
-    use crate::workdirs::FileNames;
+    use crate::store::workdirs::FileNames;
     use std::collections::HashMap;
     use std::fs;
     use std::path::PathBuf;

@@ -2,7 +2,7 @@ use crate::context::Ctx;
 use crate::model::nodes::{Node, Task};
 use crate::model::schemas::{Checkpoint, DAG, DAGMeta, Kwarg, Parent, ParentKind, TaskOutput};
 use crate::settings::Cfg;
-use crate::workdirs::FileNames;
+use crate::store::workdirs::FileNames;
 use serde::Deserialize;
 use serde_json::{Deserializer, Value};
 use std::borrow::Cow;

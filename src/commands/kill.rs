@@ -1,7 +1,7 @@
 use crate::context::Ctx;
 use crate::model::status::{Failed, JobType, Status};
-use crate::workdirs;
-use crate::{settings, state};
+use crate::settings;
+use crate::store::{state, workdirs};
 use log;
 use std::io;
 use std::process::{Child, Command, Stdio};

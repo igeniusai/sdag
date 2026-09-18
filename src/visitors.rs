@@ -157,7 +157,7 @@ mod tests {
         Cmd, DAGMeta, ExecMode, ParentKind, Scope, Script, ScriptPath, SlurmOverride, TaskOutput,
     };
     use crate::model::status::{Failed, JobType};
-    use crate::workdirs::FileNames;
+    use crate::store::workdirs::FileNames;
     use serde_json::Value;
     use std::collections::HashMap;
     use std::env;

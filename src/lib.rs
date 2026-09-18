@@ -7,11 +7,10 @@ mod model;
 mod polling;
 mod scheduler;
 mod settings;
-mod state;
+mod store;
 mod submission;
 mod summary;
 mod visitors;
-mod workdirs;
 
 #[pymodule]
 mod core {

@@ -1,7 +1,7 @@
 //! Create the summary table out of the nodemap.
 
 use crate::settings;
-use crate::workdirs;
+use crate::store::workdirs;
 use chrono::{DateTime, Local};
 use std::error::Error;
 use std::iter::zip;

@@ -6,7 +6,7 @@ use crate::model::schemas::DAGMeta;
 use crate::model::{dag_setup, status};
 use crate::polling::{LocalPoller, Poller, SlurmPoller};
 use crate::settings::Cfg;
-use crate::state;
+use crate::store::state;
 use crate::submission::Submitter;
 use crate::summary;
 use crate::visitors::NodeVisitor;

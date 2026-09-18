@@ -5,8 +5,7 @@
 use crate::model::nodes::Task;
 use crate::model::schemas::{DAGMeta, ExecMode, Script, SlurmOverride};
 use crate::settings::Cfg;
-use crate::state;
-use crate::workdirs::FileNames;
+use crate::store::{state, workdirs::FileNames};
 use log;
 use regex::Regex;
 use serde_json::Value;
