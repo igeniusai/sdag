@@ -157,10 +157,31 @@ mod tests {
         Cmd, ExecMode, ParentKind, Scope, Script, ScriptPath, SlurmOverride, TaskOutput,
     };
     use crate::model::status::{Failed, JobType};
-    use crate::store::workdirs::FileNames;
+    use crate::store::workdirs::{FileNames, get_cache_paths, get_dagdir};
     use serde_json::Value;
     use std::collections::HashMap;
+    use std::env;
     use std::fs;
+    use std::path::PathBuf;
+    use uuid::Uuid;
+
+    fn get_tmp_dir() -> PathBuf {
+        let path = env::temp_dir().join(Uuid::new_v4().to_string());
+        fs::create_dir_all(&path).unwrap();
+        path
+    }
+
+    fn get_cfg() -> Cfg {
+        let homedir = get_tmp_dir();
+        let dagdir = get_dagdir(&homedir, "pipeline", "xxx");
+        let (cachedir, local_cachedir) = get_cache_paths(&homedir);
+        let mut cfg = Cfg::default();
+        cfg.homedir = homedir;
+        cfg.dagdir = dagdir;
+        cfg.cachedir = cachedir;
+        cfg.local_cachedir = local_cachedir;
+        cfg
+    }
 
     fn get_ctx(nodes: &[Node]) -> Ctx {
         Ctx::new(nodes).unwrap()
@@ -257,7 +278,7 @@ mod tests {
 
     #[test]
     fn test_visit_root_completed() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let root = get_root(0);
         let nodes = [Node::Root(root)];
 
@@ -278,7 +299,7 @@ mod tests {
 
     #[test]
     fn test_visit_root_skipped() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let root1 = get_root(0);
         let mut root2 = get_root(1);
         root2.parents.push(get_parent(0));
@@ -299,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_visit_end_completed() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let end = get_end(0);
         let nodes = [Node::End(end)];
 
@@ -320,7 +341,7 @@ mod tests {
 
     #[test]
     fn test_visit_end_skipped() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let root = get_root(0);
         let mut end = get_end(1);
         end.parents.push(get_parent(0));
@@ -341,7 +362,7 @@ mod tests {
 
     #[test]
     fn test_visit_end_not_submitted() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let root = get_root(0);
         let root2 = get_root(1);
         let mut end = get_end(2);
@@ -365,7 +386,7 @@ mod tests {
 
     #[test]
     fn test_visit_end_skipped_mixed() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let root = get_root(0);
         let root2 = get_root(1);
         let mut end = get_end(2);
@@ -389,7 +410,7 @@ mod tests {
 
     #[test]
     fn test_visit_branch_completed() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let root = get_root(0);
 
         let mut end1 = get_end(2);
@@ -441,7 +462,7 @@ mod tests {
 
     #[test]
     fn test_visit_branch_skipped() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let root = get_root(0);
         let mut end1 = get_end(2);
         let mut end2 = get_end(3);
@@ -473,7 +494,7 @@ mod tests {
 
     #[test]
     fn test_visit_branch_already_completed() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let root = get_root(0);
         let mut end2 = get_end(3);
         let mut end1 = get_end(2);
@@ -509,7 +530,7 @@ mod tests {
 
     #[test]
     fn test_visit_oneof_completed() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let root1 = get_root(0);
         let root2 = get_root(1);
         let mut oneof = get_oneof(2, 0, 1);
@@ -545,7 +566,7 @@ mod tests {
 
     #[test]
     fn test_oneof_skipped() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let root1 = get_root(0);
         let root2 = get_root(1);
         let mut oneof = get_oneof(2, 0, 1);
@@ -570,7 +591,7 @@ mod tests {
 
     #[test]
     fn test_visit_task_skipped() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let root1 = get_root(0);
         let root2 = get_root(1);
         let mut task = get_task(2);
@@ -597,7 +618,7 @@ mod tests {
 
     #[test]
     fn test_visit_task_ready() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let root1 = get_root(0);
         let root2 = get_root(1);
         let mut task = get_task(2);
@@ -626,7 +647,7 @@ mod tests {
 
     #[test]
     fn test_visit_task_cache() {
-        let cfg = Cfg::default();
+        let cfg = get_cfg();
         let root1 = get_root(0);
         let root2 = get_root(1);
         let mut task = get_task(2);
