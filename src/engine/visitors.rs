@@ -1,5 +1,5 @@
 use crate::engine::context::{Ctx, Job};
-use crate::engine::submission::blocking;
+use crate::engine::submission::inline;
 use crate::model::nodes::{Branch, Children, End, Node, OneOf, ProvideStatus, Root, Task};
 use crate::model::schemas::Parent;
 use crate::model::status::{
@@ -52,7 +52,7 @@ impl<'a, 'b> Visitor<()> for NodeVisitor<'a, 'b> {
     fn visit_branch(&mut self, node: &Branch, ctx: &mut Ctx) {
         let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.statuses);
         if all_parents_completed(&parent_statuses) {
-            let status = match blocking::submit_branch(node, &self.cfg) {
+            let status = match inline::submit_branch(node, &self.cfg) {
                 Ok(choice) => Status::Completed(Completed::Branch(choice)),
                 Err(_) => Status::Failed(Failed::Generic),
             };
@@ -82,7 +82,7 @@ impl<'a, 'b> Visitor<()> for NodeVisitor<'a, 'b> {
     fn visit_oneof(&mut self, node: &OneOf, ctx: &mut Ctx) {
         let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.statuses);
         if let Some(uid) = find_completed_parent(&node.parents, &ctx.statuses) {
-            let status = match blocking::submit_oneof(node, uid, &self.cfg) {
+            let status = match inline::submit_oneof(node, uid, &self.cfg) {
                 Ok(_) => Status::Completed(Completed::OneOf(uid)),
                 Err(e) => {
                     log::error!("Node {}: OneOf failed - {e}", node.uid);
@@ -135,7 +135,7 @@ impl<'a, 'b> NodeVisitor<'a, 'b> {
         if all_parents_completed(&parent_statuses) {
             ctx.statuses[task.uid] = Status::ReadyForSubmission;
             if task.cache {
-                if blocking::submit_validate_cache(task, &self.cfg) {
+                if inline::submit_validate_cache(task, &self.cfg) {
                     ctx.statuses[task.uid] = Status::Completed(Completed::Cached);
                     return;
                 }

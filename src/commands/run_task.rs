@@ -1,4 +1,4 @@
-use crate::engine::submission::nonblocking::{submit_local_blocking, submit_slurm};
+use crate::engine::submission::jobs::{submit_local_blocking, submit_slurm};
 use crate::model::nodes::{Node, Task};
 use crate::model::schemas::{Cmd, DAGMeta};
 use crate::settings::{self, Cfg};

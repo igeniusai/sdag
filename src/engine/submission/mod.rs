@@ -1,5 +1,5 @@
-pub mod blocking;
-pub mod nonblocking;
+pub mod inline;
+pub mod jobs;
 use crate::engine::context::{Ctx, Job};
 use crate::model::nodes::{Node, Task};
 use crate::model::schemas::{Cmd, DAGMeta};
@@ -100,7 +100,7 @@ impl<'a> Submitter<'a> {
 
     fn submit_local(&mut self, task: &Task, ctx: &mut Ctx) -> Result<(), Box<dyn Error>> {
         let try_num = ctx.try_nums[task.uid];
-        let child = nonblocking::submit_local(task, try_num, &self.cfg, &self.meta)?;
+        let child = jobs::submit_local(task, try_num, &self.cfg, &self.meta)?;
         let pid = child.id();
 
         log::info!("Task '{}': Submitted process with pid '{}'", task.uid, pid);
@@ -112,7 +112,7 @@ impl<'a> Submitter<'a> {
 
     fn submit_slurm(&mut self, task: &Task, ctx: &mut Ctx) -> Result<(), Box<dyn Error>> {
         let try_num = ctx.try_nums[task.uid];
-        let job_id = nonblocking::submit_slurm(task, try_num, &self.cfg, &self.meta)?;
+        let job_id = jobs::submit_slurm(task, try_num, &self.cfg, &self.meta)?;
 
         log::info!("Task '{}': Submitted job_id '{}'", task.uid, job_id);
         ctx.slurm_jobs.push((task.uid, job_id.to_string()));
@@ -134,7 +134,7 @@ impl<'a> Submitter<'a> {
                 .push_back(Job::ValidateCache(task.uid, false));
             return;
         }
-        if !already_checked && blocking::submit_validate_cache(&task, &self.cfg) {
+        if !already_checked && inline::submit_validate_cache(&task, &self.cfg) {
             ctx.statuses[task.uid] = Status::Completed(Completed::Cached);
             return;
         }

@@ -1,4 +1,4 @@
-use crate::engine::submission::blocking;
+use crate::engine::submission::inline;
 use crate::model::nodes::{Node, Task};
 use crate::model::schemas::{Artifact, ParentKind};
 use crate::settings::{self, Cfg};
@@ -82,7 +82,7 @@ fn check_caching(task: &Task, cfg: &Cfg, input: &HashMap<String, Value>) -> bool
 
     let cache_path = workdirs::get_task_cache_path(task, cfg);
     let path_str = cache_path.to_string_lossy();
-    match blocking::compare_input_with_cache(input, &cache_path, &task.cache_ignore) {
+    match inline::compare_input_with_cache(input, &cache_path, &task.cache_ignore) {
         Ok(Some(_)) => true,
         Ok(None) => {
             log::info!("Task {}: cache at '{path_str}' doesn't match", task.uid);
