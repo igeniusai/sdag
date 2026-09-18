@@ -69,7 +69,7 @@ fn get_runtask_hash(task_name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::run_task::get_runtask_hash;
+    use super::*;
 
     #[test]
     fn test_runtask_hash() {

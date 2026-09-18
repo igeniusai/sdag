@@ -1,15 +1,11 @@
 use pyo3::prelude::*;
 mod banner;
 mod blocking;
-mod cache_pruning;
+mod commands;
 mod context;
 mod dag_setup;
-mod describe;
-mod kill;
-mod list_pipelines;
 mod nodes;
 mod polling;
-mod run_task;
 mod scheduler;
 mod schemas;
 mod settings;
@@ -44,7 +40,7 @@ mod core {
         fail_fast: bool,
     ) {
         settings::configure_logging(log_level);
-        scheduler::run(
+        commands::run(
             pipeline_path,
             max_concurrency,
             time_between_polls,
@@ -75,7 +71,7 @@ mod core {
         fail_fast: bool,
     ) {
         settings::configure_logging(log_level);
-        scheduler::restart_run(
+        commands::restart_run(
             pipeline_name,
             pipeline_hash,
             max_concurrency,
@@ -94,7 +90,7 @@ mod core {
     ) -> "None")]
     pub fn kill_run(pipeline_name: &str, pipeline_hash: &str, log_level: &str) {
         settings::configure_logging(log_level);
-        kill::create_kill_lock(pipeline_name, pipeline_hash);
+        commands::create_kill_lock(pipeline_name, pipeline_hash);
     }
 
     #[pyfunction]
@@ -111,7 +107,7 @@ mod core {
         log_level: &str,
     ) {
         settings::configure_logging(log_level);
-        cache_pruning::prune_cache(task_name, pipeline_name, allow_full_prune);
+        commands::prune_cache(task_name, pipeline_name, allow_full_prune);
     }
 
     #[pyfunction]
@@ -120,14 +116,8 @@ mod core {
         log_level: "str",
     ) -> "None")]
     pub fn view_pipeline(mermaid: &str, log_level: &str) {
-        use graphs_tui::{RenderOptions, render_mermaid_to_tui};
-
         settings::configure_logging(log_level);
-        log::debug!("\n{mermaid}");
-
-        let result =
-            render_mermaid_to_tui(mermaid, RenderOptions::default()).expect("Failed to print DAG");
-        println!("{}", result.output);
+        commands::view_pipeline(mermaid);
     }
 
     #[pyfunction]
@@ -146,7 +136,7 @@ mod core {
         max_concurrent_runs: usize,
     ) {
         settings::configure_logging(log_level);
-        run_task::run_task(
+        commands::run_task(
             task_serialized,
             slurm_grace_period,
             max_concurrent_runs,
@@ -161,7 +151,7 @@ mod core {
         paths: "list[str]",
     ) -> "None")]
     pub fn print_pipeline_list(names: Vec<String>, paths: Vec<String>) {
-        list_pipelines::print_pipelines(&names, &paths);
+        commands::print_pipelines(&names, &paths);
     }
 
     #[pyfunction]
@@ -171,7 +161,7 @@ mod core {
     ) -> "None")]
     pub fn print_runs(pipeline_name: &str, log_level: &str) {
         settings::configure_logging(log_level);
-        if let Err(e) = list_pipelines::print_runs(pipeline_name) {
+        if let Err(e) = commands::print_runs(pipeline_name) {
             log::error!("Failed to retrieve data - {e}");
         }
     }
@@ -183,6 +173,6 @@ mod core {
     ) -> "None")]
     pub fn describe_pipeline(pipeline_path: &str, log_level: &str) {
         settings::configure_logging(log_level);
-        describe::describe_pipeline(pipeline_path, log_level)
+        commands::describe_pipeline(pipeline_path, log_level)
     }
 }
