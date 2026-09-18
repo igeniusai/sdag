@@ -116,7 +116,7 @@ mod test {
 
     fn get_cfg() -> Cfg {
         let meta = get_meta();
-        Cfg::new(&PathBuf::from("/a/path"), &meta, "info", 1, 5, 1, 1)
+        Cfg::new(&PathBuf::from("/a/path"), &meta, "info", 1, 5, 1, 1, false)
     }
 
     fn get_task(uid: usize) -> Task {

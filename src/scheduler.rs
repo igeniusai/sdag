@@ -25,6 +25,7 @@ pub fn run(
     slurm_grace_period: usize,
     max_concurrent_runs: usize,
     log_level: &str,
+    fail_fast: bool,
 ) {
     let pipeline_path = PathBuf::from(pipeline_path);
     let dag = state::read_dag(&pipeline_path).expect("Failed to read DAG - {e}");
@@ -46,6 +47,7 @@ pub fn run(
         time_between_polls,
         slurm_grace_period,
         max_concurrent_runs,
+        fail_fast,
     );
 
     dag_setup::add_children(&mut nodes);
@@ -66,6 +68,7 @@ pub fn restart_run(
     time_between_polls: u64,
     retry: bool,
     log_level: &str,
+    fail_fast: bool,
 ) {
     let homedir = settings::find_homedir().expect("Failed to find the home directory");
     let Some(path) = workdirs::find_pipeline_folder(&homedir, name, hash) else {
@@ -88,6 +91,7 @@ pub fn restart_run(
     cfg.max_concurrency = max_concurrency;
     cfg.sleep_time = Duration::from_secs(time_between_polls);
     cfg.log_level = log_level.to_string();
+    cfg.fail_fast = fail_fast;
 
     scheduling_loop(&nodes, &mut ctx, &cfg, &meta);
 }
@@ -142,6 +146,12 @@ fn scheduling_loop(nodes: &[Node], ctx: &mut Ctx, cfg: &Cfg, meta: &DAGMeta) {
         summary::print_summary(&nodes, &ctx, &meta.pipeline_name, &meta.hash);
         if status::is_simulation_completed(&ctx.statuses) {
             log::info!("Simulation completed");
+            break;
+        }
+
+        if cfg.fail_fast && status::any_node_failed(&ctx.statuses) {
+            let _ = state::create_kill_file(&cfg.dagdir)
+                .map_err(|e| log::error!("Failed to create kill file - {e}"));
             break;
         }
 

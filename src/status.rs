@@ -140,6 +140,10 @@ pub fn some_parents_failed_or_skipped(parent_statuses: &[&Status]) -> bool {
         .any(|x| matches!(**x, Status::Skipped | Status::Failed(_)))
 }
 
+pub fn any_node_failed(statuses: &[Status]) -> bool {
+    statuses.iter().any(|x| matches!(x, Status::Failed(_)))
+}
+
 /// Check if every parent has failed or has been skipped.
 pub fn all_parents_failed_or_skipped(parent_statuses: &[&Status]) -> bool {
     parent_statuses

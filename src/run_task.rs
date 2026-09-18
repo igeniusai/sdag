@@ -35,6 +35,7 @@ pub fn run_task(
         time_between_polls,
         slurm_grace_period,
         max_concurrent_runs,
+        false,
     );
     let nodes = vec![Node::Task(task.clone())];
     workdirs::create_dir_structure(&cfg, &nodes).expect("Failed to create directories");

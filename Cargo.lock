@@ -634,6 +634,7 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "graphs-tui",
+ "libc",
  "log",
  "pyo3",
  "regex",

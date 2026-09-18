@@ -49,6 +49,13 @@ class Pyproj(SlurmOverride):
             set, it overrides all pipeline commands.
         log_level (Literal["debug", "info", "warning", "error"]):
             Logging level.
+        max_concurrency (int): Maximum number of tasks executed
+            at the same time.
+        slurm_grace_period (int): Number of turns a task can be missing
+            from the response without being considered as failed.
+            Defaults to 60.
+        fail_fast (bool): Kill the scheduler and all running tasks if
+            any of them fails.
     """
 
     dag_dir: str = Field(alias="dag-dir", default="./pipelines")
@@ -67,11 +74,12 @@ class Pyproj(SlurmOverride):
     )
     max_concurrency: int = Field(alias="max-concurrency", default=0, ge=0)
     slurm_grace_period: int = Field(
-        alias="slurm-grace-period", default=5, ge=0
+        alias="slurm-grace-period", default=60, ge=0
     )
     max_concurrent_runs: int = Field(
         alias="max-concurrent-runs", default=20, gt=0
     )
+    fail_fast: bool = Field(alias="fail-fast", default=False)
 
     tags: list[SDAGTag] = Field(default_factory=list)
 
@@ -98,6 +106,14 @@ class Pyproj(SlurmOverride):
 
         if argdict.get("compiled_dag_dir") is not None:
             self.compiled_dag_dir = args.compiled_dag_dir
+
+        if argdict.get("fail_fast"):
+            self.fail_fast = True
+
+        if argdict.get("local"):
+            self.cmd = "bash"
+            for tag in self.tags:
+                tag.cmd = "bash"
 
 
 @lru_cache(maxsize=1)

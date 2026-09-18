@@ -19,9 +19,7 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [tool.maturin]
-# "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
 features = ["pyo3/extension-module"]
-# python-packages = ["sdag"]
 python-source = "python"
 module-name = "sdag.core"
 strip = true
@@ -87,9 +85,12 @@ ignore = [
 convention = "google"
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["python", "tests"]
 exclude = [
     "**/__pycache__",
+    ".venv",
+    "**/node_modules",
+    "**/.*",
 ]
 defineConstant = { DEBUG = true }
 reportMissingImports = "error"

@@ -32,6 +32,7 @@ mod core {
         log_level: "str",
         slurm_grace_period: "int",
         max_concurrent_runs: "int",
+        fail_fast: "bool",
     ) -> "None")]
     pub fn run(
         pipeline_path: &str,
@@ -40,6 +41,7 @@ mod core {
         log_level: &str,
         slurm_grace_period: usize,
         max_concurrent_runs: usize,
+        fail_fast: bool,
     ) {
         settings::configure_logging(log_level);
         scheduler::run(
@@ -49,6 +51,7 @@ mod core {
             slurm_grace_period,
             max_concurrent_runs,
             log_level,
+            fail_fast,
         )
     }
 
@@ -60,6 +63,7 @@ mod core {
         time_between_polls:"int",
         log_level: "str",
         retry: "bool",
+        fail_fast: "bool",
     ) -> "None")]
     pub fn restart_run(
         pipeline_name: &str,
@@ -68,6 +72,7 @@ mod core {
         time_between_polls: u64,
         log_level: &str,
         retry: bool,
+        fail_fast: bool,
     ) {
         settings::configure_logging(log_level);
         scheduler::restart_run(
@@ -77,6 +82,7 @@ mod core {
             time_between_polls,
             retry,
             log_level,
+            fail_fast,
         );
     }
 
