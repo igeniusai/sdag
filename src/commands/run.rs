@@ -26,16 +26,21 @@ pub fn run(
     nodes.sort_by_key(|n| n.get_uid());
 
     let homedir = settings::find_homedir().expect("Failed to find the home directory");
-    let cfg = Cfg::new(
-        &homedir,
-        &meta,
-        log_level,
+    let dagdir = workdirs::get_dagdir(&homedir, &meta.pipeline_name, &meta.hash);
+    let (cachedir, local_cachedir) = workdirs::get_cache_paths(&homedir);
+    let cfg = Cfg {
+        homedir,
+        dagdir,
+        cachedir,
+        local_cachedir,
+        timestamp: settings::get_timestamp(),
+        grace_period: slurm_grace_period,
+        max_dagdirs: max_concurrent_runs,
         max_concurrency,
-        time_between_polls,
-        slurm_grace_period,
-        max_concurrent_runs,
+        sleep_time: Duration::from_secs(time_between_polls),
+        log_level: log_level.to_string(),
         fail_fast,
-    );
+    };
 
     dag_setup::add_children(&mut nodes);
     workdirs::create_dir_structure(&cfg, &nodes).expect("Failed to create dagdir");

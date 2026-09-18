@@ -3,10 +3,10 @@ use crate::model::nodes::{Node, Task};
 use crate::model::schemas::{Cmd, DAGMeta};
 use crate::settings::{self, Cfg};
 use crate::store::workdirs;
-use chrono::Local;
 use log;
 use serde_json::{self, Value};
 use std::collections::HashMap;
+use std::time::Duration;
 use uuid::Uuid;
 
 pub fn run_task(
@@ -16,27 +16,33 @@ pub fn run_task(
     time_between_polls: u64,
     log_level: &str,
 ) {
-    let homedir = settings::find_homedir().expect("Failed to find the home directory");
     let task: Task = serde_json::from_str(task_serialized).expect("Failed to parse task");
     let meta = DAGMeta {
         pipeline_name: task.pipeline_name.clone(),
         hash: get_runtask_hash(&task.name),
-        timestamp: format!("{}", Local::now().format("%Y-%m-%dT%H:%M:%S")),
+        timestamp: settings::get_timestamp(),
         extra: Value::Null,
         import_path: task.pipeline_name.clone(), // TODO
         kwargs: HashMap::new(),
     };
 
-    let cfg = Cfg::new(
-        &homedir,
-        &meta,
-        &log_level,
-        1,
-        time_between_polls,
-        slurm_grace_period,
-        max_concurrent_runs,
-        false,
-    );
+    let homedir = settings::find_homedir().expect("Failed to find the home directory");
+    let dagdir = workdirs::get_dagdir(&homedir, &meta.pipeline_name, &meta.hash);
+    let (cachedir, local_cachedir) = workdirs::get_cache_paths(&homedir);
+    let cfg = Cfg {
+        homedir,
+        dagdir,
+        cachedir,
+        local_cachedir,
+        timestamp: settings::get_timestamp(),
+        grace_period: slurm_grace_period,
+        max_dagdirs: max_concurrent_runs,
+        sleep_time: Duration::from_secs(time_between_polls),
+        log_level: log_level.to_string(),
+        max_concurrency: 1,
+        fail_fast: false,
+    };
+
     let nodes = vec![Node::Task(task.clone())];
     workdirs::create_dir_structure(&cfg, &nodes).expect("Failed to create directories");
     submit_job(&task, &cfg, &meta);

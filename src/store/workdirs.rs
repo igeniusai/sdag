@@ -7,6 +7,27 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+pub fn get_task_cache_path(task: &Task, cfg: &Cfg) -> PathBuf {
+    match task.scope {
+        Scope::Global => cfg.cachedir.join(&task.name),
+        Scope::Local => cfg
+            .local_cachedir
+            .join(&task.pipeline_name)
+            .join(&task.name),
+    }
+}
+
+pub fn get_dagdir(homedir: &Path, pipeline_name: &str, hash: &str) -> PathBuf {
+    homedir.join("pipelines").join(pipeline_name).join(hash)
+}
+
+pub fn get_cache_paths(homedir: &Path) -> (PathBuf, PathBuf) {
+    let base_cachedir = homedir.join(".cache");
+    let cachedir = base_cachedir.join("global");
+    let local_cachedir = base_cachedir.join("local");
+    (cachedir, local_cachedir)
+}
+
 pub enum FileNames {
     Input,
     Output,
@@ -28,16 +49,6 @@ impl FileNames {
             Self::Kill => "kill.lock",
             Self::Script => "script.sh",
         }
-    }
-}
-
-pub fn get_task_cache_path(task: &Task, cfg: &Cfg) -> PathBuf {
-    match task.scope {
-        Scope::Global => cfg.cachedir.join(&task.name),
-        Scope::Local => cfg
-            .local_cachedir
-            .join(&task.pipeline_name)
-            .join(&task.name),
     }
 }
 
@@ -183,9 +194,9 @@ mod tests {
     use super::*;
     use crate::model::nodes::Root;
     use crate::model::schemas::{
-        Cmd, DAGMeta, ExecMode, Parent, ParentKind, Scope, Script, ScriptPath, SlurmOverride,
+        Cmd, ExecMode, Parent, ParentKind, Scope, Script, ScriptPath, SlurmOverride,
     };
-    use serde_json::Value;
+    use crate::store::workdirs;
     use std::collections::HashMap;
     use std::env;
     use uuid::Uuid;
@@ -323,17 +334,19 @@ mod tests {
     fn test_create_dir_structure() {
         let path = get_tmp_dir();
         let nodes = get_nodes();
-        let meta = DAGMeta {
-            pipeline_name: "pipeline".into(),
-            hash: "xxx".into(),
-            timestamp: "1900-01-01T09:20:20".into(),
-            extra: Value::Null,
-            import_path: String::new(),
-            kwargs: HashMap::new(),
-        };
 
+        let pipeline_name = "pipeline";
+        let hash = "xxx";
         let homedir = path.join("home");
-        let cfg = Cfg::new(&homedir, &meta, "info", 1, 5, 1, 1, false);
+        let dagdir = workdirs::get_dagdir(&homedir, pipeline_name, hash);
+        let (cachedir, local_cachedir) = workdirs::get_cache_paths(&homedir);
+
+        let mut cfg = Cfg::default();
+        cfg.homedir = homedir;
+        cfg.dagdir = dagdir;
+        cfg.cachedir = cachedir;
+        cfg.local_cachedir = local_cachedir;
+
         create_dir_structure(&cfg, &nodes).unwrap();
 
         assert!(cfg.homedir.exists());

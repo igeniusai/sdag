@@ -198,36 +198,9 @@ mod tests {
     use crate::store::workdirs::FileNames;
     use std::collections::HashMap;
     use std::fs;
-    use std::path::PathBuf;
 
     use super::*;
-    use crate::model::schemas::{Cmd, DAGMeta, Scope, Script, ScriptPath, SlurmOverride};
-    use serde_json::Value;
-    use std::env;
-    use uuid::Uuid;
-
-    fn get_meta() -> DAGMeta {
-        DAGMeta {
-            pipeline_name: "pipe".into(),
-            hash: "xxx".into(),
-            timestamp: "1920-01-01T09:20:20".into(),
-            extra: Value::Null,
-            import_path: String::new(),
-            kwargs: HashMap::new(),
-        }
-    }
-
-    fn get_tmp_dir() -> PathBuf {
-        let path = env::temp_dir().join(Uuid::new_v4().to_string());
-        fs::create_dir_all(&path).unwrap();
-        path
-    }
-
-    fn get_cfg() -> Cfg {
-        let meta = get_meta();
-        let homedir = get_tmp_dir();
-        Cfg::new(&homedir, &meta, "info", 1, 5, 1, 1, false)
-    }
+    use crate::model::schemas::{Cmd, Scope, Script, ScriptPath, SlurmOverride};
 
     fn get_poller(cfg: &Cfg) -> SlurmPoller<'_> {
         SlurmPoller {
@@ -342,7 +315,7 @@ mod tests {
 
     #[test]
     fn test_handle_pending_status() {
-        let cfg = get_cfg();
+        let cfg = Cfg::default();
         let mut poller = get_poller(&cfg);
 
         let task = get_task(0);
@@ -362,7 +335,7 @@ mod tests {
 
     #[test]
     fn test_handle_failed_status() {
-        let cfg = get_cfg();
+        let cfg = Cfg::default();
         let mut poller = get_poller(&cfg);
 
         let task = get_task(0);
@@ -379,7 +352,7 @@ mod tests {
 
     #[test]
     fn test_handle_failed_status_with_retry() {
-        let cfg = get_cfg();
+        let cfg = Cfg::default();
         let mut poller = get_poller(&cfg);
 
         let mut task = get_task(0);
@@ -399,7 +372,7 @@ mod tests {
 
     #[test]
     fn test_handle_completed_with_caching() {
-        let cfg = get_cfg();
+        let cfg = Cfg::default();
         let mut poller = get_poller(&cfg);
         let mut task = get_task(0);
         task.cache = true;
@@ -429,7 +402,7 @@ mod tests {
 
     #[test]
     fn test_handle_completed_ext() {
-        let cfg = get_cfg();
+        let cfg = Cfg::default();
         let mut poller = get_poller(&cfg);
         let mut task = get_task(0);
         task.mode = ExecMode::Ext;

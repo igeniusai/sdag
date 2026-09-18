@@ -96,27 +96,9 @@ fn poll_local(child: &mut Child) -> Status {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::model::schemas::{Cmd, DAGMeta, Scope, Script, ScriptPath, SlurmOverride};
-    use serde_json::Value;
+    use crate::model::schemas::{Cmd, Scope, Script, ScriptPath, SlurmOverride};
     use std::collections::HashMap;
-    use std::path::PathBuf;
     use std::process::Command;
-
-    fn get_meta() -> DAGMeta {
-        DAGMeta {
-            pipeline_name: "pipe".into(),
-            hash: "xxx".into(),
-            timestamp: "1920-01-01T09:20:20".into(),
-            extra: Value::Null,
-            import_path: String::new(),
-            kwargs: HashMap::new(),
-        }
-    }
-
-    fn get_cfg() -> Cfg {
-        let meta = get_meta();
-        Cfg::new(&PathBuf::from("/a/path"), &meta, "info", 1, 5, 1, 1, false)
-    }
 
     fn get_task(uid: usize) -> Task {
         Task {
@@ -154,7 +136,7 @@ mod test {
 
     #[test]
     fn test_poll() {
-        let cfg = get_cfg();
+        let cfg = Cfg::default();
         let nodes = vec![Node::Task(get_task(0))];
         let mut ctx = Ctx::new(&nodes).unwrap();
 

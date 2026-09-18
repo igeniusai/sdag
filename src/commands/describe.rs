@@ -27,13 +27,19 @@ struct TaskDescription<'a> {
     kwargs: String,
 }
 
-pub fn describe_pipeline(pipeline_path: &str, log_level: &str) {
+pub fn describe_pipeline(pipeline_path: &str) {
     let pipeline_path = PathBuf::from(pipeline_path);
     let homedir = settings::find_homedir().expect("Failed to find the home directory");
     let dag = state::read_dag(&pipeline_path).expect("Failed to read DAG - {e}");
-    let cfg = Cfg::new(&homedir, &dag.meta, log_level, 1, 0, 0, 1, false);
-    let mut descriptions = vec![];
+    let dagdir = workdirs::get_dagdir(&homedir, &dag.meta.pipeline_name, &dag.meta.hash);
+    let (cachedir, local_cachedir) = workdirs::get_cache_paths(&homedir);
 
+    let mut cfg = Cfg::default();
+    cfg.dagdir = dagdir;
+    cfg.cachedir = cachedir;
+    cfg.local_cachedir = local_cachedir;
+
+    let mut descriptions = vec![];
     for node in &dag.nodes {
         if let Node::Task(task) = node {
             let description = get_description(&task, &cfg);

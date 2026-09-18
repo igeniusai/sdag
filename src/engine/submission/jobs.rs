@@ -246,6 +246,7 @@ mod tests {
     use super::*;
     use crate::model::schemas::{Cmd, Scope};
     use crate::model::schemas::{ScriptContent, ScriptPath};
+    use crate::store::workdirs;
     use std::env;
     use std::fs;
     use std::path::PathBuf;
@@ -269,9 +270,16 @@ mod tests {
     }
 
     fn get_cfg() -> Cfg {
-        let meta = get_meta();
         let homedir = get_tmp_dir();
-        Cfg::new(&homedir, &meta, "info", 1, 5, 1, 1, false)
+        let meta = get_meta();
+        let dagdir = workdirs::get_dagdir(&homedir, &meta.pipeline_name, &meta.hash);
+        let (cachedir, local_cachedir) = workdirs::get_cache_paths(&homedir);
+
+        let mut cfg = Cfg::default();
+        cfg.dagdir = dagdir;
+        cfg.cachedir = cachedir;
+        cfg.local_cachedir = local_cachedir;
+        cfg
     }
 
     fn get_task() -> Task {

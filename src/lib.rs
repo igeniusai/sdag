@@ -163,6 +163,6 @@ mod core {
     ) -> "None")]
     pub fn describe_pipeline(pipeline_path: &str, log_level: &str) {
         settings::configure_logging(log_level);
-        commands::describe_pipeline(pipeline_path, log_level)
+        commands::describe_pipeline(pipeline_path)
     }
 }
