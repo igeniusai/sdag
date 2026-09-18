@@ -1,5 +1,5 @@
 use crate::nodes::{Node, Task};
-use crate::schemas::TaskMeta;
+use crate::schemas::{Scope, TaskMeta};
 use crate::settings::Cfg;
 use log;
 use std::fs;
@@ -28,6 +28,16 @@ impl FileNames {
             Self::Kill => "kill.lock",
             Self::Script => "script.sh",
         }
+    }
+}
+
+pub fn get_task_cache_path(task: &Task, cfg: &Cfg) -> PathBuf {
+    match task.scope {
+        Scope::Global => cfg.cachedir.join(&task.name),
+        Scope::Local => cfg
+            .local_cachedir
+            .join(&task.pipeline_name)
+            .join(&task.name),
     }
 }
 
