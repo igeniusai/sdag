@@ -245,7 +245,7 @@ fn find_submitted_job_id(output: &str) -> Option<String> {
 mod tests {
     use super::*;
     use crate::model::schemas::{ScriptContent, ScriptPath};
-    use crate::store::workdirs;
+    use crate::store::workdirs::DirPaths;
     use std::env;
     use std::fs;
     use std::path::PathBuf;
@@ -271,13 +271,11 @@ mod tests {
     fn get_cfg() -> Cfg {
         let homedir = get_tmp_dir();
         let meta = get_meta();
-        let dagdir = workdirs::get_dagdir(&homedir, &meta.pipeline_name, &meta.hash);
-        let (cachedir, local_cachedir) = workdirs::get_cache_paths(&homedir);
-
+        let paths = DirPaths::new(&homedir, &meta.pipeline_name, &meta.hash);
         let mut cfg = Cfg::default();
-        cfg.dagdir = dagdir;
-        cfg.cachedir = cachedir;
-        cfg.local_cachedir = local_cachedir;
+        cfg.dagdir = paths.dagdir;
+        cfg.cachedir = paths.cachedir;
+        cfg.local_cachedir = paths.local_cachedir;
         cfg
     }
 

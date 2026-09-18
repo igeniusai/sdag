@@ -195,7 +195,7 @@ fn get_status_from_string(status_string: &str, job_id: &str) -> Status {
 #[cfg(test)]
 mod tests {
     use crate::engine::context::Job;
-    use crate::store::workdirs::{FileNames, get_cache_paths, get_dagdir};
+    use crate::store::workdirs::{DirPaths, FileNames};
     use std::collections::HashMap;
     use std::env;
     use std::fs;
@@ -220,13 +220,12 @@ mod tests {
 
     fn get_cfg() -> Cfg {
         let homedir = get_tmp_dir();
-        let dagdir = get_dagdir(&homedir, "pipeline", "xxx");
-        let (cachedir, local_cachedir) = get_cache_paths(&homedir);
+        let paths = DirPaths::new(&homedir, "pipeline", "xxx");
         let mut cfg = Cfg::default();
         cfg.homedir = homedir;
-        cfg.dagdir = dagdir;
-        cfg.cachedir = cachedir;
-        cfg.local_cachedir = local_cachedir;
+        cfg.dagdir = paths.dagdir;
+        cfg.cachedir = paths.cachedir;
+        cfg.local_cachedir = paths.local_cachedir;
         cfg
     }
 

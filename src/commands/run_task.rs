@@ -2,7 +2,7 @@ use crate::engine::submission::jobs::{submit_local_blocking, submit_slurm};
 use crate::model::nodes::{Node, Task};
 use crate::model::schemas::{Cmd, DAGMeta};
 use crate::settings::{self, Cfg};
-use crate::store::workdirs;
+use crate::store::workdirs::{self, DirPaths};
 use log;
 use serde_json::{self, Value};
 use std::collections::HashMap;
@@ -27,13 +27,12 @@ pub fn run_task(
     };
 
     let homedir = settings::find_homedir().expect("Failed to find the home directory");
-    let dagdir = workdirs::get_dagdir(&homedir, &meta.pipeline_name, &meta.hash);
-    let (cachedir, local_cachedir) = workdirs::get_cache_paths(&homedir);
+    let paths = DirPaths::new(&homedir, &meta.pipeline_name, &meta.hash);
     let cfg = Cfg {
         homedir,
-        dagdir,
-        cachedir,
-        local_cachedir,
+        dagdir: paths.dagdir,
+        cachedir: paths.cachedir,
+        local_cachedir: paths.local_cachedir,
         timestamp: settings::get_timestamp(),
         grace_period: slurm_grace_period,
         max_dagdirs: max_concurrent_runs,

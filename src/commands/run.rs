@@ -1,7 +1,8 @@
 use crate::engine::{context::Ctx, scheduler};
 use crate::model::{dag_setup, status};
 use crate::settings::{self, Cfg};
-use crate::store::{state, workdirs};
+use crate::store::state;
+use crate::store::workdirs::{self, DirPaths};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -26,13 +27,12 @@ pub fn run(
     nodes.sort_by_key(|n| n.get_uid());
 
     let homedir = settings::find_homedir().expect("Failed to find the home directory");
-    let dagdir = workdirs::get_dagdir(&homedir, &meta.pipeline_name, &meta.hash);
-    let (cachedir, local_cachedir) = workdirs::get_cache_paths(&homedir);
+    let paths = DirPaths::new(&homedir, &meta.pipeline_name, &meta.hash);
     let cfg = Cfg {
         homedir,
-        dagdir,
-        cachedir,
-        local_cachedir,
+        dagdir: paths.dagdir,
+        cachedir: paths.cachedir,
+        local_cachedir: paths.local_cachedir,
         timestamp: settings::get_timestamp(),
         grace_period: slurm_grace_period,
         max_dagdirs: max_concurrent_runs,

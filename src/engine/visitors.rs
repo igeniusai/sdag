@@ -155,7 +155,7 @@ mod tests {
     use super::*;
     use crate::model::schemas::{ParentKind, TaskOutput};
     use crate::model::status::{Failed, JobType};
-    use crate::store::workdirs::{FileNames, get_cache_paths, get_dagdir};
+    use crate::store::workdirs::{DirPaths, FileNames};
     use serde_json::Value;
     use std::env;
     use std::fs;
@@ -170,13 +170,12 @@ mod tests {
 
     fn get_cfg() -> Cfg {
         let homedir = get_tmp_dir();
-        let dagdir = get_dagdir(&homedir, "pipeline", "xxx");
-        let (cachedir, local_cachedir) = get_cache_paths(&homedir);
+        let paths = DirPaths::new(&homedir, "pipeline", "xxx");
         let mut cfg = Cfg::default();
         cfg.homedir = homedir;
-        cfg.dagdir = dagdir;
-        cfg.cachedir = cachedir;
-        cfg.local_cachedir = local_cachedir;
+        cfg.dagdir = paths.dagdir;
+        cfg.cachedir = paths.cachedir;
+        cfg.local_cachedir = paths.local_cachedir;
         cfg
     }
 

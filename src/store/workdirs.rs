@@ -17,15 +17,23 @@ pub fn get_task_cache_path(task: &Task, cfg: &Cfg) -> PathBuf {
     }
 }
 
-pub fn get_dagdir(homedir: &Path, pipeline_name: &str, hash: &str) -> PathBuf {
-    homedir.join("pipelines").join(pipeline_name).join(hash)
+pub struct DirPaths {
+    pub dagdir: PathBuf,
+    pub cachedir: PathBuf,
+    pub local_cachedir: PathBuf,
 }
-
-pub fn get_cache_paths(homedir: &Path) -> (PathBuf, PathBuf) {
-    let base_cachedir = homedir.join(".cache");
-    let cachedir = base_cachedir.join("global");
-    let local_cachedir = base_cachedir.join("local");
-    (cachedir, local_cachedir)
+impl DirPaths {
+    pub fn new(homedir: &Path, pipeline_name: &str, hash: &str) -> Self {
+        let dagdir = homedir.join("pipelines").join(pipeline_name).join(hash);
+        let base_cachedir = homedir.join(".cache");
+        let cachedir = base_cachedir.join("global");
+        let local_cachedir = base_cachedir.join("local");
+        Self {
+            dagdir,
+            cachedir,
+            local_cachedir,
+        }
+    }
 }
 
 pub enum FileNames {
@@ -194,7 +202,6 @@ mod tests {
     use super::*;
     use crate::model::nodes::Root;
     use crate::model::schemas::{Parent, ParentKind};
-    use crate::store::workdirs;
     use std::env;
     use uuid::Uuid;
 
@@ -316,17 +323,13 @@ mod tests {
         let path = get_tmp_dir();
         let nodes = get_nodes();
 
-        let pipeline_name = "pipeline";
-        let hash = "xxx";
         let homedir = path.join("home");
-        let dagdir = workdirs::get_dagdir(&homedir, pipeline_name, hash);
-        let (cachedir, local_cachedir) = workdirs::get_cache_paths(&homedir);
-
+        let paths = DirPaths::new(&homedir, "pipeline", "xxx");
         let mut cfg = Cfg::default();
         cfg.homedir = homedir;
-        cfg.dagdir = dagdir;
-        cfg.cachedir = cachedir;
-        cfg.local_cachedir = local_cachedir;
+        cfg.dagdir = paths.dagdir;
+        cfg.cachedir = paths.cachedir;
+        cfg.local_cachedir = paths.local_cachedir;
 
         create_dir_structure(&cfg, &nodes).unwrap();
 
