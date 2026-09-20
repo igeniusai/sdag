@@ -124,21 +124,25 @@ class If:
         Returns:
             Self: This task.
         """
-        self.branch.in_context = True
-        compiler.register_branch(self.branch)
+        compiler.register(self.branch)
+        compiler.push_scope((self.branch.uid, True))
         return self
 
     def __exit__(self, type, value, traceback) -> None:  # noqa: A002
         """Exit the positive branch."""
-        self.branch.in_context = False
-        self.branch.branch = False
+        compiler.pop_scope()
+        compiler.close_clause(self.branch.uid, next_edge_value=False)
 
 
 class Elif:
     """Elif Wrapper.
 
+    Must follow an upstream If or Elif clause in the same scope, with
+    nothing but plain task calls in between.
+
     Attributes:
         _expr (TaskNode | OneOfNode): Task returning a bool output.
+        branch (BranchNode): Branch.
     """
 
     def __init__(self, expr: TaskNode | OneOfNode):
@@ -146,8 +150,17 @@ class Elif:
 
         Args:
             expr (TaskNode | OneOfNode): Task returning a bool output.
+
+        Raises:
+            IncorrectElifError: Not immediately preceded by an If or
+                Elif clause in the same scope.
         """
-        self._expr = expr
+        prev = compiler.current_scope.last_clause
+        if prev is None or prev.terminal:
+            raise IncorrectElifError
+
+        expr.add_branch_edge(prev.branch_uid, prev.next_edge_value)
+
         parent = Parent(uid=expr.uid, kind=OutputParent(key="expr"))
         self.branch = BranchNode(uid=compiler.get_uid(), parents=[parent])
 
@@ -157,76 +170,47 @@ class Elif:
         Returns:
             Self: This task.
         """
-        if not compiler.active:
-            raise IncorrectElifError
-
-        if not compiler.active.branches:
-            raise IncorrectElifError
-
-        last_branch = compiler.active.branches[-1]
-
-        # Elif without If (within a branch)
-        if last_branch.in_context:
-            raise IncorrectElifError
-
-        # Parent If in the True branch
-        if last_branch.branch:
-            raise IncorrectElifError
-
-        ifbranch = compiler.active.branches.pop()
-        self._expr.add_branch_edge(
-            parent_uid=ifbranch.uid, branch=ifbranch.branch
-        )
-
-        self.branch.in_context = True
-        compiler.register_branch(self.branch)
-
+        compiler.register(self.branch)
+        compiler.push_scope((self.branch.uid, True))
         return self
 
     def __exit__(self, type, value, traceback) -> None:  # noqa: A002
         """Exit the positive branch."""
-        self.branch.in_context = False
-        self.branch.branch = False
+        compiler.pop_scope()
+        compiler.close_clause(self.branch.uid, next_edge_value=False)
 
 
 class Else:
-    """Else wrapper."""
+    """Else wrapper.
+
+    Must follow an upstream If or Elif clause in the same scope, with
+    nothing but plain task calls in between.
+    """
 
     def __enter__(self) -> Self:
         """Enter the else context.
 
         Raises:
-            IncorrectElseError: Incorrect else formatting.
+            IncorrectElseError: Not immediately preceded by an If or
+                Elif clause in the same scope.
 
         Returns:
             Self: Else.
         """
-        if not compiler.active:
+        prev = compiler.current_scope.last_clause
+        if prev is None or prev.terminal:
             raise IncorrectElseError
 
-        if not compiler.active.branches:
-            raise IncorrectElseError
-
-        last_branch = compiler.active.branches[-1]
-
-        if last_branch.to_be_dropped:
-            raise IncorrectElseError
-
-        if last_branch.in_context:
-            raise IncorrectElseError
-
-        last_branch.branch = False
-        last_branch.in_context = True
-        last_branch.to_be_dropped = True
-
+        self._branch_uid = prev.branch_uid
+        compiler.push_scope((prev.branch_uid, prev.next_edge_value))
         return self
 
     def __exit__(self, exc_type, exc, tb):
         """Exit the context."""
-        if not compiler.active:
-            raise IncorrectElseError
-
-        compiler.active.branches.pop()
+        compiler.pop_scope()
+        compiler.close_clause(
+            self._branch_uid, next_edge_value=False, terminal=True
+        )
 
 
 class Task:

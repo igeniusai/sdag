@@ -10,13 +10,13 @@ from typing import TYPE_CHECKING
 from sdag.exceptions import DAGNotSetError, TaskNotUniqueError
 from sdag.models import (
     DAG,
-    BranchNode,
+    ClosedClause,
     CompiledDAG,
     DAGMeta,
     EndNode,
     NodeUnion,
-    Parent,
     RootNode,
+    TraceScope,
 )
 
 if TYPE_CHECKING:
@@ -109,6 +109,9 @@ class DAGCompiler:
     def register(self, node: NodeUnion) -> None:
         """Register a node in the graph.
 
+        If a branch scope is currently active, the node is given a
+        branch edge to it, tying it to that branch's true/false path.
+
         Args:
             node (NodeUnion): Node.
 
@@ -125,23 +128,75 @@ class DAGCompiler:
             node.root_uid = self.active.root.uid
 
         self.active.dag.nodes.append(node)
-        self._handle_branches(node)
 
-    def register_branch(self, branch: BranchNode) -> None:
-        """Register a branch.
+        anchor = self.active.scope.anchor
+        if anchor is not None:
+            node.add_branch_edge(anchor[0], anchor[1])
 
-        Args:
-            branch (BranchNode): Branch.
+    @property
+    def current_scope(self) -> TraceScope:
+        """TraceScope currently active in the pipeline being traced.
 
         Raises:
-            DAGNotSetError: Attempting to register a node
-                but no pipelines are being compiled.
+            DAGNotSetError: No pipelines are being compiled.
+
+        Returns:
+            TraceScope: Current scope.
         """
         if self.active is None:
             raise DAGNotSetError
+        return self.active.scope
 
-        self.register(branch)
-        self.active.branches.append(branch)
+    def push_scope(self, anchor: tuple[int, bool] | None) -> TraceScope:
+        """Enter a new lexical scope, e.g. an If/Elif/Else body.
+
+        Args:
+            anchor (tuple[int, bool] | None): (branch_uid, branch_value)
+                stamped on every node registered in the new scope.
+
+        Returns:
+            TraceScope: The newly active scope.
+        """
+        scope = TraceScope(parent=self.current_scope, anchor=anchor)
+        self.active.scope = scope  # type: ignore
+        return scope
+
+    def pop_scope(self) -> TraceScope:
+        """Exit the current lexical scope, restoring its parent.
+
+        Raises:
+            DAGNotSetError: No pipelines are being compiled, or
+                attempting to pop the pipeline's root scope.
+
+        Returns:
+            TraceScope: The scope that was just closed.
+        """
+        closed = self.current_scope
+        if closed.parent is None:
+            raise DAGNotSetError
+        self.active.scope = closed.parent  # type: ignore
+        return closed
+
+    def close_clause(
+        self,
+        branch_uid: int,
+        next_edge_value: bool,
+        terminal: bool = False,  # noqa: FBT002
+    ) -> None:
+        """Record a closed branch for the next Elif/Else.
+
+        Args:
+            branch_uid (int): Uid of the BranchNode the clause evaluated.
+            next_edge_value (bool): Branch edge value a following
+                Elif/Else must depend on.
+            terminal (bool): True if this clause was an Else, closing
+                the chain to further Elif/Else.
+        """
+        self.current_scope.last_clause = ClosedClause(
+            branch_uid=branch_uid,
+            next_edge_value=next_edge_value,
+            terminal=terminal,
+        )
 
     def set_dag(self, root: RootNode, import_path: str | None = None) -> None:
         """Set a new dag.
@@ -200,118 +255,14 @@ class DAGCompiler:
             self.active = self.outer.pop()
             self.active.dag.nodes.extend(dag.nodes)
 
-            if self.active.branches:
-                branch = self.active.branches[-1]
-                # TODO: This is hacky and slow
-                if (
-                    branch.in_context
-                    and branch.root_uid == self.active.root.uid
-                    and self._parents_do_not_depend_on_branch(root.parents)
-                ):
-                    self.add_branch_edge(root)
+            anchor = self.active.scope.anchor
+            if anchor is not None:
+                root.add_branch_edge(anchor[0], anchor[1])
 
         else:
             self.active = None
 
         return dag, root, end
-
-    def _parents_do_not_depend_on_branch(self, parents: list[Parent]) -> bool:
-        """Traverse the graph to check root dependencies.
-
-        Ugly solution to prevent useless edges if two subpipelines
-        live in the context of a branch (Check out the compiler tests).
-
-        Args:
-            parents (list[Parent]): Root parents.
-
-        Raises:
-            DAGNotSetError: No DAG is being compiled.
-
-        Returns:
-            bool: True if the parents do not depend on the branch.
-        """
-        if self.active is None:
-            raise DAGNotSetError
-        branch_uid = self.active.branches[-1].uid
-        queue: list[int] = [parent.uid for parent in parents]
-        visited = set()
-        nodes = {node.uid: node for node in self.active.dag.nodes}
-
-        while queue:
-            uid = queue.pop()
-            node = nodes[uid]
-            if node.root_uid not in visited:
-                visited.add(node.root_uid)
-                root = nodes[node.root_uid]
-                for parent in root.parents:
-                    if parent.uid == branch_uid:
-                        return False
-                    queue.append(parent.uid)
-        return True
-
-    def _handle_branches(self, node: NodeUnion) -> None:
-        """Check if branches must be dropped etc.
-
-        Args:
-            node (NodeUnion): Node being registered.
-
-        Raises:
-            DAGNotSetError: No DAGs being compiled.
-        """
-        if self.active is None:
-            raise DAGNotSetError
-
-        if not self.active.branches:
-            return
-
-        branch = self.active.branches[-1]
-        if branch.in_context and not self.is_child_of_branch(node):
-            self.add_branch_edge(node)
-
-        elif branch.to_be_dropped:
-            self.active.branches.pop()
-
-        else:
-            branch.to_be_dropped = True
-
-    def is_child_of_branch(self, node: NodeUnion) -> bool:
-        """Check if a child already depends on the branch.
-
-        Args:
-            node (NodeUnion): Node being registered.
-
-        Raises:
-            DAGNotSetError: No DAGs currently being compiled.
-
-        Returns:
-            bool: True if the child already depends on the branch
-                so any additional edge would be useless.
-        """
-        if self.active is None:
-            raise DAGNotSetError
-
-        branch = self.active.branches[-1]
-        parents = {p.uid for p in node.parents}
-        is_direct_child = branch.uid in parents
-        intersect = parents.intersection(branch.children)
-
-        return is_direct_child or bool(intersect)
-
-    def add_branch_edge(self, node: NodeUnion) -> None:
-        """Add a branch edge.
-
-        Args:
-            node (NodeUnion): Node.
-
-        Raises:
-            DAGNotSetError: No DAGs are set.
-        """
-        if self.active is None:
-            raise DAGNotSetError
-
-        branch = self.active.branches[-1]
-        branch.children.add(node.uid)
-        node.add_branch_edge(branch.uid, branch=branch.branch)
 
 
 compiler = DAGCompiler()

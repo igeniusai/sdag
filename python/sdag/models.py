@@ -8,6 +8,7 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal, TypeVar
@@ -481,28 +482,9 @@ class BranchNode(BaseNode):
 
     Attributes:
         kind (Literal["branch"]): Kind.
-        _children (set[int]): Used to track which nodes
-            have an explicit edge.
-        branch (bool): Branch.
-        in_context (bool): Used to mark the branch as active.
-        to_be_dropped (bool): If True, the branch will be
-            dropped at the successive addition.
     """
 
     kind: Literal["branch"] = "branch"
-    _children: set[int] = PrivateAttr(default_factory=set)
-    branch: bool = True
-    in_context: bool = False
-    to_be_dropped: bool = False
-
-    @property
-    def children(self) -> set[int]:
-        """Direct children.
-
-        Returns:
-            set[int]: Children.
-        """
-        return self._children
 
 
 class OneOfNode(BaseNode):
@@ -638,6 +620,43 @@ class DAG(BaseModel):
     nodes: list[NodeUnion] = Field(default_factory=list)
 
 
+@dataclass
+class ClosedClause:
+    """A closed If/Elif/Else clause, kept so the next Elif/Else can chain.
+
+    Attributes:
+        branch_uid (int): Uid of the BranchNode this clause evaluated.
+        next_edge_value (bool): Branch edge value a following Elif/Else
+            must depend on to run.
+        terminal (bool): True once an Else has closed the chain, so no
+            further Elif/Else may follow.
+    """
+
+    branch_uid: int
+    next_edge_value: bool
+    terminal: bool = False
+
+
+@dataclass
+class TraceScope:
+    """Branch scope.
+
+    Attributes:
+        parent (Self | None): Enclosing scope. None for the
+            pipeline's root scope. Defaults to None.
+        anchor (tuple[int, bool] | None): (branch_uid, branch_value)
+            branch edge on every node registered while active.
+            None outside of branches. Defaults to None.
+        last_clause (ClosedClause | None): Last branch closed
+            directly in this scope, used by the next Elif/Else
+            to chain onto it. Defaults to None.
+    """
+
+    parent: Self | None = None
+    anchor: tuple[int, bool] | None = None
+    last_clause: ClosedClause | None = None
+
+
 class CompiledDAG(BaseModel):
     """Pipeline being compiled.
 
@@ -645,13 +664,14 @@ class CompiledDAG(BaseModel):
         dag (DAG): DAG.
         root (RootNode): Root node.
         end (EndNode): End node.
-        branches: list[BranchNode]: Branches.
+        scope (TraceScope): Lexical scope currently active while
+            tracing this pipeline's body.
     """
 
     dag: DAG
     root: RootNode
     end: EndNode
-    branches: list[BranchNode] = Field(default_factory=list)
+    scope: TraceScope = Field(default_factory=TraceScope)
 
 
 class CacheableTask(BaseModel):

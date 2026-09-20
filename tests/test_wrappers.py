@@ -191,6 +191,43 @@ class TestElIf:
         assert tasknode2.parents[0].uid == elifnode.uid
         assert tasknode2.parents[0].kind.branch
 
+    def test_elif_after_elif_with_intervening_task(self) -> None:
+        """An unrelated task between two Elifs must not break the chain."""
+
+        @pipeline
+        def dag():
+            with If(test_task()):
+                test_task()
+            with Elif(test_task()):
+                test_task()
+            test_task()
+            with Elif(test_task()):
+                test_task()
+
+        @dag.task("script.sh")
+        def test_task(): ...
+
+        graph = dag.compile()
+        firstelif = graph.nodes[5]
+        unrelated = graph.nodes[7]
+        expnode3 = graph.nodes[8]
+        secondelif = graph.nodes[9]
+        tasknode3 = graph.nodes[10]
+
+        assert firstelif.kind == secondelif.kind == "branch"
+        assert not any(p.kind.kind == "branch" for p in unrelated.parents)
+
+        assert expnode3.parents[0].uid == firstelif.uid
+        assert expnode3.parents[0].kind.kind == "branch"
+        assert not expnode3.parents[0].kind.branch
+
+        assert secondelif.parents[0].kind.kind == "output"
+        assert secondelif.parents[0].uid == expnode3.uid
+
+        assert tasknode3.parents[0].kind.kind == "branch"
+        assert tasknode3.parents[0].uid == secondelif.uid
+        assert tasknode3.parents[0].kind.branch
+
     def test_elif_without_if(self) -> None:
         @pipeline
         def dag():
@@ -216,7 +253,9 @@ class TestElIf:
         with pytest.raises(IncorrectElifError):
             dag.compile()
 
-    def test_elif_after_if(self) -> None:
+    def test_elif_after_if_with_intervening_task(self) -> None:
+        """An unrelated task between If and Elif must not break the chain."""
+
         @pipeline
         def dag():
             with If(test_task()):
@@ -228,8 +267,26 @@ class TestElIf:
         @dag.task("script.sh")
         def test_task(): ...
 
-        with pytest.raises(IncorrectElifError):
-            dag.compile()
+        graph = dag.compile()
+        ifnode = graph.nodes[2]
+        unrelated = graph.nodes[4]
+        expnode2 = graph.nodes[5]
+        elifnode = graph.nodes[6]
+        tasknode2 = graph.nodes[7]
+
+        assert ifnode.kind == elifnode.kind == "branch"
+        assert not any(p.kind.kind == "branch" for p in unrelated.parents)
+
+        assert expnode2.parents[0].uid == ifnode.uid
+        assert expnode2.parents[0].kind.kind == "branch"
+        assert not expnode2.parents[0].kind.branch
+
+        assert elifnode.parents[0].kind.kind == "output"
+        assert elifnode.parents[0].uid == expnode2.uid
+
+        assert tasknode2.parents[0].kind.kind == "branch"
+        assert tasknode2.parents[0].uid == elifnode.uid
+        assert tasknode2.parents[0].kind.branch
 
     def test_elif_after_else(self) -> None:
         @pipeline
@@ -274,6 +331,16 @@ class TestElse:
         assert not tasknode2.parents[0].kind.branch
 
     def test_inner_pipelines_in_if(self) -> None:
+        """Both sub-pipeline roots get the branch anchor directly.
+
+        Previously, a graph traversal avoided adding a branch edge to
+        `root3` since it already depended on `root2`'s output
+        transitively. That optimization was removed for simplicity: the
+        extra edge below is harmless (redundant, not incorrect), and in
+        exchange every node registered in a branch's scope is handled
+        by one uniform rule instead of a special-cased traversal.
+        """
+
         @pipeline
         def dag_outer():
             with If(exp()):
@@ -301,7 +368,8 @@ class TestElse:
             Parent(uid=3, kind=BranchParent(kind="branch", branch=True))
         ]
         assert root3.parents == [
-            Parent(uid=5, kind=LogicalParent(kind="logical"))
+            Parent(uid=5, kind=LogicalParent(kind="logical")),
+            Parent(uid=3, kind=BranchParent(kind="branch", branch=True)),
         ]
 
     def test_else_without_if(self) -> None:
@@ -329,7 +397,9 @@ class TestElse:
         with pytest.raises(IncorrectElseError):
             dag.compile()
 
-    def test_else_after_if(self) -> None:
+    def test_else_after_if_with_intervening_task(self) -> None:
+        """An unrelated task between If and Else must not break the chain."""
+
         @pipeline
         def dag():
             with If(test_task()):
@@ -341,8 +411,17 @@ class TestElse:
         @dag.task("script.sh")
         def test_task(): ...
 
-        with pytest.raises(IncorrectElseError):
-            dag.compile()
+        graph = dag.compile()
+        ifnode = graph.nodes[2]
+        unrelated = graph.nodes[4]
+        tasknode2 = graph.nodes[5]
+
+        assert ifnode.kind == "branch"
+        assert not any(p.kind.kind == "branch" for p in unrelated.parents)
+
+        assert tasknode2.parents[0].kind.kind == "branch"
+        assert tasknode2.parents[0].uid == ifnode.uid
+        assert not tasknode2.parents[0].kind.branch
 
 
 class TestPipeline:
