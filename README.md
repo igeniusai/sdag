@@ -9,7 +9,7 @@
 DAGs for Slurm.
 
 [![License - Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue)](LICENSE)
-[![Documentation](https://img.shields.io/badge/docs-latest-blue)](https://github.com/igeniusai/sdag)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue)](https://igeniusai.github.io/sdag/)
 [![CI](https://github.com/igeniusai/sdag/actions/workflows/ci.yaml/badge.svg)](https://github.com/igeniusai/sdag/actions/workflows/ci.yaml)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-brightgreen)](https://github.com/igeniusai/sdag/blob/main/pyproject.toml)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -86,7 +86,7 @@ To run the `hello` pipeline, execute:
 sdag run hello:hello_world
 ```
 
-Check out the [official documentation](https://github.com/igeniusai/sdag) for a detailed description of the features offered by sdag.
+Check out the official [documentation](https://igeniusai.github.io/sdag/) for a detailed description of the features offered by sdag.
 
 ## Building from source and running tests
 
