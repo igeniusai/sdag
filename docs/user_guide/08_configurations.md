@@ -1,0 +1,67 @@
+# Configurations
+
+This section presents the configurations available in sdag.
+
+## pyproject.toml
+
+Configurations must be set under `[tool.sdag]`. Here are the available options:
+
+| option                       | Default value          | Description |
+|------------------------------|------------------------|-------------|
+| dag-dir                      | "./pipelines"          | Path where pipelines are searched. |
+| compiled-dag-dir             | "./compiled-pipelines" | Compiled pipeline destination path. |
+| cmd                          | null                   | If set, override the command of all tasks |
+| prepend-compiled-dag-dir     | true                   | Prepend the `compiled-dag-dir` so you can write `sdag run dag.json` instead of `sdag run ./compiled-pipelines/dag.json` |
+| log-level                    | "info"                 | Compiler, scheduler, and task log level |
+| time_between_polls           | 5                      | Time between successive scheduler Slurm polls (seconds) |
+| max-concurrency              | 0                     | Maximum number of tasks running at the same time. Set to zero to allow any number of tasks to run at the same time |
+| slurm-grace-period           | 60                     | Maximum number of times a task can be missing from the Slurm output without considering it as failed. |
+| max-concurrent-runs          | 20                     | Maximum number of runs of the same pipeline kept by sdag. Set to 0 to keep all runs. |
+| fail-fast                    | false                  | If true, kill the scheduler and all running jobs if any task fails. |
+
+In the `pyproject.toml` file you can also set a number of Slurm variables that will override those set in scripts or inside pipelines:
+
+- job-name
+- nodes
+- partition
+- qos
+- gpus-per-node
+- ntasks-per-node
+- output
+- error
+- account
+- cpus-per-task
+- mem
+- time
+
+They are ignored for local tasks. The `pyproject.toml` file also allows one to define tag configurations. Check out the [tag](../advanced/08_tags.md) section for details.
+
+## .sdag.toml
+
+If available, this file located in the main project directory. It has the exact same schema of `pyproject.toml`. However, configurations must not be placed under `tool.sdag`.
+So, if the `pyproject.toml` look like this:
+
+```toml
+[tool.sdag]
+dag-dir = "my_package/workflows"
+max-concurrency = 10
+```
+
+The corresponding `.sdag.toml` will simply be:
+
+```toml
+dag-dir = "my_package/workflows"
+max-concurrency = 10
+```
+
+All configurations set in the `.sdag.toml` have higher priority with respect to those in `pyproject.toml` and they will override them when conflicting.
+`.sdag.toml` is often ignored from git (although nothing prevents you from committing it if you find it useful) and treated somewhat like a `.env` to set things you might not want to push to a remote repo (like the Slurm `account` or `qos`). You can also use it to define machine-specific configurations that must override the default ones to transparently adapt the codebase to different clusters.
+
+## Environment variables
+
+Most environment variables are set by the scheduler, so users don't really have to think about them. However, a few environment variables can be set to modify the default behavior:
+
+| Environment variable   | Description |
+|------------------------|-------------|
+| `SDAG_HOME`            | Path of the sdag working directory. It's `~` by default. Inside it, a `.sdag` directory will be created |
+| `SDAG_BASE_PATH`       | Base path of all artifacts. If set, it's automatically prepended to all artifact relative paths.        |
