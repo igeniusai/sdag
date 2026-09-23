@@ -51,6 +51,8 @@
     
       <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
     <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -1257,16 +1259,22 @@
 </table>
 <p>Check out the official <a href="https://slurm.schedmd.com/sbatch.html">documentation</a> for details. All these options are ignored if a task is marked as local. The <code>pyproject.toml</code> file also allows one to define tag configurations. Check out the <a href="../../advanced/08_tags/">tag</a> section for details.</p>
 <h2 id="sdagtoml">.sdag.toml</h2>
-<p>If available, this file located in the main project directory. It has the exact same schema of <code>pyproject.toml</code>. However, configurations must not be placed under <code>[tool.sdag]</code>.
-So, if the <code>pyproject.toml</code> looks like this:</p>
+<p>If available, this file located in the main project directory. It has the exact same schema of <code>pyproject.toml</code>. However, configurations must not be placed under <code>[tool.sdag]</code>.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1"><code>pyproject.toml</code></label><label for="__tabbed_1_2"><code>.sdag.toml</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[tool.sdag]</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">dag-dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;my_package/workflows&quot;</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">max-concurrency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span>
 </span></code></pre></div>
-<p>The equivalent <code>.sdag.toml</code> will simply be:</p>
+</div>
+<div class="tabbed-block">
 <div class="language-toml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">dag-dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;my_package/workflows&quot;</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">max-concurrency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span>
 </span></code></pre></div>
+</div>
+</div>
+</div>
 <p>All configurations set in the <code>.sdag.toml</code> have higher priority with respect to those in <code>pyproject.toml</code> and they will override them when conflicting.
 <code>.sdag.toml</code> is often ignored from git (although nothing prevents you from committing it if you find it useful) and treated somewhat like a <code>.env</code> to set things you might not want to push to a remote repo (like the Slurm <code>account</code> or <code>qos</code>). You can also use it to define machine-specific configurations that must override the default ones to transparently adapt the codebase to different clusters.</p>
 <h2 id="environment-variables">Environment variables</h2>

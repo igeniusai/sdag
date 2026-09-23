@@ -51,6 +51,8 @@
     
       <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
     <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -1022,7 +1024,7 @@
 
 <h1 id="visualization">Visualization</h1>
 <p>As shown in the previous sections, you can use <code>sdag view &lt;pipeline-name&gt;</code> to visualize graphs in the terminal. However, when graphs become large this visualization quickly becomes messy and hard to understand. For this reason, sdag provides another quick visualization method. To leverage it, you must install the <a href="https://pypi.org/project/neo4j-viz/">neo4j-viz</a> library.</p>
-<p>To visualize the <code>dependent_tasks</code> pipeline of the <a href="../01_multiple_tasks/">Handling multiple tasks</a> section, copy the following snippet into a Jupyter notebook cell:</p>
+<p>To visualize the <code>dependent_tasks</code> pipeline of the <a href="../01_multiple_tasks/">Handling multiple tasks</a> section, copy the following snippet into a <a href="https://jupyter.org/">Jupyter notebook</a> cell:</p>
 <div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sdag</span><span class="w"> </span><span class="kn">import</span> <span class="n">DAGViewer</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>

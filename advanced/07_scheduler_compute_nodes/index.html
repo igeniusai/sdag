@@ -51,6 +51,8 @@
     
       <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
     <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -1023,7 +1025,7 @@
 <h1 id="running-the-scheduler-on-compute-nodes">Running the Scheduler on Compute Nodes</h1>
 <p>On public supercomputers, jobs running on login nodes usually have limited resources and wall time. The Rust scheduler of sdag is intentionally lightweight so it can typically survive many hours on login nodes without being killed. If the SSH connection goes down, <code>sdag restart</code> can be used to safely restart the scheduler and pick the execution from where it left off.</p>
 <p>Nevertheless, for long workflows across large graphs it may be better to just submit the scheduler as a Slurm job on a compute node. Copy the following script into a <code>submit_scheduler.sh</code> file:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="ch">#!/bin/bash</span>
+<div class="language-sh highlight"><span class="filename">submit_scheduler.sh</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="ch">#!/bin/bash</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1">#SBATCH --job-name=scheduler</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1">#SBATCH --account=&lt;account-name&gt;</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1">#SBATCH --partition=&lt;partition-name&gt;</span>
