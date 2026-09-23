@@ -33,7 +33,7 @@ and its `script.sh` execution script:
 sdag-execute
 ```
 
-## Flat layout:
+## Flat layout
 
 Create a `<my-package>/workflows` directory and an empty `__init__.py` module inside it. Now copy the `hello.py` module from the previous example in the `workflows/` folder and the `script.sh` script in the main project one. Finally, copy the following snippet inside the `pyproject.toml` file:
 
@@ -55,7 +55,7 @@ Your project tree should look like this:
         └── hello.py       <- hello_world pipeline
 ```
 
-## src layout:
+## src layout
 
 Create a `src/<my-package>/workflows` directory and an empty `__init__.py` module inside it. Now copy the `hello.py` module from the previous example in the `workflows/` folder and the `script.sh` script in the main project one. Finally, copy the following snippet inside the `pyproject.toml` file:
 

@@ -61,7 +61,7 @@ class Pyproj(SlurmOverride):
             any of them fails.
     """
 
-    dag_dir: str = Field(alias="dag-dir", default="./pipelines")
+    dag_dir: str = Field(alias="dag-dir", default=".")
     compiled_dag_dir: str = Field(
         alias="compiled-dag-dir", default="./compiled-pipelines"
     )

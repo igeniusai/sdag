@@ -1,7 +1,6 @@
 # Overriding Configurations at Compile Time
 
-When called inside a pipeline, tasks return their corresponding nodes in the graph. These nodes expose most configurations as attributes, so they can be modified at compile time to override their default values. Here is an example:
-
+When called inside a pipeline, tasks return their corresponding nodes in the graph. These nodes expose most configurations as attributes that can be modified at compile time to override their default values. Here is an example:
 
 ```py
 from sdag import ScriptPath, pipeline

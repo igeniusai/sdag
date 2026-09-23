@@ -1,17 +1,19 @@
 # Control Flow
 
-By default, sdag searches pipelines in `./pipelines`. To follow along with this example, create a `./pipelines` folder containing an empty `__init__.py` and a `control_flow.py` module. Your project tree should look like this:
-
-```
-<package-name>
-└── pipelines
-    ├── __init__.py      <- Do not forget to create this file!
-    └── control_flow.py  <- Module edited in this example
-```
+!!! info
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.
 
 ## Branches
 
-The pipeline structure can be dynamically altered based on the output of other tasks. Paste the following snippet into `control_flow.py`:
+The pipeline structure can be dynamically altered based on the output of other tasks. Create the following two files in the main project directory:
+
+`script.sh` (if missing):
+
+```sh
+sdag-execute
+```
+
+`control_flow.py`:
 
 ```py
 from sdag import Elif, Else, If, pipeline
@@ -52,7 +54,7 @@ def option3():
     print("Option 3 selected")
 ```
 
-`condition1` and `condition2` are tasks that must return a Boolean value. Run:
+`condition1` and `condition2` are tasks that **must** return a Boolean value. Run:
 
 ```sh
 sdag run control_flow --local

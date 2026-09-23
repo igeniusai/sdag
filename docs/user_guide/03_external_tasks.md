@@ -1,15 +1,19 @@
-# External Tasks
+# External and Local Tasks
 
-By default, sdag searches pipelines in `./pipelines`. To follow along with this example, create a `./pipelines` folder containing an empty `__init__.py` and a `external_tasks.py` module. Your project tree should look like this:
+## External tasks
 
+!!! info
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.
+
+Many times, tasks are just regular Python functions wrapped by sdag. However, you might also want to run Bash scripts, executables, or perhaps a piece of code unrelated to the sdag project. Tasks can be marked as external to inform sdag they do not wrap a Python function. Create the following two files in the main project directory:
+
+`script.sh` (if missing):
+
+```sh
+sdag-execute
 ```
-<package-name>
-└── pipelines
-    ├── __init__.py        <- Do not forget to create this file!
-    └── external_tasks.py  <- Module edited in this example
-```
 
-Many times, tasks are just regular Python functions wrapped by sdag. However, sometimes you want to run Bash commands, executables, or perhaps a piece of code unrelated to the `sdag` project. Tasks can be marked as external to inform sdag they do not wrap a Python function. Paste the following code into `external_tasks.py`:
+`external_local_tasks.py`:
 
 ```py
 from sdag import Script, pipeline
@@ -32,3 +36,26 @@ sdag run external_dag --local
 
 !!! warning
     Input arguments like `path` or `user` might cause troubles as they would override the corresponding `PATH` and `USER` environment variables. For this reason, a compile-time error is thrown when the input variables of external tasks might override POSIX environment variables. The obvious solution is to use safer names like `input_path` instead of `path`.
+
+## Local tasks
+
+Differently from other libraries, in sdag you don't specify a runner for the whole pipeline. Local and Slurm tasks can be freely mixed in the same workflow. This choice has been made to avoid spinning Slurm jobs that may stay in queue forever just to perform small operations that could be easily executed locally. Add the following snippet to `external_local_tasks.py`:
+
+```py
+@pipeline
+def local_dag():
+    local_task()
+
+
+@local_pipeline.task("script.sh", cmd="bash")
+def local_task():
+    print("I run locally!")
+```
+
+`cmd="bash"` is used to specify that the task must run as a nonblocking, local process instead of a Slurm job. This pipeline can now executed with:
+
+```sh
+sdag run local_dag
+```
+
+Under the hood, the `--local` option used in many other examples simply sets `cmd="bash"` to all tasks, thus forcing them to run as local processes.

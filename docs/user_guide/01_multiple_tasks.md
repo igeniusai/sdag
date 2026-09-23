@@ -1,15 +1,17 @@
 # Handling Multiple Tasks
 
-By default, sdag searches pipelines in `./pipelines`. To follow along with this example, create a `./pipelines` folder containing an empty `__init__.py` and a `many_tasks.py` module. Your project tree should look like this:
+!!! info
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.
 
-```
-<package-name>
-└── pipelines
-    ├── __init__.py   <- Do not forget to create this file!
-    └── many_tasks.py <- Module edited in this example
+Create the following two files in the main project directory:
+
+`script.sh` (if missing):
+
+```sh
+sdag-execute
 ```
 
-Add the following code to `many_tasks.py`
+`many_tasks.py`:
 
 ```py
 from sdag import pipeline
