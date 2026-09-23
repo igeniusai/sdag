@@ -6,9 +6,9 @@ This section presents the configurations available in sdag.
 
 Configurations must be set under `[tool.sdag]`. Here are the available options:
 
-| option                       | Default value          | Description |
+| Option                       | Default value          | Description |
 |------------------------------|------------------------|-------------|
-| dag-dir                      | "./pipelines"          | Path where pipelines are searched. |
+| dag-dir                      | "."          | Path where pipelines are searched. |
 | compiled-dag-dir             | "./compiled-pipelines" | Compiled pipeline destination path. |
 | cmd                          | null                   | If set, override the command of all tasks |
 | prepend-compiled-dag-dir     | true                   | Prepend the `compiled-dag-dir` so you can write `sdag run dag.json` instead of `sdag run ./compiled-pipelines/dag.json` |
@@ -19,27 +19,29 @@ Configurations must be set under `[tool.sdag]`. Here are the available options:
 | max-concurrent-runs          | 20                     | Maximum number of runs of the same pipeline kept by sdag. Set to 0 to keep all runs. |
 | fail-fast                    | false                  | If true, kill the scheduler and all running jobs if any task fails. |
 
-In the `pyproject.toml` file you can also set a number of Slurm variables that will override those set in scripts or inside pipelines:
+In the `pyproject.toml` file you can also set a number of Sbatch options that will override those set in scripts or inside pipelines:
 
-- job-name
-- nodes
-- partition
-- qos
-- gpus-per-node
-- ntasks-per-node
-- output
-- error
-- account
-- cpus-per-task
-- mem
-- time
+| Option           | Description |
+|------------------|-------------|
+| job-name         | Job name |
+| nodes            | Number of nodes |
+| account          | Account name |
+| partition        | Partiton |
+| qos              | Quality of Service |
+| ntasks-per-node  | Number of tasks per node |
+| cpus-per-task    | Number of CPUs per task |
+| gpus-per-node    | Number of GPUs per node |
+| time             | Wall time |
+| mem              | Requested memory |
+| output           | stdout file path |
+| error            | stderr file path |
 
-They are ignored for local tasks. The `pyproject.toml` file also allows one to define tag configurations. Check out the [tag](../advanced/08_tags.md) section for details.
+Check out the official [documentation](https://slurm.schedmd.com/sbatch.html) for details. All these options are ignored if a task is marked as local. The `pyproject.toml` file also allows one to define tag configurations. Check out the [tag](../advanced/08_tags.md) section for details.
 
 ## .sdag.toml
 
-If available, this file located in the main project directory. It has the exact same schema of `pyproject.toml`. However, configurations must not be placed under `tool.sdag`.
-So, if the `pyproject.toml` look like this:
+If available, this file located in the main project directory. It has the exact same schema of `pyproject.toml`. However, configurations must not be placed under `[tool.sdag]`.
+So, if the `pyproject.toml` looks like this:
 
 ```toml
 [tool.sdag]
@@ -47,7 +49,7 @@ dag-dir = "my_package/workflows"
 max-concurrency = 10
 ```
 
-The corresponding `.sdag.toml` will simply be:
+The equivalent `.sdag.toml` will simply be:
 
 ```toml
 dag-dir = "my_package/workflows"

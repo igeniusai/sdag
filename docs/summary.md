@@ -1,6 +1,5 @@
 - [Overview](index.md)
 - [Installation](installation.md)
-- [Getting Started](getting_started.md)
 - [User Guide](user_guide/)
 - [Advanced](advanced/)
 - [API reference](api_reference.md)

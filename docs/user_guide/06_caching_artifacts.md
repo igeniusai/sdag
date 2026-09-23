@@ -1,15 +1,17 @@
 # Caching and Artifacts
 
-By default, sdag searches pipelines in `./pipelines`. To follow along with this example, create a `./pipelines` folder containing an empty `__init__.py` and a `caching.py` module. Your project tree should look like this:
+!!! info
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.
 
-```
-<package-name>
-└── pipelines
-    ├── __init__.py  <- Do not forget to create this file!
-    └── caching.py   <- Module edited in this example
+Caching is used to persist the output of a task across multiple runs, so you don't have to re-execute it again. Create the following two files in the main project directory:
+
+`script.sh` (if missing):
+
+```sh
+sdag-execute
 ```
 
-Caching is used to persist the output of a task across multiple runs, so you don't have to re-execute it again. Add the following snippet to `caching.py`:
+`caching.py`:
 
 ```py
 from sdag import pipeline
@@ -31,7 +33,7 @@ def non_cached_task():
     print("I run every time")
 ```
 
-When this pipeline is executed the first time via `sdag run cached --local`, both tasks will be scheduled. When executed again, `cached_task` will be cached, so it will be marked as completed without execution. For caching to be validated, all input values must match with the cached ones. You can try to modify the value of `a` to check the cache gets invalidated. You can increase the `cache_size` in the decorator (which is equal to `1` by default) to account for multiple values of `a`.
+When this pipeline is executed the first time via `sdag run cached --local`, both tasks will be scheduled. When executed again, `cached_task` will be cached, so it will be marked as completed without execution. For caching to be validated, all input values must match with the cached ones. You can try to modify the value of `a` to check the cache gets invalidated. You can increase the `cache_size` in the decorator (which is equal to `1` by default) to account for multiple values of `a`. You can use the `cache_ignore` field of the task decorator to list the arguments you don't bother checking during cache validation. `cache_ignore` is useful for things like endpoints or parameters that are allowed to change without compromising cached values.
 
 The cache is bound to a task name. Many times, instead of increasing the cache size you can change the task name to provide it a whole new cache. Copy the following snippet into the same module:
 
@@ -112,4 +114,10 @@ should print something like:
 └─────┴─────────────┴───────────────────┴────────┴───────────┴────────────────────────────────┘
 ```
 
-`sdag prune` can be used to prune the cache of tasks or pipelines. Run `sdag prune create_file -p dag_with_artifact` to prune the cache of a task or drop the task name to delete the cache of the entire pipeline. `sdag prune all` will prune the entire sdag cache.
+`sdag prune` can be used to prune the cache of tasks or pipelines. Run:
+
+```sh
+sdag prune create_file -p dag_with_artifact
+```
+
+to delete the cache of the `create_file` task. Check out the [CLI](09_cli.md) section for details.

@@ -1,15 +1,18 @@
 # Input and Output Data
 
-By default, sdag searches pipelines in `./pipelines`. To follow along with this example, create a `./pipelines` folder containing an empty `__init__.py` and a `input_and_output.py` module. Your project tree should look like this:
+!!! info
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.
 
-```
-<package-name>
-└── pipelines
-    ├── __init__.py         <- Do not forget to create this file!
-    └── input_and_output.py <- Module edited in this example
+Keyword arguments can be used to take as input the output of a previous task.
+Create the following two files in the main project directory:
+
+`script.sh` (if missing):
+
+```sh
+sdag-execute
 ```
 
-Keyword arguments can be used to take as input the output of a previous task. Paste the following code into the `input_and_output.py` module:
+`input_and_output.py`:
 
 ```py
 from sdag import pipeline
@@ -31,7 +34,7 @@ def take_input(world: str):
     print(f"Hello, {world}!")
 ```
 
-`sdag view output_use` will produce:
+`sdag view output_use` will print:
 
 ```
    ╭──────╮
