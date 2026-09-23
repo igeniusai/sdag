@@ -41,20 +41,21 @@ Check out the official [documentation](https://slurm.schedmd.com/sbatch.html) fo
 ## .sdag.toml
 
 If available, this file located in the main project directory. It has the exact same schema of `pyproject.toml`. However, configurations must not be placed under `[tool.sdag]`.
-So, if the `pyproject.toml` looks like this:
 
-```toml
-[tool.sdag]
-dag-dir = "my_package/workflows"
-max-concurrency = 10
-```
+=== "`pyproject.toml`"
 
-The equivalent `.sdag.toml` will simply be:
+    ```toml
+    [tool.sdag]
+    dag-dir = "my_package/workflows"
+    max-concurrency = 10
+    ```
 
-```toml
-dag-dir = "my_package/workflows"
-max-concurrency = 10
-```
+=== "`.sdag.toml`"
+
+    ```toml
+    dag-dir = "my_package/workflows"
+    max-concurrency = 10
+    ```
 
 All configurations set in the `.sdag.toml` have higher priority with respect to those in `pyproject.toml` and they will override them when conflicting.
 `.sdag.toml` is often ignored from git (although nothing prevents you from committing it if you find it useful) and treated somewhat like a `.env` to set things you might not want to push to a remote repo (like the Slurm `account` or `qos`). You can also use it to define machine-specific configurations that must override the default ones to transparently adapt the codebase to different clusters.

@@ -1,38 +1,36 @@
 # Input and Output Data
 
-!!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.
-
 Keyword arguments can be used to take as input the output of a previous task.
 Create the following two files in the main project directory:
 
-`script.sh` (if missing):
+=== "`input_and_output.py`"
 
-```sh
-sdag-execute
-```
-
-`input_and_output.py`:
-
-```py
-from sdag import pipeline
+    ```py
+    from sdag import pipeline
 
 
-@pipeline
-def output_use():
-    t = return_output()
-    take_input(world=t)
+    @pipeline
+    def output_use():
+        t = return_output()
+        take_input(world=t)
 
 
-@output_use.task("script.sh")
-def return_output():
-    return "world"
+    @output_use.task("script.sh")
+    def return_output():
+        return "world"
 
 
-@output_use.task("script.sh")
-def take_input(world: str):
-    print(f"Hello, {world}!")
-```
+    @output_use.task("script.sh")
+    def take_input(world: str):
+        print(f"Hello, {world}!")
+    ```
+
+=== "`script.sh`"
+
+    ```sh
+    sdag-execute
+    ```
+
 
 `sdag view output_use` will print:
 
@@ -110,3 +108,6 @@ def use_input_path(input1: str, input2: str):
     input2_path = Path(input2)
     ...
 ```
+
+!!! info
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.

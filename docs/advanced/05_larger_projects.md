@@ -4,47 +4,50 @@ When working with larger projects made of many pipelines, it is convenient to se
 
 This examples takes advantage of the `hello.py` module created in the [first example](../user_guide/00_hello_world.md):
 
-```py
-from sdag import pipeline
+
+=== "`hello.py`"
+
+    ```py
+    from sdag import pipeline
 
 
-@pipeline
-def hello_world():
-    say_hello(name="sdag")
+    @pipeline
+    def hello_world():
+        say_hello(name="sdag")
 
 
-@hello_world.task("script.sh")
-def say_hello(name: str):
-    print(f"hello from {name}")
-```
+    @hello_world.task("script.sh")
+    def say_hello(name: str):
+        print(f"hello from {name}")
+    ```
 
-and its `script.sh` execution script:
+=== "`script.sh`"
 
-```
-#!/bin/bash
-#SBATCH --account=<account-name>
-#SBATCH --partition=<partition-name>
-#SBATCH --qos=<qos-name>
-#SBATCH --nodes=1
-#SBATCH --tasks-per-node=1
-#SBATCH --cpus-per-task=1
-#SBATCH --time=00:00:30
+    ```sh
+    #!/bin/bash
+    #SBATCH --account=<account-name>
+    #SBATCH --partition=<partition-name>
+    #SBATCH --qos=<qos-name>
+    #SBATCH --nodes=1
+    #SBATCH --tasks-per-node=1
+    #SBATCH --cpus-per-task=1
+    #SBATCH --time=00:00:30
 
-sdag-execute
-```
+    sdag-execute
+    ```
 
 ## Flat layout
 
 Create a `<my-package>/workflows` directory and an empty `__init__.py` module inside it. Now copy the `hello.py` module from the previous example in the `workflows/` folder and the `script.sh` script in the main project one. Finally, copy the following snippet inside the `pyproject.toml` file:
 
-```toml
+```toml title="pyproject.toml"
 [tool.sdag]
 dag-dir = "<my_package>/workflows"
 ```
 
 Your project tree should look like this:
 
-```
+``` title="flat layout"
 <my-package>
 ├── pyproject.toml
 ├── script.sh      <- Execution script
@@ -59,14 +62,14 @@ Your project tree should look like this:
 
 Create a `src/<my-package>/workflows` directory and an empty `__init__.py` module inside it. Now copy the `hello.py` module from the previous example in the `workflows/` folder and the `script.sh` script in the main project one. Finally, copy the following snippet inside the `pyproject.toml` file:
 
-```toml
+```toml title="pyproject.toml"
 [tool.sdag]
 dag-dir = "src/<my_package>/workflows"
 ```
 
 Your project tree should look like this:
 
-```
+``` title="src layout"
 <my-package>
 ├── pyproject.toml
 ├── script.sh      <- Execution script
@@ -94,7 +97,7 @@ sdag run hello_world --local
 
 If you don't like to specify `--local` every time, add the following setting to the `pyproject.toml`:
 
-```toml
+```toml title="pyproject.toml"
 [tool.sdag]
 dag-dir = "<flat-or-src-layout>/workflows"
 cmd = "bash"

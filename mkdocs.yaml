@@ -22,6 +22,8 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
   - admonition
@@ -35,6 +37,8 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
 
 plugins:
   - search

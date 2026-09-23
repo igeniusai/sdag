@@ -12,7 +12,7 @@ def some_task(): ...
 The corresponding configurations be either set in the `pyproject.toml` under `[[tools.sdag.tags]]` or in the `.sdag.toml` file under `[[tags]]`.
 Here is how to define three tags in the `pyproject.toml`:
 
-```toml
+```toml title="pyproject.toml"
 [[tool.sdag.tags]]
 tag = "online"
 cmd = "bash"

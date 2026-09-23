@@ -3,7 +3,7 @@
 Testing tasks is very easy. Decorated tasks have `fn` attribute that holds a reference to the decorated function. This reference can be used to call tasks directly.
 You need to install [pytest](https://docs.pytest.org/en/stable/) tu run this example. Create a `test/` folder inside the main project directory and add a `test_tasks.py` module inside it containing the following code:
 
-```py
+```py title="test_tasks.py"
 from pathlib import Path
 
 from sdag import Artifact, task

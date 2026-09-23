@@ -1,37 +1,36 @@
 # Nested Calls
 
-!!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](../user_guide/00_hello_world.md) section and execute pipelines without the `--local` option.
-
 Create the following two files in the main project directory:
 
-`script.sh` (if missing):
+=== "`nested.py`"
 
-```sh
-sdag-execute
-```
+    ```py
+    from pathlib import Path
 
-`nested.py`:
-
-```py
-from sdag import Artifact, pipeline, task
+    from sdag import Artifact, pipeline, task
 
 
-@pipeline
-def outer_pipeline():
-    t = inner_pipeline()
-    global_task(path=t.artifacts["global_task"]["path"])
+    @pipeline
+    def outer_pipeline():
+        t = inner_pipeline()
+        global_task(path=t.artifacts["global_task"]["path"])
 
 
-@pipeline
-def inner_pipeline():
-    global_task(path="./artifact.txt")
+    @pipeline
+    def inner_pipeline():
+        global_task(path="./artifact.txt")
 
 
-@task("script.sh")
-def global_task(path: Artifact[str]):
-    path.touch()
-```
+    @task("script.sh")
+    def global_task(path: Artifact[Path]):
+        path.touch()
+    ```
+
+=== "`script.sh`"
+
+    ```sh
+    sdag-execute
+    ```
 
 First of all, as you can see `global_task` is decorated with the `@task` instead of the `@<pipeline-name>.task` one. These tasks are not scoped to a single pipeline: every pipeline can import and use them. Their cache is also visible to all pipelines. In the example, one outer pipeline calls another pipeline and a global task equipped with an artifact. The node returned by a pipeline is special as it has access to all artifacts of its tasks. They can be accessed through the `artifacts` attribute by specifying both task and artifact name.
 
@@ -71,3 +70,6 @@ Tasks have a `fn` attribute pointing to the decorated function. This reference c
 ```sh
 sdag run task_calling_task --local
 ```
+
+!!! info
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](../user_guide/00_hello_world.md) section and execute pipelines without the `--local` option.
