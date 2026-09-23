@@ -2,29 +2,30 @@
 
 After [installing](../installation.md) sdag, create the following two files in the main project directory:
 
-`script.sh`:
 
-```sh
-sdag-execute
-```
+=== "`hello.py`"
 
-`hello.py`:
-
-```py
-from sdag import pipeline, Script
+    ```py
+    from sdag import pipeline
 
 
-@pipeline
-def hello_world():
-    say_hello(name="sdag")
+    @pipeline
+    def hello_world():
+        say_hello(name="sdag")
 
 
-@hello_world.task("script.sh")
-def say_hello(name: str):
-    print(f"hello from {name}")
-```
+    @hello_world.task("script.sh")
+    def say_hello(name: str):
+        print(f"hello from {name}")
+    ```
 
-There are two fundamental objects in sdag, **pipelines** and **tasks**. Pipelines (marked with the `@pipeline` decorator) are used to represent the structure of the graph that will be executed. Tasks (marked with the `@task` or `<pipeline-name>@task` decorators) are jobs scheduled depending on the current state of the graph.  The `script` argument of the task decorator contains the path to the script that will be fired by the scheduler, which is simply `sdag-execute` in this example. Through this command, sdag will dispatch the execution to the correct function. This pipeline can be compiled with:
+=== "`script.sh`"
+
+    ```sh
+    sdag-execute
+    ```
+
+There are two fundamental objects in sdag, **pipelines** and **tasks**. Pipelines (marked with the `@pipeline` decorator) are used to represent the structure of the graph that will be executed. Tasks (marked with `@task` or `<pipeline-name>@task` decorators) are jobs scheduled depending on the current state of the graph.  The `script` argument of the task decorator contains the path to the script that will be fired by the scheduler, which is simply `sdag-execute` in this example. Through this command, sdag will dispatch the execution to the correct function. This pipeline can be compiled with:
 
 ```sh
 sdag compile hello:hello_world
@@ -55,17 +56,17 @@ This command will start the scheduler and execute the `say_hello` task. You shou
     └─────┴───────────┴─────────────┴───────────────────────┴─────────┘
 ```
 
-Notice that in `sdag run` you didn't have to type the full `./compiled-pipelines/hello_world.json` path. If you instead executed:
+If you instead executed:
 
 ```sh
 sdag run hello_world --local
 ```
 
-(thus without pointing to a compiled JSON file), the `hello_world` pipeline would be compiled on the fly and then immediately executed. Several sdag commands accept either pipeline names, import strings, or compiled JSON paths. You can check out the [CLI](09_cli.md) section for additional information. The latter allows one to skip the compilation step.
+(thus without pointing to a compiled JSON file), the `hello_world` pipeline would be compiled on the fly and then immediately executed. Several sdag commands accept either pipeline names, import strings, or compiled JSON paths. The latter allows one to skip the compilation step. You can check out the [CLI](09_cli.md) section for additional information.
 
-The `--local` option is used to run tasks locally as explained in the [Local tasks](03_external_tasks.md) section. To run the same pipeline on a Slurm cluster, create a standard [Sbatch](https://slurm.schedmd.com/sbatch.html) script by modifying `script.sh` as follows:
+The `--local` option is used to run tasks locally as explained in the [local task](03_external_tasks.md) section. To run the same pipeline on a Slurm cluster, create a standard [sbatch](https://slurm.schedmd.com/sbatch.html) script by modifying `script.sh` as follows:
 
-```sh
+```sh title="script.sh"
 #!/bin/bash
 #SBATCH --account=<account-name>
 #SBATCH --partition=<partition-name>

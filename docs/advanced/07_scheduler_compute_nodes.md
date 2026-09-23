@@ -4,7 +4,7 @@ On public supercomputers, jobs running on login nodes usually have limited resou
 
 Nevertheless, for long workflows across large graphs it may be better to just submit the scheduler as a Slurm job on a compute node. Copy the following script into a `submit_scheduler.sh` file:
 
-```sh
+```sh  title="submit_scheduler.sh"
 #!/bin/bash
 #SBATCH --job-name=scheduler
 #SBATCH --account=<account-name>

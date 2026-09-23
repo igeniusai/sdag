@@ -1,8 +1,5 @@
 # Failure Recovery
 
-!!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.
-
 Failures are unfortunately very common in HPC. In the context of sdag, the two most common failures that can happen are:
 
 1. The sdag scheduler gets killed
@@ -22,33 +19,34 @@ Once restarted, it get from Slurm the status of the supposedly running jobs to u
 
 Create the following two files in the main project directory:
 
-`script.sh` (if missing):
 
-```sh
-sdag-execute
-```
+=== "`failure_recovery.py`"
 
-`failure_recovery.py`:
-
-```py
-from sdag import pipeline
+    ```py
+    from sdag import pipeline
 
 
-@pipeline
-def failure():
-    t = failed_task()
-    will_never_run(t)
+    @pipeline
+    def failure():
+        t = failed_task()
+        will_never_run(t)
 
 
-@failure.task("script.sh")
-def failed_task():
-    raise ValueError("Failing...")
+    @failure.task("script.sh")
+    def failed_task():
+        raise ValueError("Failing...")
 
 
-@failure.task("script.sh")
-def will_never_run():
-    print("You will never see this message")
-```
+    @failure.task("script.sh")
+    def will_never_run():
+        print("You will never see this message")
+    ```
+
+=== "`script.sh`"
+
+    ```sh
+    sdag-execute
+    ```
 
 Run:
 
@@ -77,3 +75,6 @@ sdag run failure --local
 ```
 
 You will see that the execution of `failed_task` is retried two times before marking it as failed definitively.
+
+!!! info
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.

@@ -1,58 +1,55 @@
 # Control Flow
 
-!!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.
-
 ## Branches
 
 The pipeline structure can be dynamically altered based on the output of other tasks. Create the following two files in the main project directory:
 
-`script.sh` (if missing):
+=== "`control_flow.py`"
 
-```sh
-sdag-execute
-```
-
-`control_flow.py`:
-
-```py
-from sdag import Elif, Else, If, pipeline
+    ```py
+    from sdag import Elif, Else, If, pipeline
 
 
-@pipeline
-def control_flow():
-    with If(condition1()):
-        option1()
-    with Elif(condition2()):
-        option2()
-    with Else():
-        option3()
+    @pipeline
+    def control_flow():
+        with If(condition1()):
+            option1()
+        with Elif(condition2()):
+            option2()
+        with Else():
+            option3()
 
 
-@control_flow.task("script.sh")
-def condition1() -> bool:
-    return False
+    @control_flow.task("script.sh")
+    def condition1() -> bool:
+        return False
 
 
-@control_flow.task("script.sh")
-def condition2() -> bool:
-    return True
+    @control_flow.task("script.sh")
+    def condition2() -> bool:
+        return True
 
 
-@control_flow.task("script.sh")
-def option1():
-    print("Option 1 selected")
+    @control_flow.task("script.sh")
+    def option1():
+        print("Option 1 selected")
 
 
-@control_flow.task("script.sh")
-def option2():
-    print("Option 2 selected")
+    @control_flow.task("script.sh")
+    def option2():
+        print("Option 2 selected")
 
 
-@control_flow.task("script.sh")
-def option3():
-    print("Option 3 selected")
-```
+    @control_flow.task("script.sh")
+    def option3():
+        print("Option 3 selected")
+    ```
+
+=== "`script.sh`"
+
+    ```sh
+    sdag-execute
+    ```
 
 `condition1` and `condition2` are tasks that **must** return a Boolean value. Run:
 
@@ -135,3 +132,6 @@ def dag():
     # Likely equal to t_fast
     first_to_complete = oneof(t_fail, t_slow, t_fast)
 ```
+
+!!! info
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.

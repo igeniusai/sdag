@@ -2,7 +2,7 @@
 
 So far, `sdag-execute` has always been used to run tasks. There are a few reasons to modify the task entrypoint, one of them being logging customization. sdag configures its own logger when running tasks. By default, everything is logged to stderr so that it can be easily captured by Slurm and written in the `error` file. To modify logging and in general to wrap the task call with some custom logic, it is required to create an entrypoint for the sdag task execution. create an `entrypoint.py` module and paste the following code:
 
-```py
+```py  title="entrypoint.py"
 from sdag import sdag_execute
 
 
@@ -10,9 +10,9 @@ if __name__ == "__main__":
     sdag_execute(configure_logger=False)
 ```
 
-Now we can replace the `sdag-execute` command in `script.sh` with a call to this module:
+It is now possible to replace the `sdag-execute` command in `script.sh` with a call to this module:
 
-```sh
+```sh  title="script.sh"
 #!/bin/bash
 #SBATCH --account=<account-name>
 #SBATCH --partition=<partition-name>

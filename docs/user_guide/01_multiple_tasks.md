@@ -1,33 +1,30 @@
 # Handling Multiple Tasks
 
-!!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.
-
 Create the following two files in the main project directory:
 
-`script.sh` (if missing):
+=== "`many_tasks.py`"
 
-```sh
-sdag-execute
-```
-
-`many_tasks.py`:
-
-```py
-from sdag import pipeline
+    ```py
+    from sdag import pipeline
 
 
-@pipeline
-def many_tasks():
-    say_hello()
-    say_hello()
-    say_hello()
+    @pipeline
+    def many_tasks():
+        say_hello()
+        say_hello()
+        say_hello()
 
 
-@many_tasks.task("script.sh")
-def say_hello():
-    print("hello world!")
-```
+    @many_tasks.task("script.sh")
+    def say_hello():
+        print("hello world!")
+    ```
+
+=== "`script.sh`"
+
+    ```sh
+    sdag-execute
+    ```
 
 You can view the graph of this pipeline in the terminal via `sdag view`:
 
@@ -106,3 +103,6 @@ Which means that `second` will only run if both `first` tasks successfully compl
 ```sh
 sdag run dependent_tasks --local
 ```
+
+!!! info
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.
