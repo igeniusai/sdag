@@ -307,33 +307,6 @@
       
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../../getting_started/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Getting Started
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
     
   
   
@@ -347,10 +320,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
   
@@ -368,8 +341,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -477,7 +450,7 @@
   <span class="md-ellipsis">
     
   
-    External Tasks
+    External and Local Tasks
   
 
     
@@ -750,10 +723,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
             
   
   
@@ -771,8 +744,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1137,14 +1110,16 @@
 
 
 <h1 id="control-flow">Control Flow</h1>
-<p>By default, sdag searches pipelines in <code>./pipelines</code>. To follow along with this example, create a <code>./pipelines</code> folder containing an empty <code>__init__.py</code> and a <code>control_flow.py</code> module. Your project tree should look like this:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>&lt;package-name&gt;
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>└── pipelines
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    ├── __init__.py      &lt;- Do not forget to create this file!
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    └── control_flow.py  &lt;- Module edited in this example
-</span></code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>To run these examples with Slurm, turn <code>script.sh</code> into a <a href="https://slurm.schedmd.com/sbatch.html">sbatch</a> script as explained in the <a href="../00_hello_world/">Hello World</a> section and execute pipelines without the <code>--local</code> option.</p>
+</div>
 <h2 id="branches">Branches</h2>
-<p>The pipeline structure can be dynamically altered based on the output of other tasks. Paste the following snippet into <code>control_flow.py</code>:</p>
+<p>The pipeline structure can be dynamically altered based on the output of other tasks. Create the following two files in the main project directory:</p>
+<p><code>script.sh</code> (if missing):</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>sdag-execute
+</span></code></pre></div>
+<p><code>control_flow.py</code>:</p>
 <div class="language-py highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sdag</span><span class="w"> </span><span class="kn">import</span> <span class="n">Elif</span><span class="p">,</span> <span class="n">Else</span><span class="p">,</span> <span class="n">If</span><span class="p">,</span> <span class="n">pipeline</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
@@ -1182,7 +1157,7 @@
 </span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a><span class="k">def</span><span class="w"> </span><span class="nf">option3</span><span class="p">():</span>
 </span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Option 3 selected&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<p><code>condition1</code> and <code>condition2</code> are tasks that must return a Boolean value. Run:</p>
+<p><code>condition1</code> and <code>condition2</code> are tasks that <strong>must</strong> return a Boolean value. Run:</p>
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sdag<span class="w"> </span>run<span class="w"> </span>control_flow<span class="w"> </span>--local
 </span></code></pre></div>
 <p>to execute the example. The expected flow is:</p>
