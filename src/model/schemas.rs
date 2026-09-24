@@ -184,7 +184,7 @@ pub struct Checkpoint<'a> {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "kebab-case")]
 pub struct SlurmOverride {
     pub job_name: Option<String>,
     pub nodes: Option<usize>,
