@@ -2,7 +2,7 @@
 
 When working with larger projects made of many pipelines, it is convenient to set the directory sdag searches pipelines into explicitly. Both [flat and src layouts](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/) are supported. The only important point is to add `__init__.py` files to all subfolders in the tree to let sdag treat them as regular, importable packages.
 
-This examples takes advantage of the `hello.py` module created in the [first example](../tutorial/hello_world.md):
+This examples takes advantage of the `hello.py` module created in the [first example](../user_guide/hello_world.md):
 
 
 === "`hello.py`"

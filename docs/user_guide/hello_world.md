@@ -1,6 +1,6 @@
 # Hello World in sdag
 
-After [installing](../../installation.md) sdag, create the following two files in the main project directory:
+After [installing](../installation.md) sdag, create the following two files in the main project directory:
 
 
 === "`hello.py`"
