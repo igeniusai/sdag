@@ -2,7 +2,10 @@ site_name: sdag
 repo_url: https://github.com/igeniusai/sdag
 repo_name: igeniusai/sdag
 theme:
+  font:
+    text: DM Sans
   name: material
+  custom_dir: docs/override
   logo: assets/domyn-white-logo.svg
   favicon: assets/domyn-favicon-512x512.png
   icon:
@@ -15,12 +18,12 @@ theme:
   palette:
     - scheme: default
       toggle:
-        icon: material/brightness-7
+        icon: gfonts/wb_sunny
         name: Switch to dark mode
 
     - scheme: slate
       toggle:
-        icon: material/brightness-4
+        icon: gfonts/bedtime
         name: Switch to light mode
 extra_css:
   - stylesheets/extra.css
