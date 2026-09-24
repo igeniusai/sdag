@@ -62,13 +62,15 @@ impl<'a> SlurmPoller<'a> {
                 submission::handle_retries(task, ctx, failure.clone())
             }
             Status::Completed(Completed::Job(job_type)) => {
+                let job = job_type.clone();
+                ctx.statuses[task.uid] = status;
                 ctx.running_cacheable.remove(&task.name);
                 ctx.updated.push_back(task.uid);
                 if let ExecMode::Ext = task.mode
                     && let Err(e) = inline::submit_save_ext_output(task, &self.cfg)
                 {
                     log::error!("Task {}: Failed to save external output - {e}", task.uid);
-                    ctx.statuses[task.uid] = Status::Failed(Failed::Job(job_type.clone()));
+                    ctx.statuses[task.uid] = Status::Failed(Failed::Job(job));
                     return;
                 }
                 if task.cache
