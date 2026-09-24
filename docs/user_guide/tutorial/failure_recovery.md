@@ -77,4 +77,4 @@ sdag run failure --local
 You will see that the execution of `failed_task` is retried two times before marking it as failed definitively.
 
 !!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.

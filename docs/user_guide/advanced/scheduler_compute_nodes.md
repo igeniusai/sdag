@@ -17,7 +17,6 @@ Nevertheless, for long workflows across large graphs it may be better to just su
 #SBATCH --output ./logs/%x.%j.out
 #SBATCH --error ./logs/%x.%j.err
 
-source .venv/bin/activate
 sdag $@
 ```
 

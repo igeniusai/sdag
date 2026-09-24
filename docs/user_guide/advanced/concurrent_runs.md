@@ -1,4 +1,4 @@
-# Handling Concurrent Runs of the Same Pipeline
+# Handling Multiple Runs of the Same Pipeline
 
 One does not often deals with multiple concurrent runs of the same pipeline. In fact, calling the same pipeline multiple times with different arguments typically involves writing a bash script that must be maintained, which is exactly what sdag tries to avoid. A better approach would be to define an outer pipeline that calls the inner pipelines multiple times.
 

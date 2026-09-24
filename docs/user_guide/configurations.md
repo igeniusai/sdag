@@ -36,7 +36,7 @@ In the `pyproject.toml` file you can also set a number of Sbatch options that wi
 | output           | stdout file path |
 | error            | stderr file path |
 
-Check out the official [documentation](https://slurm.schedmd.com/sbatch.html) for details. All these options are ignored if a task is marked as local. The `pyproject.toml` file also allows one to define tag configurations. Check out the [tag](../advanced/08_tags.md) section for details.
+Check out the official [documentation](https://slurm.schedmd.com/sbatch.html) for details. All these options are ignored if a task is marked as local. The `pyproject.toml` file also allows one to define tag configurations. Check out the [tag](advanced/tags.md) section for details.
 
 ## .sdag.toml
 
