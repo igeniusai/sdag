@@ -1,6 +1,6 @@
 # Hello World in sdag
 
-After [installing](../installation.md) sdag, create the following two files in the main project directory:
+After [installing](../../installation.md) sdag, create the following two files in the main project directory:
 
 
 === "`hello.py`"
@@ -38,7 +38,7 @@ sdag compile hello_world
 ```
 
 !!! info
-    In more structured codebases it is convenient to explicitly define the base directory pipelines are searched into. Check out the [Structuring Larger Projects](../advanced/05_larger_projects.md) section for details.
+    In more structured codebases it is convenient to explicitly define the base directory pipelines are searched into. Check out the [Structuring Larger Projects](../advanced/larger_projects.md) section for details.
 
 To run the compiled pipeline, execute:
 
@@ -62,9 +62,9 @@ If you instead executed:
 sdag run hello_world --local
 ```
 
-(thus without pointing to a compiled JSON file), the `hello_world` pipeline would be compiled on the fly and then immediately executed. Several sdag commands accept either pipeline names, import strings, or compiled JSON paths. The latter allows one to skip the compilation step. You can check out the [CLI](09_cli.md) section for additional information.
+(thus without pointing to a compiled JSON file), the `hello_world` pipeline would be compiled on the fly and then immediately executed. Several sdag commands accept either pipeline names, import strings, or compiled JSON paths. The latter allows one to skip the compilation step. You can check out the [CLI](../cli.md) section for additional information.
 
-The `--local` option is used to run tasks locally as explained in the [local task](03_external_tasks.md) section. To run the same pipeline on a Slurm cluster, create a standard [sbatch](https://slurm.schedmd.com/sbatch.html) script by modifying `script.sh` as follows:
+The `--local` option is used to run tasks locally as explained in the [local task](external_tasks.md) section. To run the same pipeline on a Slurm cluster, create a standard [sbatch](https://slurm.schedmd.com/sbatch.html) script by modifying `script.sh` as follows:
 
 ```sh title="script.sh"
 #!/bin/bash
@@ -81,7 +81,7 @@ sdag-execute
 !!!info
     fields like `job-name`, `output`, and `error` are intentionally missing here as sdag overrides them by default.
 
-where `<account-name>`, `<partition-name>`, and `<qos-name>` are the Slurm account, partition, and quality of service you have access to. You can check out the [Configurations](08_configurations.md) and [Tags](../advanced/08_tags.md) sections to learn how to set these quantities globally or for groups of tasks. You can now run the DAG on the HPC with the following command:
+where `<account-name>`, `<partition-name>`, and `<qos-name>` are the Slurm account, partition, and quality of service you have access to. You can check out the [Configurations](../configurations.md) and [Tags](../advanced/tags.md) sections to learn how to set these quantities globally or for groups of tasks. You can now run the DAG on the HPC with the following command:
 
 ```sh
 sdag run hello_world

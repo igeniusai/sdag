@@ -57,7 +57,7 @@ Create the following two files in the main project directory:
 So, the output of `return_output` is used as input in the `take_input` task.
 
 !!! warning
-    Output data is serialized as JSON under the hood, which means only JSON-serializable objects are allowed (e.g., lists are fine but tuples are not). Because we don't want to enforce default serialization methods, when working with complex or large data structures it is recommended to serialize them separately and move their paths around as [artifacts](06_caching_artifacts.md).
+    Output data is serialized as JSON under the hood, which means only JSON-serializable objects are allowed (e.g., lists are fine but tuples are not). Because we don't want to enforce default serialization methods, when working with complex or large data structures it is recommended to serialize them separately and move their paths around as [artifacts](caching_artifacts.md).
 
 You can run the example via:
 
@@ -110,4 +110,4 @@ def use_input_path(input1: str, input2: str):
 ```
 
 !!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.

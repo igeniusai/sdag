@@ -123,8 +123,8 @@ should print something like:
 sdag prune create_file -p dag_with_artifact
 ```
 
-to delete the cache of the `create_file` task. Check out the [CLI](09_cli.md) section for details.
+to delete the cache of the `create_file` task. Check out the [CLI](../cli.md) section for details.
 
 
 !!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](00_hello_world.md) section and execute pipelines without the `--local` option.
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.
