@@ -14,7 +14,6 @@ theme:
     - content.code.copy
     - content.code.select
     - content.code.annotate
-    - navigation.tabs
 
   palette:
     - scheme: default

@@ -72,4 +72,4 @@ sdag run task_calling_task --local
 ```
 
 !!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](../tutorial/hello_world.md) section and execute pipelines without the `--local` option.
+    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](../user_guide/hello_world.md) section and execute pipelines without the `--local` option.
