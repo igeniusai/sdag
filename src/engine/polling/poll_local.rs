@@ -43,7 +43,7 @@ impl<'a> LocalPoller<'a> {
             }
             Status::Completed(_) => {
                 log::info!("Local task '{uid}' completed");
-                ctx.statuses[task.uid] = status;
+                ctx.set_status(task.uid, status);
                 self.handle_success(task, child.id(), ctx);
             }
             _ => {
@@ -61,7 +61,7 @@ impl<'a> LocalPoller<'a> {
             && let Err(e) = inline::submit_save_ext_output(task, &self.cfg)
         {
             log::error!("Task {}: Failed to save external output - {e}", task.uid);
-            ctx.statuses[task.uid] = Status::Failed(Failed::Job(JobType::Local(pid)));
+            ctx.set_status(task.uid, Status::Failed(Failed::Job(JobType::Local(pid))));
             return;
         }
         if task.cache

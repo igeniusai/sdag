@@ -37,18 +37,18 @@ impl<'a, 'b> Visitor<()> for NodeVisitor<'a, 'b> {
     fn visit_root(&mut self, node: &Root, ctx: &mut Ctx) {
         let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.statuses);
         if all_parents_completed(&parent_statuses) {
-            ctx.statuses[node.uid] = Status::Completed(Completed::Generic);
+            ctx.set_status(node.uid, Status::Completed(Completed::Generic));
         } else if some_parents_failed_or_skipped(&parent_statuses) {
-            ctx.statuses[node.uid] = Status::Skipped
+            ctx.set_status(node.uid, Status::Skipped);
         }
     }
 
     fn visit_end(&mut self, node: &End, ctx: &mut Ctx) {
         let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.statuses);
         if all_parents_completed(&parent_statuses) {
-            ctx.statuses[node.uid] = Status::Completed(Completed::Generic);
+            ctx.set_status(node.uid, Status::Completed(Completed::Generic));
         } else if parent_statuses.iter().all(|s| s.is_final()) {
-            ctx.statuses[node.uid] = Status::Skipped
+            ctx.set_status(node.uid, Status::Skipped);
         }
     }
 
@@ -59,9 +59,9 @@ impl<'a, 'b> Visitor<()> for NodeVisitor<'a, 'b> {
                 Ok(choice) => Status::Completed(Completed::Branch(choice)),
                 Err(_) => Status::Failed(Failed::Generic),
             };
-            ctx.statuses[node.uid] = status;
+            ctx.set_status(node.uid, status);
         } else if some_parents_failed_or_skipped(&parent_statuses) {
-            ctx.statuses[node.uid] = Status::Skipped;
+            ctx.set_status(node.uid, Status::Skipped);
         }
     }
 
@@ -92,9 +92,9 @@ impl<'a, 'b> Visitor<()> for NodeVisitor<'a, 'b> {
                     Status::Failed(Failed::Generic)
                 }
             };
-            ctx.statuses[node.uid] = status;
+            ctx.set_status(node.uid, status);
         } else if all_parents_failed_or_skipped(&parent_statuses) {
-            ctx.statuses[node.uid] = Status::Skipped
+            ctx.set_status(node.uid, Status::Skipped);
         }
     }
 }
@@ -136,10 +136,10 @@ impl<'a, 'b> NodeVisitor<'a, 'b> {
     fn visit_not_submitted_task(&self, task: &Task, ctx: &mut Ctx) {
         let parent_statuses = self.get_parent_statuses(&task.parents, &ctx.statuses);
         if all_parents_completed(&parent_statuses) {
-            ctx.statuses[task.uid] = Status::ReadyForSubmission;
+            ctx.set_status(task.uid, Status::ReadyForSubmission);
             if task.cache {
                 if inline::submit_validate_cache(task, &self.cfg) {
-                    ctx.statuses[task.uid] = Status::Completed(Completed::Cached);
+                    ctx.set_status(task.uid, Status::Completed(Completed::Cached));
                     return;
                 }
                 ctx.jobs.push_back(Job::ValidateCache(task.uid, true));
@@ -148,7 +148,7 @@ impl<'a, 'b> NodeVisitor<'a, 'b> {
             ctx.jobs.push_back(Job::Task(task.uid));
         } else if some_parents_failed_or_skipped(&parent_statuses) {
             log::debug!("Task '{}' is skipped", task.uid);
-            ctx.statuses[task.uid] = Status::Skipped
+            ctx.set_status(task.uid, Status::Skipped);
         }
     }
 }

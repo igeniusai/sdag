@@ -20,7 +20,7 @@ pub fn handle_retries(task: &Task, ctx: &mut Ctx, failure: Failed) {
             task.uid,
             task.retries
         );
-        ctx.statuses[task.uid] = Status::Failed(failure);
+        ctx.set_status(task.uid, Status::Failed(failure));
         ctx.updated.push_back(task.uid);
     } else {
         log::warn!(
@@ -29,6 +29,7 @@ pub fn handle_retries(task: &Task, ctx: &mut Ctx, failure: Failed) {
             try_num,
             task.retries,
         );
+        ctx.set_status(task.uid, Status::ReadyForSubmission);
         ctx.jobs.push_back(Job::Task(task.uid));
     }
 }
@@ -108,7 +109,7 @@ impl<'a> Submitter<'a> {
 
         log::info!("Task '{}': Submitted process with pid '{}'", task.uid, pid);
         ctx.local_jobs.push((task.uid, child));
-        ctx.statuses[task.uid] = Status::Running(JobType::Local(pid));
+        ctx.set_status(task.uid, Status::Running(JobType::Local(pid)));
 
         Ok(())
     }
@@ -119,7 +120,7 @@ impl<'a> Submitter<'a> {
 
         log::info!("Task '{}': Submitted job_id '{}'", task.uid, job_id);
         ctx.slurm_jobs.push((task.uid, job_id.to_string()));
-        ctx.statuses[task.uid] = Status::Pending(JobType::Slurm(job_id));
+        ctx.set_status(task.uid, Status::Pending(JobType::Slurm(job_id)));
 
         Ok(())
     }
@@ -138,10 +139,10 @@ impl<'a> Submitter<'a> {
             return;
         }
         if !already_checked && inline::submit_validate_cache(&task, &self.cfg) {
-            ctx.statuses[task.uid] = Status::Completed(Completed::Cached);
+            ctx.set_status(task.uid, Status::Completed(Completed::Cached));
             return;
         }
-        ctx.statuses[task.uid] = Status::ReadyForSubmission;
+        ctx.set_status(task.uid, Status::ReadyForSubmission);
         ctx.jobs.push_back(Job::Task(task.uid));
     }
 }
