@@ -350,6 +350,44 @@ mod tests {
     }
 
     #[test]
+    fn test_constant_pending_status_does_not_trigger_checkpoint() {
+        let cfg = get_cfg();
+        let mut poller = get_poller(&cfg);
+
+        let task = get_task(0);
+        let nodes = [Node::Task(task.clone())];
+        let constant_status = Status::Pending(JobType::Slurm("123".into()));
+        let mut ctx = get_ctx(&nodes);
+        ctx.statuses[0] = constant_status.clone();
+        poller.handle_new_slurm_status(&task, constant_status, &mut ctx);
+
+        assert!(matches!(
+            ctx.statuses[0],
+            Status::Pending(JobType::Slurm(_))
+        ));
+        assert!(!ctx.must_checkpoint);
+    }
+
+    #[test]
+    fn test_constant_running_status_does_not_trigger_checkpoint() {
+        let cfg = get_cfg();
+        let mut poller = get_poller(&cfg);
+
+        let task = get_task(0);
+        let nodes = [Node::Task(task.clone())];
+        let constant_status = Status::Running(JobType::Slurm("123".into()));
+        let mut ctx = get_ctx(&nodes);
+        ctx.statuses[0] = constant_status.clone();
+        poller.handle_new_slurm_status(&task, constant_status, &mut ctx);
+
+        assert!(matches!(
+            ctx.statuses[0],
+            Status::Running(JobType::Slurm(_))
+        ));
+        assert!(!ctx.must_checkpoint);
+    }
+
+    #[test]
     fn test_handle_failed_status() {
         let cfg = get_cfg();
         let mut poller = get_poller(&cfg);
