@@ -30,11 +30,14 @@ class SDAGTag(SlurmOverride):
         tag (str): Tag name.
         cmd (Commands | None): Command. Defaults to None.
         script_path (Path | None): Script path.
+        envs (dict[str, str]): Environment variables
+            added to all relevant tasks.
     """
 
     tag: str
     cmd: Commands | None = None
     script_path: Path | None = None
+    envs: dict[str, str] = Field(default_factory=dict)
 
 
 class Pyproj(SlurmOverride):
@@ -59,6 +62,9 @@ class Pyproj(SlurmOverride):
             Defaults to 60.
         fail_fast (bool): Kill the scheduler and all running tasks if
             any of them fails.
+        envs (dict[str, str]): Environment variables added to all tasks.
+            They have higher priority with respect to the ones set inside
+            pipelines.
     """
 
     dag_dir: str = Field(alias="dag-dir", default=".")
@@ -83,7 +89,7 @@ class Pyproj(SlurmOverride):
         alias="max-concurrent-runs", default=20, gt=0
     )
     fail_fast: bool = Field(alias="fail-fast", default=False)
-
+    envs: dict[str, str] = Field(default_factory=dict)
     tags: list[SDAGTag] = Field(default_factory=list)
 
     model_config = ConfigDict(
@@ -164,6 +170,7 @@ def apply_pyproj_to_task(task: TaskNode, pyproj: Pyproj) -> None:
     if pyproj.cmd is not None:
         task.cmd = pyproj.cmd
     task.slurm.override_from(pyproj)
+    task.envs |= pyproj.envs
     for tag in pyproj.tags:
         if tag.tag in task.tags:
             _apply_tag_configs(task, tag)
@@ -180,6 +187,7 @@ def _apply_tag_configs(task: TaskNode, tag: SDAGTag) -> None:
         task.cmd = tag.cmd
     if tag.script_path is not None:
         task.script = ScriptPath(path=tag.script_path)
+    task.envs |= tag.envs
     task.slurm.override_from(tag)
 
 
@@ -206,6 +214,11 @@ def _join_configs(
 ) -> dict[str, Any]:
     """Join configurations.
 
+    Things that must be done:
+    1. join configuration dicts
+    2. join environment variables
+    3. override tags
+
     Args:
         pyproj_dict (dict[str, Any]): Loaded pyproject.toml.
         sdag_toml_dict (dict[str, Any]): Loaded sdag.toml.
@@ -216,8 +229,11 @@ def _join_configs(
     Returns:
         dict[str, Any]: Joined configurations.
     """
+    pyproj_envs = pyproj_dict.get("envs", {})
+    sdag_envs = sdag_toml_dict.get("envs", {})
     pyproj_tags = pyproj_dict.get("tags", [])
     sdag_toml_tags = sdag_toml_dict.get("tags", [])
+
     if not isinstance(pyproj_tags, list) or not isinstance(
         sdag_toml_tags, list
     ):
@@ -228,6 +244,7 @@ def _join_configs(
     sdag_toml_tag_dict = _get_tag_dict(sdag_toml_tags)
     tag_dict = pyproj_tag_dict | sdag_toml_tag_dict
     configs = pyproj_dict | sdag_toml_dict
+    configs["envs"] = pyproj_envs | sdag_envs
     configs["tags"] = list(tag_dict.values())
 
     return configs

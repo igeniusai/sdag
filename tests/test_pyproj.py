@@ -24,9 +24,13 @@ def test_parse_pyproject(tmp_path: Path) -> None:
     max-concurrent-runs = 2
     cmd = "bash"
 
+    [tool.sdag.envs]
+    ENV="value"
+
     [[tool.sdag.tags]]
     tag = "online"
     cmd = "sbatch"
+    envs = {"ENV" = "another_value"}
     """
     pyproj_path = tmp_path / "pyproject.toml"
     # so we don't read the main one by accident
@@ -44,8 +48,10 @@ def test_parse_pyproject(tmp_path: Path) -> None:
     assert pyproj.log_level == "debug"
     assert pyproj.slurm_grace_period == 50
     assert pyproj.max_concurrent_runs == 2
+    assert pyproj.envs == {"ENV": "value"}
     assert pyproj.tags[0].tag == "online"
     assert pyproj.tags[0].cmd == "sbatch"
+    assert pyproj.tags[0].envs == {"ENV": "another_value"}
 
 
 def test_parse_pyproject_invalid_tags(tmp_path: Path) -> None:
@@ -112,9 +118,13 @@ def test_parse_sdag_toml(tmp_path: Path) -> None:
     max-concurrent-runs = 2
     cmd = "bash"
 
+    [envs]
+    ENV="value"
+
     [[tags]]
     tag = "online"
     cmd = "sbatch"
+    envs = {"ENV" = "another_value"}
     """
     sdag_toml_path = tmp_path / ".sdag.toml"
     with sdag_toml_path.open("w") as f:
@@ -150,13 +160,19 @@ def test_join_pyproj_and_sdag_toml(tmp_path: Path) -> None:
     slurm-grace-period = 20
     cmd = "bash"
 
+    [tool.sdag.envs]
+    ENV = "value"
+    OVERWRITTEN = "pyporj_value"
+
     [[tool.sdag.tags]]
     tag = "online"
     cmd = "sbatch"
+    envs = {"PYPROJ_TAG_ENV" = "pyproj_tag_value"}
 
     [[tool.sdag.tags]]
     tag = "large"
     cmd = "bash"
+    envs = {"LARGE_ENV" = "large_value"}
     """
 
     sdag_toml_content = """compiled-dag-dir = "path-alt"
@@ -164,13 +180,19 @@ def test_join_pyproj_and_sdag_toml(tmp_path: Path) -> None:
     log-level = "debug"
     cmd = "bash"
 
+    [envs]
+    ANOTHER_ENV = "another_value"
+    OVERWRITTEN = "sdag_value"
+
     [[tags]]
     tag = "online"
     cmd = "bash"
+    envs = {"SDAG_TAG_ENV" = "sdag_tag_value"}
 
     [[tags]]
     tag = "small"
     cmd = "bash"
+    envs = {"SMALL_ENV" = "small_value"}
     """
 
     pyproj_path = tmp_path / "pyproj.toml"
@@ -192,13 +214,21 @@ def test_join_pyproj_and_sdag_toml(tmp_path: Path) -> None:
     assert pyproj.cmd == "bash"
     assert pyproj.log_level == "debug"
     assert pyproj.slurm_grace_period == 20
+    assert pyproj.envs == {
+        "ENV": "value",
+        "ANOTHER_ENV": "another_value",
+        "OVERWRITTEN": "sdag_value",
+    }
 
     assert pyproj.tags[0].tag == "large"
     assert pyproj.tags[0].cmd == "bash"
+    assert pyproj.tags[0].envs == {"LARGE_ENV": "large_value"}
     assert pyproj.tags[1].tag == "online"
     assert pyproj.tags[1].cmd == "bash"
+    assert pyproj.tags[1].envs == {"SDAG_TAG_ENV": "sdag_tag_value"}
     assert pyproj.tags[2].tag == "small"
     assert pyproj.tags[2].cmd == "bash"
+    assert pyproj.tags[2].envs == {"SMALL_ENV": "small_value"}
 
 
 @pytest.mark.parametrize(
@@ -303,6 +333,60 @@ def test_override_all_slurm_cmds() -> None:
     apply_pyproj_configs(dag, pyproj)
 
     assert task.slurm.model_dump() == pyproj_dict
+
+
+def test_override_environment_variables() -> None:
+    """Check environment variables are correctly overwritten."""
+    task = TaskNode(
+        uid=0,
+        name="task_name",
+        fn_name="task_fn",
+        cache=False,
+        mode="ext",
+        cmd="sbatch",
+        scope="local",
+        retries=0,
+        tags=["TAG2"],
+        script=ScriptPath(path=Path()),
+        envs={
+            "ENV_TASK": "task_value",
+            "OVERWRITTEN_PYPROJ": "task_value",
+            "OVERWRITTEN_TAG": "task_value",
+        },
+    )
+
+    dag = DAG(
+        meta=DAGMeta(pipeline_name="pipe", hash="xxx"),
+        nodes=[task],
+    )
+
+    pyproj_dict = {
+        "envs": {
+            "OVERWRITTEN_PYPROJ": "pyproj_value",
+            "OVERWRITTEN_TAG": "pyproj_value",
+            "ENV_PYPROJ": "pyproj_value",
+        },
+        "tags": [
+            {
+                "tag": "TAG2",
+                "envs": {
+                    "OVERWRITTEN_TAG": "tag_value",
+                    "ENV_TAG": "tag_value",
+                },
+            }
+        ],
+    }
+
+    pyproj = Pyproj.model_validate(pyproj_dict)
+    apply_pyproj_configs(dag, pyproj)
+
+    assert task.envs == {
+        "OVERWRITTEN_TAG": "tag_value",
+        "OVERWRITTEN_PYPROJ": "pyproj_value",
+        "ENV_TASK": "task_value",
+        "ENV_PYPROJ": "pyproj_value",
+        "ENV_TAG": "tag_value",
+    }
 
 
 def test_override_slurm_from_tag() -> None:
