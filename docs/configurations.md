@@ -8,16 +8,17 @@ Configurations must be set under `[tool.sdag]`. Here are the available options:
 
 | Option                       | Default value          | Description |
 |------------------------------|------------------------|-------------|
-| dag-dir                      | "."          | Path where pipelines are searched. |
+| dag-dir                      | "."                    | Path where pipelines are searched. |
 | compiled-dag-dir             | "./compiled-pipelines" | Compiled pipeline destination path. |
 | cmd                          | null                   | If set, override the command of all tasks |
 | prepend-compiled-dag-dir     | true                   | Prepend the `compiled-dag-dir` so you can write `sdag run dag.json` instead of `sdag run ./compiled-pipelines/dag.json` |
 | log-level                    | "info"                 | Compiler, scheduler, and task log level |
 | time_between_polls           | 5                      | Time between successive scheduler Slurm polls (seconds) |
-| max-concurrency              | 0                     | Maximum number of tasks running at the same time. Set to zero to allow any number of tasks to run at the same time |
+| max-concurrency              | 0                      | Maximum number of tasks running at the same time. Set to zero to allow any number of tasks to run at the same time |
 | slurm-grace-period           | 60                     | Maximum number of times a task can be missing from the Slurm output without considering it as failed. |
 | max-concurrent-runs          | 20                     | Maximum number of runs of the same pipeline kept by sdag. Set to 0 to keep all runs. |
 | fail-fast                    | false                  | If true, kill the scheduler and all running jobs if any task fails. |
+| envs                         | {}                     | Environment variables that will be available to every task |
 
 In the `pyproject.toml` file you can also set a number of Sbatch options that will override those set in scripts or inside pipelines:
 
@@ -48,6 +49,13 @@ If available, this file located in the main project directory. It has the exact 
     [tool.sdag]
     dag-dir = "my_package/workflows"
     max-concurrency = 10
+
+    [tool.sdag.envs]
+    ENV_NAME = "env_value"
+
+    [[tool.sdag.tags]]
+    tag = "online"
+    cmd = "bash"
     ```
 
 === "`.sdag.toml`"
@@ -55,6 +63,13 @@ If available, this file located in the main project directory. It has the exact 
     ```toml
     dag-dir = "my_package/workflows"
     max-concurrency = 10
+
+    [envs]
+    ENV_NAME = "env_value"
+
+    [[tags]]
+    tag = "online"
+    cmd = "bash"
     ```
 
 All configurations set in the `.sdag.toml` have higher priority with respect to those in `pyproject.toml` and they will override them when conflicting.
@@ -62,9 +77,9 @@ All configurations set in the `.sdag.toml` have higher priority with respect to 
 
 ## Environment variables
 
-Most environment variables are set by the scheduler, so users don't really have to think about them. However, a few environment variables can be set to modify the default behavior:
+Most environment variables are managed by the scheduler, so users don't really have to think about them. However, a few environment variables can be set to modify the default behavior:
 
 | Environment variable   | Description |
 |------------------------|-------------|
 | `SDAG_HOME`            | Path of the sdag working directory. It's `~` by default. Inside it, a `.sdag` directory will be created |
-| `SDAG_BASE_PATH`       | Base path of all artifacts. If set, it's automatically prepended to all artifact relative paths.        |
+| `SDAG_BASE_PATH`       | Base path of all artifacts. If set, it's automatically prepended to all artifacts if defined through relative paths.        |
