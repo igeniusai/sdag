@@ -60,10 +60,13 @@ pub fn scheduling_loop(nodes: &[Node], ctx: &mut Ctx, cfg: &Cfg, meta: &DAGMeta)
         local_poller.poll(&nodes, ctx);
         visitor.visit(ctx);
         submitter.submit(&nodes, ctx);
-        let res = state::save_checkpoint(&cfg, meta, &nodes, ctx);
-        if let Err(e) = res {
-            log::error!("Failed to save checkpoint: {e}");
-        };
+        if ctx.must_checkpoint {
+            let res = state::save_checkpoint(&cfg, meta, &nodes, ctx);
+            if let Err(e) = res {
+                log::error!("Failed to save checkpoint: {e}");
+            };
+            ctx.must_checkpoint = false;
+        }
 
         summary::print_summary(&nodes, &ctx, &meta.pipeline_name, &meta.hash);
         if status::is_simulation_completed(&ctx.statuses) {

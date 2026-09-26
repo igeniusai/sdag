@@ -6,6 +6,7 @@ use crate::model::status::{Failed, JobType, Status};
 use crate::settings;
 use crate::store::{state, workdirs};
 use log;
+use std::collections::HashMap;
 use std::io;
 use std::process::{Child, Command, Stdio};
 
@@ -40,9 +41,10 @@ pub fn kill_jobs(ctx: &mut Ctx) {
 }
 
 fn kill_local_jobs(ctx: &mut Ctx) {
+    let mut killed_statuses: HashMap<usize, Status> = HashMap::new();
     for (uid, child) in &mut ctx.local_jobs {
         let job_type = JobType::Local(child.id());
-        ctx.statuses[*uid] = Status::Failed(Failed::Job(job_type));
+        killed_statuses.insert(*uid, Status::Failed(Failed::Job(job_type)));
         match kill_process_group(child) {
             Ok(_) => log::info!("Task '{uid}': Killed process group {}", child.id()),
             Err(e) => log::error!(
@@ -50,6 +52,9 @@ fn kill_local_jobs(ctx: &mut Ctx) {
                 child.id()
             ),
         }
+    }
+    for (uid, killed_status) in killed_statuses.into_iter() {
+        ctx.set_status(uid, killed_status);
     }
 }
 
@@ -63,28 +68,33 @@ fn kill_process_group(child: &mut Child) -> io::Result<()> {
     Ok(())
 }
 
-fn kill_slurm_jobs(ctx: &mut Ctx) -> io::Result<()> {
-    let mut job_ids: Vec<&str> = Vec::with_capacity(ctx.slurm_jobs.len());
-    for (uid, job_id) in &ctx.slurm_jobs {
-        log::info!("Task '{}': Killing job {}", uid, job_id);
-        let job_type = JobType::Slurm(job_id.to_string());
-        ctx.statuses[*uid] = Status::Failed(Failed::Job(job_type));
-        job_ids.push(job_id);
-    }
-
-    if job_ids.len() == 0 {
+fn kill_slurm_jobs(ctx: &mut Ctx) -> Result<(), String> {
+    if ctx.slurm_jobs.len() == 0 {
         log::info!("No running Slurm jobs found");
         return Ok(());
     }
 
     let mut cmd = Command::new("scancel");
-    for job in job_ids {
-        cmd.arg(job);
+    for (uid, job_id) in &ctx.slurm_jobs {
+        log::info!("Task '{}': Killing job {}", uid, job_id);
+        cmd.arg(job_id);
     }
 
-    cmd.stdout(Stdio::inherit())
+    let output = cmd
+        .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
-        .output()?;
+        .output()
+        .map_err(|e| format!("Failed to run scancel - {e}"))?;
+
+    if !output.status.success() {
+        return Err("Failed to cancel Slurm jobs".into());
+    }
+
+    let killed: Vec<(usize, String)> = ctx.slurm_jobs.drain(..).collect();
+    for (uid, job_id) in killed {
+        let job_type = JobType::Slurm(job_id.clone());
+        ctx.set_status(uid, Status::Failed(Failed::Job(job_type)));
+    }
 
     Ok(())
 }
@@ -110,6 +120,7 @@ mod tests {
             local_jobs: vec![(0, child)],
             slurm_jobs: Vec::new(),
             running_cacheable: HashSet::new(),
+            must_checkpoint: false,
         };
 
         kill_jobs(&mut ctx);

@@ -53,9 +53,17 @@ impl<'a> SlurmPoller<'a> {
 
     fn handle_new_slurm_status(&mut self, task: &Task, status: Status, ctx: &mut Ctx) {
         match &status {
-            Status::Pending(JobType::Slurm(job_id)) | Status::Running(JobType::Slurm(job_id)) => {
+            Status::Pending(JobType::Slurm(job_id)) => {
                 ctx.slurm_jobs.push((task.uid, job_id.to_string()));
-                ctx.statuses[task.uid] = status;
+                if !matches!(&ctx.statuses[task.uid], Status::Pending(_)) {
+                    ctx.set_status(task.uid, status);
+                }
+            }
+            Status::Running(JobType::Slurm(job_id)) => {
+                ctx.slurm_jobs.push((task.uid, job_id.to_string()));
+                if !matches!(&ctx.statuses[task.uid], Status::Running(_)) {
+                    ctx.set_status(task.uid, status);
+                }
             }
             Status::Failed(failure) => {
                 log::error!("Task - '{}' failed", task.uid);
@@ -63,14 +71,14 @@ impl<'a> SlurmPoller<'a> {
             }
             Status::Completed(Completed::Job(job_type)) => {
                 let job = job_type.clone();
-                ctx.statuses[task.uid] = status;
+                ctx.set_status(task.uid, status);
                 ctx.running_cacheable.remove(&task.name);
                 ctx.updated.push_back(task.uid);
                 if let ExecMode::Ext = task.mode
                     && let Err(e) = inline::submit_save_ext_output(task, &self.cfg)
                 {
                     log::error!("Task {}: Failed to save external output - {e}", task.uid);
-                    ctx.statuses[task.uid] = Status::Failed(Failed::Job(job));
+                    ctx.set_status(task.uid, Status::Failed(Failed::Job(job)));
                     return;
                 }
                 if task.cache
@@ -87,7 +95,7 @@ impl<'a> SlurmPoller<'a> {
             | Status::Pending(_)
             | Status::Completed(_) => {
                 log::warn!("Task '{}': status {}", task.uid, status);
-                ctx.statuses[task.uid] = status;
+                ctx.set_status(task.uid, status);
                 ctx.updated.push_back(task.uid);
             }
         }
@@ -244,6 +252,7 @@ mod tests {
     fn get_ctx(nodes: &[Node]) -> Ctx {
         let mut ctx = Ctx::new(nodes).unwrap();
         ctx.try_nums[0] = 1;
+        ctx.must_checkpoint = false;
         ctx
     }
 
@@ -337,6 +346,45 @@ mod tests {
             ctx.statuses[0],
             Status::Pending(JobType::Slurm(_))
         ));
+        assert!(ctx.must_checkpoint);
+    }
+
+    #[test]
+    fn test_constant_pending_status_does_not_trigger_checkpoint() {
+        let cfg = get_cfg();
+        let mut poller = get_poller(&cfg);
+
+        let task = get_task(0);
+        let nodes = [Node::Task(task.clone())];
+        let constant_status = Status::Pending(JobType::Slurm("123".into()));
+        let mut ctx = get_ctx(&nodes);
+        ctx.statuses[0] = constant_status.clone();
+        poller.handle_new_slurm_status(&task, constant_status, &mut ctx);
+
+        assert!(matches!(
+            ctx.statuses[0],
+            Status::Pending(JobType::Slurm(_))
+        ));
+        assert!(!ctx.must_checkpoint);
+    }
+
+    #[test]
+    fn test_constant_running_status_does_not_trigger_checkpoint() {
+        let cfg = get_cfg();
+        let mut poller = get_poller(&cfg);
+
+        let task = get_task(0);
+        let nodes = [Node::Task(task.clone())];
+        let constant_status = Status::Running(JobType::Slurm("123".into()));
+        let mut ctx = get_ctx(&nodes);
+        ctx.statuses[0] = constant_status.clone();
+        poller.handle_new_slurm_status(&task, constant_status, &mut ctx);
+
+        assert!(matches!(
+            ctx.statuses[0],
+            Status::Running(JobType::Slurm(_))
+        ));
+        assert!(!ctx.must_checkpoint);
     }
 
     #[test]
@@ -353,7 +401,8 @@ mod tests {
             &mut ctx,
         );
         println!("{}", ctx.statuses[0]);
-        assert!(matches!(ctx.statuses[0], Status::Failed(_)))
+        assert!(matches!(ctx.statuses[0], Status::Failed(_)));
+        assert!(ctx.must_checkpoint);
     }
 
     #[test]
@@ -373,7 +422,8 @@ mod tests {
         );
 
         let job = ctx.jobs.pop_front().unwrap();
-        assert!(matches!(job, Job::Task(0)))
+        assert!(matches!(job, Job::Task(0)));
+        assert!(ctx.must_checkpoint);
     }
 
     #[test]
@@ -404,6 +454,7 @@ mod tests {
             .join(&task.name);
 
         assert!(cachedir.exists());
+        assert!(ctx.must_checkpoint);
     }
 
     #[test]
@@ -427,5 +478,6 @@ mod tests {
 
         let output = taskdir.join(FileNames::Output.as_str());
         assert!(output.exists());
+        assert!(ctx.must_checkpoint);
     }
 }

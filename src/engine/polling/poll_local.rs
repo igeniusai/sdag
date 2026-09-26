@@ -43,7 +43,7 @@ impl<'a> LocalPoller<'a> {
             }
             Status::Completed(_) => {
                 log::info!("Local task '{uid}' completed");
-                ctx.statuses[task.uid] = status;
+                ctx.set_status(task.uid, status);
                 self.handle_success(task, child.id(), ctx);
             }
             _ => {
@@ -61,7 +61,7 @@ impl<'a> LocalPoller<'a> {
             && let Err(e) = inline::submit_save_ext_output(task, &self.cfg)
         {
             log::error!("Task {}: Failed to save external output - {e}", task.uid);
-            ctx.statuses[task.uid] = Status::Failed(Failed::Job(JobType::Local(pid)));
+            ctx.set_status(task.uid, Status::Failed(Failed::Job(JobType::Local(pid))));
             return;
         }
         if task.cache
@@ -120,6 +120,8 @@ mod test {
         let cfg = Cfg::default();
         let nodes = vec![Node::Task(get_task(0))];
         let mut ctx = Ctx::new(&nodes).unwrap();
+        ctx.try_nums[0] = 1;
+        ctx.must_checkpoint = false;
 
         let mut child = Command::new("true").spawn().unwrap();
         child.wait().unwrap();
@@ -131,6 +133,26 @@ mod test {
         assert!(matches!(
             ctx.statuses[0],
             Status::Completed(Completed::Job(_))
-        ))
+        ));
+        assert!(ctx.must_checkpoint)
+    }
+
+    #[test]
+    fn test_poll_failed() {
+        let cfg = Cfg::default();
+        let nodes = vec![Node::Task(get_task(0))];
+        let mut ctx = Ctx::new(&nodes).unwrap();
+        ctx.try_nums[0] = 1;
+        ctx.must_checkpoint = false;
+
+        let mut child = Command::new("bash").arg("exit").arg("1").spawn().unwrap();
+        child.wait().unwrap();
+        ctx.local_jobs.push((0, child));
+
+        let mut poller = LocalPoller { cfg: &cfg };
+        poller.poll(&nodes, &mut ctx);
+
+        assert!(matches!(ctx.statuses[0], Status::Failed(Failed::Job(_))));
+        assert!(ctx.must_checkpoint)
     }
 }

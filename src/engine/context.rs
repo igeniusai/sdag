@@ -21,6 +21,7 @@ pub struct Ctx {
     pub local_jobs: Vec<(usize, Child)>,
     pub slurm_jobs: Vec<(usize, String)>,
     pub running_cacheable: HashSet<String>,
+    pub must_checkpoint: bool,
 }
 impl Ctx {
     pub fn new(nodes: &[Node]) -> Result<Self, String> {
@@ -54,6 +55,7 @@ impl Ctx {
             running_cacheable: HashSet::new(),
             local_jobs: Vec::new(),
             slurm_jobs: Vec::new(),
+            must_checkpoint: true,
         })
     }
 
@@ -66,6 +68,7 @@ impl Ctx {
             running_cacheable: HashSet::new(),
             local_jobs: Vec::new(),
             slurm_jobs: Vec::new(),
+            must_checkpoint: false,
         };
         ctx.mark_all_local_running_jobs_as_failed(nodes);
         ctx.collect_running_slurm_jobs();
@@ -74,6 +77,11 @@ impl Ctx {
 
     pub fn nrunning(&self) -> usize {
         self.slurm_jobs.len() + self.local_jobs.len()
+    }
+
+    pub fn set_status(&mut self, uid: usize, status: Status) {
+        self.statuses[uid] = status;
+        self.must_checkpoint = true;
     }
 
     fn mark_all_local_running_jobs_as_failed(&mut self, nodes: &[Node]) {
