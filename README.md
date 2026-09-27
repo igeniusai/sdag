@@ -64,7 +64,7 @@ rustup update
 
 ## Getting started
 
-After installing the library, copy the following snippet into a file named `hello.py`:
+Paste the following code into a module in the main project directory:
 
 ```py
 from sdag import Script, pipeline
@@ -75,15 +75,15 @@ def hello_world() -> None:
     say_hello(name="sdag")
 
 
-@hello_world.task(Script("sdag-execute"), cmd="bash")
+@hello_world.task(Script("sdag-execute"))
 def say_hello(name: str) -> None:
     print(f"hello from {name}")
 ```
 
-To run the `hello` pipeline, execute:
+To run the `hello_world` pipeline locally, execute:
 
 ```sh
-sdag run hello:hello_world
+sdag run hello_world --local
 ```
 
 Check out the official [documentation](https://igeniusai.github.io/sdag/) for a detailed description of the features offered by sdag.
