@@ -379,8 +379,8 @@ class ParserBuilder:
             default="last",
             help=(
                 "Pipeline hash as written in the compiled JSON file."
-                " If equal to 'last', the most recently create pipeline"
-                " is continued. Defaults to 'last'"
+                " If equal to 'last', the most recently created pipeline"
+                " is considered. Defaults to 'last'"
             ),
         )
 

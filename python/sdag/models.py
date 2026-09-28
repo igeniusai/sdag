@@ -3,7 +3,6 @@
 
 """sdag models."""
 
-import random
 import sys
 
 if sys.version_info >= (3, 11):
@@ -570,22 +569,11 @@ NodeUnion = Annotated[
 """Node union."""
 
 
-def get_random_hash() -> str:
-    """Generate an unique hash for the compiled JSON.
-
-    Returns:
-        str: Hash.
-    """
-    random.seed()
-    return format(random.getrandbits(64), "x")
-
-
 class DAGMeta(BaseModel):
     """DAG metadata.
 
     Attributes:
         pipeline_name (str): Pipeline name.
-        hash (str): Unique hash.
         timestamp (str): Timestamp.
         import_path (str): Import path.
         kwargs (dict[str, Any]): Pipeline input kwargs.
@@ -593,7 +581,6 @@ class DAGMeta(BaseModel):
     """
 
     pipeline_name: str
-    hash: str = Field(default_factory=get_random_hash)
     timestamp: str = Field(default_factory=datetime.now().isoformat)
     import_path: str = ""
     kwargs: dict[str, Any] = Field(default_factory=dict)

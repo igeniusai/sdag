@@ -285,11 +285,7 @@ def test_apply_pyproj_configs(
         tags=["TAG1", "TAG2"],
         script=ScriptPath(path=Path()),
     )
-
-    dag = DAG(
-        meta=DAGMeta(pipeline_name="pipe", hash="xxx"),
-        nodes=[task],
-    )
+    dag = DAG(meta=DAGMeta(pipeline_name="pipe"), nodes=[task])
 
     apply_pyproj_configs(dag, pyproj)
     assert dag.nodes[0].cmd == cmd  # type: ignore
@@ -310,10 +306,7 @@ def test_override_all_slurm_cmds() -> None:
         tags=[],
         script=ScriptPath(path=Path()),
     )
-    dag = DAG(
-        meta=DAGMeta(pipeline_name="pipe", hash="xxx"),
-        nodes=[task],
-    )
+    dag = DAG(meta=DAGMeta(pipeline_name="pipe"), nodes=[task])
     pyproj_dict = {
         "job-name": "job",
         "nodes": 2,
@@ -354,11 +347,7 @@ def test_override_environment_variables() -> None:
             "OVERWRITTEN_TAG": "task_value",
         },
     )
-
-    dag = DAG(
-        meta=DAGMeta(pipeline_name="pipe", hash="xxx"),
-        nodes=[task],
-    )
+    dag = DAG(meta=DAGMeta(pipeline_name="pipe"), nodes=[task])
 
     pyproj_dict = {
         "envs": {
@@ -403,10 +392,7 @@ def test_override_slurm_from_tag() -> None:
         tags=["TAG2"],
         script=ScriptPath(path=Path()),
     )
-    dag = DAG(
-        meta=DAGMeta(pipeline_name="pipe", hash="xxx"),
-        nodes=[task],
-    )
+    dag = DAG(meta=DAGMeta(pipeline_name="pipe"), nodes=[task])
     pyproj_dict = {
         "job-name": "job-1",
         "nodes": 1,

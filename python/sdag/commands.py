@@ -71,7 +71,7 @@ def compile_and_return_dag(
     cfg = get_pyproj()
     apply_pyproj_configs(dag, cfg)
 
-    logger.info("Compiled pipeline '%s' with hash '%s'", path, dag.meta.hash)
+    logger.info("Compiled pipeline '%s'", path)
 
     return dag
 
@@ -237,18 +237,14 @@ def restart_run(args: Namespace, extras: dict[str, Any]) -> None:
     pyproj.join_cli_args(args)
     configure_logging(pyproj.log_level)
 
+    pipeline_name = args.pipeline
     if args.pipeline.endswith(".json"):
         dag = _parse_compiled_pipeline(args.pipeline)
         pipeline_name = dag.meta.pipeline_name
-        pipeline_hash = dag.meta.hash
-
-    else:
-        pipeline_name = args.pipeline
-        pipeline_hash = args.hash
 
     core.restart_run(
         pipeline_name=pipeline_name,
-        pipeline_hash=pipeline_hash,
+        pipeline_hash=args.hash,
         max_concurrency=pyproj.max_concurrency,
         time_between_polls=pyproj.time_between_polls,
         log_level=pyproj.log_level,
@@ -274,18 +270,14 @@ def retry_run(args: Namespace, extras: dict[str, Any]) -> None:
     pyproj.join_cli_args(args)
     configure_logging(pyproj.log_level)
 
+    pipeline_name = args.pipeline
     if args.pipeline.endswith(".json"):
         dag = _parse_compiled_pipeline(args.pipeline)
         pipeline_name = dag.meta.pipeline_name
-        pipeline_hash = dag.meta.hash
-
-    else:
-        pipeline_name = args.pipeline
-        pipeline_hash = args.hash
 
     core.restart_run(
         pipeline_name=pipeline_name,
-        pipeline_hash=pipeline_hash,
+        pipeline_hash=args.hash,
         max_concurrency=pyproj.max_concurrency,
         time_between_polls=pyproj.time_between_polls,
         log_level=pyproj.log_level,
@@ -311,18 +303,14 @@ def kill_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
     pyproj.join_cli_args(args)
     configure_logging(pyproj.log_level)
 
+    pipeline_name = args.pipeline
     if args.pipeline.endswith(".json"):
         dag = _parse_compiled_pipeline(args.pipeline)
         pipeline_name = dag.meta.pipeline_name
-        pipeline_hash = dag.meta.hash
-
-    else:
-        pipeline_name = args.pipeline
-        pipeline_hash = args.hash
 
     core.kill_run(
         pipeline_name=pipeline_name,
-        pipeline_hash=pipeline_hash,
+        pipeline_hash=args.hash,
         log_level=pyproj.log_level,
     )
 

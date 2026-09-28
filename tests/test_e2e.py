@@ -101,22 +101,25 @@ def test_prune_cache_from_json(
 
     pipeline = {
         "meta": {
-            "pipeline_name": "dag",
+            "pipeline_name": "test_prune_cache_from_json",
             "timestamp": "2025-12-30T11:30:46.343072",
-            "hash": "xyzk",
             "extra": {},
             "kwargs": {},
             "import_path": "path.to.pipeline:fn",
         },
         "nodes": [
-            {"uid": 0, "pipeline_name": "dag", "kind": "root"},
+            {
+                "uid": 0,
+                "pipeline_name": "test_prune_cache_from_json",
+                "kind": "root",
+            },
             {
                 "uid": 1,
                 "kind": "task",
                 "fn_name": "task",
                 "name": "task_global",
                 "scope": "global",
-                "pipeline_name": "dag",
+                "pipeline_name": "test_prune_cache_from_json",
                 "cache": True,
                 "mode": "ext",
                 "cmd": "bash",
@@ -138,7 +141,7 @@ def test_prune_cache_from_json(
                 "scope": "local",
                 "fn_name": "task",
                 "name": "task_local",
-                "pipeline_name": "dag",
+                "pipeline_name": "test_prune_cache_from_json",
                 "cache": True,
                 "mode": "ext",
                 "cmd": "bash",
@@ -176,7 +179,9 @@ def test_prune_cache_from_json(
         json.dump(pipeline, f)
 
     cache_path = tmp_path / ".sdag" / ".cache"
-    local_cache_path = cache_path / "local" / "dag" / "task_local"
+    local_cache_path = (
+        cache_path / "local" / "test_prune_cache_from_json" / "task_local"
+    )
     global_cache_path = cache_path / "global" / "task_global"
     global_cache_path.mkdir(parents=True, exist_ok=True)
     local_cache_path.mkdir(parents=True, exist_ok=True)
@@ -235,9 +240,9 @@ def test_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
     pipeline = {
         "meta": {
-            "pipeline_name": "dag",
-            "timestamp": "2025-12-30T11:30:46.343072",
             "hash": "xyz",
+            "pipeline_name": "test_run_pipeline",
+            "timestamp": "2025-12-30T11:30:46.343072",
             "extra": {},
             "import_path": "path.to.pipeline:fn",
             "kwargs": {},
@@ -291,7 +296,13 @@ def test_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     cli()
 
     assert (
-        tmp_path / ".sdag" / "pipelines" / "dag" / "xyz" / "1" / "output.json"
+        tmp_path
+        / ".sdag"
+        / "pipelines"
+        / "test_run_pipeline"
+        / "xyz"
+        / "1"
+        / "output.json"
     ).exists()
     assert target_path.exists()
 
@@ -317,21 +328,24 @@ def test_run_pipeline_with_global_caching(
 
     pipeline = {
         "meta": {
-            "pipeline_name": "dag",
+            "pipeline_name": "test_run_pipeline_with_global_caching",
             "timestamp": "2025-12-30T11:30:46.343072",
-            "hash": "xyzk",
             "extra": {},
             "kwargs": {},
             "import_path": "path.to.pipeline:fn",
         },
         "nodes": [
-            {"uid": 0, "pipeline_name": "dag", "kind": "root"},
+            {
+                "uid": 0,
+                "pipeline_name": "test_prune_cache_from_json",
+                "kind": "root",
+            },
             {
                 "uid": 1,
                 "kind": "task",
                 "fn_name": "task",
                 "name": "task",
-                "pipeline_name": "dag",
+                "pipeline_name": "test_prune_cache_from_json",
                 "scope": "global",
                 "cache": True,
                 "cache_size": 1,
@@ -351,7 +365,7 @@ def test_run_pipeline_with_global_caching(
             },
             {
                 "uid": 2,
-                "pipeline_name": "dag",
+                "pipeline_name": "test_prune_cache_from_json",
                 "kind": "end",
                 "parents": [
                     {
@@ -400,9 +414,8 @@ def test_run_pipeline_with_local_caching(
 
     pipeline = {
         "meta": {
-            "pipeline_name": "dag",
+            "pipeline_name": "test_run_pipeline_with_local_caching",
             "timestamp": "2025-12-30T11:30:46.343072",
-            "hash": "xyzk",
             "extra": {},
             "kwargs": {},
             "import_path": "path.to.pipeline:fn",
