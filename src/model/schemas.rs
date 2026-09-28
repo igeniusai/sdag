@@ -7,10 +7,18 @@ use crate::settings::Cfg;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{borrow::Cow, collections::HashMap, fmt, path::PathBuf};
+use uuid::Uuid;
+
+fn get_new_dag_hash() -> String {
+    let full_uuid = Uuid::new_v4().to_string();
+    let idx = full_uuid.char_indices().nth_back(11).unwrap().0;
+    full_uuid[idx..].into()
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct DAGMeta {
     pub pipeline_name: String,
+    #[serde(default = "get_new_dag_hash")]
     pub hash: String,
     pub timestamp: String,
     pub extra: Value,
@@ -198,4 +206,15 @@ pub struct SlurmOverride {
     pub cpus_per_task: Option<usize>,
     pub mem: Option<String>,
     pub time: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verify_hash_length() {
+        let hash = get_new_dag_hash();
+        assert_eq!(hash.chars().count(), 12);
+    }
 }
