@@ -14,17 +14,17 @@ Caching is used to persist the output of a task across multiple runs, so you don
         non_cached_task(t)
 
 
-    @cached.task("script.sh", cache=True)
+    @cached.task("submit.sh", cache=True)
     def cached_task(a: str):
         print(f"I only run once. The value of a is {a}")
 
 
-    @cached.task("script.sh")
+    @cached.task("submit.sh")
     def non_cached_task():
         print("I run every time")
     ```
 
-=== "`script.sh`"
+=== "`submit.sh`"
 
     ```sh
     sdag-execute
@@ -48,7 +48,7 @@ def name_change():
     t.name = "another_task"
 
 
-@name_change.task("script.sh", cache=True)
+@name_change.task("submit.sh", cache=True)
 def a_task(value: int):
     print(f"value: {value}")
 ```
@@ -77,12 +77,12 @@ def dag_with_artifact():
     print_path(input_path=t.artifacts["path"])
 
 
-@dag_with_artifact.task("script.sh", cache=True)
+@dag_with_artifact.task("submit.sh", cache=True)
 def create_file(path: Artifact[Path]):
     path.touch()
 
 
-@dag_with_artifact.task("script.sh", cache=True)
+@dag_with_artifact.task("submit.sh", cache=True)
 def print_path(input_path: str):
     print(f"The input path is {input_path}")
 ```
@@ -127,4 +127,4 @@ to delete the cache of the `create_file` task. Check out the [CLI](../cli.md) se
 
 
 !!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.
+    To run these examples with Slurm, turn `submit.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.

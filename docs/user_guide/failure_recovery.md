@@ -32,17 +32,17 @@ Create the following two files in the main project directory:
         will_never_run(t)
 
 
-    @failure.task("script.sh")
+    @failure.task("submit.sh")
     def failed_task():
         raise ValueError("Failing...")
 
 
-    @failure.task("script.sh")
+    @failure.task("submit.sh")
     def will_never_run():
         print("You will never see this message")
     ```
 
-=== "`script.sh`"
+=== "`submit.sh`"
 
     ```sh
     sdag-execute
@@ -63,7 +63,7 @@ sdag retry failure
 `retry` will reset all failed and skipped task before continuing the run. If no task failed or get skipped, then `sdag retry` it's virtually identical to `sdag restart` of the previous section. You can also set the number of retries for a task. Modify `failed_task` as follows:
 
 ```py
-@failure.task("script.sh", retries=2)
+@failure.task("submit.sh", retries=2)
 def failed_task():
     raise ValueError("Failing...")
 ```
@@ -77,4 +77,4 @@ sdag run failure --local
 You will see that the execution of `failed_task` is retried two times before marking it as failed definitively.
 
 !!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.
+    To run these examples with Slurm, turn `submit.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.

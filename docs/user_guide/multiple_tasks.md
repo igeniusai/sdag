@@ -15,12 +15,12 @@ Create the following two files in the main project directory:
         say_hello()
 
 
-    @many_tasks.task("script.sh")
+    @many_tasks.task("submit.sh")
     def say_hello():
         print("hello world!")
     ```
 
-=== "`script.sh`"
+=== "`submit.sh`"
 
     ```sh
     sdag-execute
@@ -65,12 +65,12 @@ def dependent_tasks():
     second(t1, t2)
 
 
-@dependent_tasks.task("script.sh")
+@dependent_tasks.task("submit.sh")
 def first():
     print("I run first!")
 
 
-@dependent_tasks.task("script.sh")
+@dependent_tasks.task("submit.sh")
 async def second():
     await asyncio.sleep(1)
     print("I run second!")
@@ -105,4 +105,4 @@ sdag run dependent_tasks --local
 ```
 
 !!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.
+    To run these examples with Slurm, turn `submit.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.

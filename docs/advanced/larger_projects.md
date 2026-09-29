@@ -16,12 +16,12 @@ This examples takes advantage of the `hello.py` module created in the [first exa
         say_hello(name="sdag")
 
 
-    @hello_world.task("script.sh")
+    @hello_world.task("submit.sh")
     def say_hello(name: str):
         print(f"hello from {name}")
     ```
 
-=== "`script.sh`"
+=== "`submit.sh`"
 
     ```sh
     #!/bin/bash
@@ -38,7 +38,7 @@ This examples takes advantage of the `hello.py` module created in the [first exa
 
 ## Flat layout
 
-Create a `<my-package>/workflows` directory and an empty `__init__.py` module inside it. Now copy the `hello.py` module from the previous example in the `workflows/` folder and the `script.sh` script in the main project one. Finally, copy the following snippet inside the `pyproject.toml` file:
+Create a `<my-package>/workflows` directory and an empty `__init__.py` module inside it. Now copy the `hello.py` module from the previous example in the `workflows/` folder and the `submit.sh` script in the main project one. Finally, copy the following snippet inside the `pyproject.toml` file:
 
 ```toml title="pyproject.toml"
 [tool.sdag]
@@ -50,7 +50,7 @@ Your project tree should look like this:
 ``` title="flat layout"
 <my-package>
 ├── pyproject.toml
-├── script.sh      <- Execution script
+├── submit.sh      <- Execution script
 └── <my_package>
     ├── __init__.py
     └── workflows
@@ -60,7 +60,7 @@ Your project tree should look like this:
 
 ## src layout
 
-Create a `src/<my-package>/workflows` directory and an empty `__init__.py` module inside it. Now copy the `hello.py` module from the previous example in the `workflows/` folder and the `script.sh` script in the main project one. Finally, copy the following snippet inside the `pyproject.toml` file:
+Create a `src/<my-package>/workflows` directory and an empty `__init__.py` module inside it. Now copy the `hello.py` module from the previous example in the `workflows/` folder and the `submit.sh` script in the main project one. Finally, copy the following snippet inside the `pyproject.toml` file:
 
 ```toml title="pyproject.toml"
 [tool.sdag]
@@ -72,7 +72,7 @@ Your project tree should look like this:
 ``` title="src layout"
 <my-package>
 ├── pyproject.toml
-├── script.sh      <- Execution script
+├── submit.sh      <- Execution script
 └── src
     └── <my_package>
         ├── __init__.py

@@ -28,7 +28,7 @@ sdag run external_dag --local
 
 ## Local tasks
 
-Differently from other libraries, in sdag you don't specify a runner for the whole pipeline. Local and Slurm tasks can be freely mixed in the same workflow. This choice has been made to avoid spinning Slurm jobs that may stay in queue forever just to perform small operations that could be easily executed locally. Add a new pipeline to `external_local_tasks.py` and create the corresponding `script.sh`:
+Differently from other libraries, in sdag you don't specify a runner for the whole pipeline. Local and Slurm tasks can be freely mixed in the same workflow. This choice has been made to avoid spinning Slurm jobs that may stay in queue forever just to perform small operations that could be easily executed locally. Add a new pipeline to `external_local_tasks.py` and create the corresponding `submit.sh`:
 
 === "`external_local_tasks.py`"
 
@@ -38,12 +38,12 @@ Differently from other libraries, in sdag you don't specify a runner for the who
         local_task()
 
 
-    @local_dag.task("script.sh", cmd="bash")
+    @local_dag.task("submit.sh", cmd="bash")
     def local_task():
         print("I run locally!")
     ```
 
-=== "`script.sh`"
+=== "`submit.sh`"
 
     ```sh
     sdag-execute
@@ -59,4 +59,4 @@ sdag run local_dag
 Under the hood, the `--local` option used in many other examples simply sets `cmd="bash"` to all tasks, thus forcing them to run as local processes.
 
 !!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.
+    To run these examples with Slurm, turn `submit.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.

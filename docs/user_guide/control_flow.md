@@ -20,32 +20,32 @@ The pipeline structure can be dynamically altered based on the output of other t
             option3()
 
 
-    @control_flow.task("script.sh")
+    @control_flow.task("submit.sh")
     def condition1() -> bool:
         return False
 
 
-    @control_flow.task("script.sh")
+    @control_flow.task("submit.sh")
     def condition2() -> bool:
         return True
 
 
-    @control_flow.task("script.sh")
+    @control_flow.task("submit.sh")
     def option1():
         print("Option 1 selected")
 
 
-    @control_flow.task("script.sh")
+    @control_flow.task("submit.sh")
     def option2():
         print("Option 2 selected")
 
 
-    @control_flow.task("script.sh")
+    @control_flow.task("submit.sh")
     def option3():
         print("Option 3 selected")
     ```
 
-=== "`script.sh`"
+=== "`submit.sh`"
 
     ```sh
     sdag-execute
@@ -94,22 +94,22 @@ def oneof_example():
     final_task(t)
 
 
-@oneof_example.task("script.sh")
+@oneof_example.task("submit.sh")
 def condition() -> bool:
     return False
 
 
-@oneof_example.task("script.sh")
+@oneof_example.task("submit.sh")
 def first_alternative():
     print("alternative 1 selected")
 
 
-@oneof_example.task("script.sh")
+@oneof_example.task("submit.sh")
 def second_alternative():
     print("alternative 2 selected")
 
 
-@oneof_example.task("script.sh")
+@oneof_example.task("submit.sh")
 def final_task():
     print("final task")
 ```
@@ -134,4 +134,4 @@ def dag():
 ```
 
 !!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.
+    To run these examples with Slurm, turn `submit.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.

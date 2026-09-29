@@ -21,12 +21,12 @@ Create the following two files in the main project directory:
         global_task(path="./artifact.txt")
 
 
-    @task("script.sh")
+    @task("submit.sh")
     def global_task(path: Artifact[Path]):
         path.touch()
     ```
 
-=== "`script.sh`"
+=== "`submit.sh`"
 
     ```sh
     sdag-execute
@@ -54,13 +54,13 @@ def task_calling_task():
     outer_task()
 
 
-@task_calling_task.task("script.sh")
+@task_calling_task.task("submit.sh")
 def outer_task():
     result = inner_task.fn(a=1)
     print(f"1 + 1 = {result}")
 
 
-@task_calling_task.task("script.sh")
+@task_calling_task.task("submit.sh")
 def inner_task(a: int):
     return a + 1
 ```
@@ -72,4 +72,4 @@ sdag run task_calling_task --local
 ```
 
 !!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](../user_guide/hello_world.md) section and execute pipelines without the `--local` option.
+    To run these examples with Slurm, turn `submit.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](../user_guide/hello_world.md) section and execute pipelines without the `--local` option.

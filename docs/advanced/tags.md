@@ -5,7 +5,7 @@ Tags can be used to specify custom configurations for groups of tasks. Tags can 
 ```py
 from sdag import task
 
-@task("script.sh", tags=["online", "small", "custom"])
+@task("submit.sh", tags=["online", "small", "custom"])
 def some_task(): ...
 ```
 
