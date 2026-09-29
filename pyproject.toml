@@ -128,5 +128,5 @@ sdag = "sdag.entrypoints:cli"
 sdag-execute = "sdag.entrypoints:sdag_execute"
 
 [tool.sdag]
-dag-dir = "python/sdag/pipelines"
+dag-dir = "./examples"
 log-level = "info"
