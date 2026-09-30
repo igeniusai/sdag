@@ -23,7 +23,7 @@ def override():
     t.slurm.output = "path/to/file.out"
 
 
-@override.task("script.sh")
+@override.task("submit.sh")
 def default_task(): ...
 ```
 

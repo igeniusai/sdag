@@ -15,17 +15,17 @@ Create the following two files in the main project directory:
         take_input(world=t)
 
 
-    @output_use.task("script.sh")
+    @output_use.task("submit.sh")
     def return_output():
         return "world"
 
 
-    @output_use.task("script.sh")
+    @output_use.task("submit.sh")
     def take_input(world: str):
         print(f"Hello, {world}!")
     ```
 
-=== "`script.sh`"
+=== "`submit.sh`"
 
     ```sh
     sdag-execute
@@ -76,7 +76,7 @@ def dag_with_input(input_path):
     use_input_path(input_path=input_path)
 
 
-@dag_with_input.task("script.sh")
+@dag_with_input.task("submit.sh")
 def use_input_path(input_path: Path):
     print(f"Input path: '{input_path}'; type: {type(input_path)}")
 ```
@@ -102,7 +102,7 @@ sdag runtask use_input_path dag_with_input --local --input-path=a/path
 Notice that `input_path` is automatically cast to `Path`. We only do this with paths to eliminate a frequent pattern showing up in our pipelines:
 
 ```py
-@dag_with_input.task("script.sh")
+@dag_with_input.task("submit.sh")
 def use_input_path(input1: str, input2: str):
     input1_path = Path(input1)
     input2_path = Path(input2)
@@ -110,4 +110,4 @@ def use_input_path(input1: str, input2: str):
 ```
 
 !!! info
-    To run these examples with Slurm, turn `script.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.
+    To run these examples with Slurm, turn `submit.sh` into a [sbatch](https://slurm.schedmd.com/sbatch.html) script as explained in the [Hello World](hello_world.md) section and execute pipelines without the `--local` option.

@@ -107,15 +107,19 @@ to activate it. Execute:
 
 ```sh
 pytest
-````
+```
 
-to run the Python tests and:
+to run the the quick Python test suite and:
+
+```sh
+pytest --runslow
+```
+
+to run every Python test. Rust tests can be executed through:
 
 ```sh
 cargo test
 ```
-
-to execute all Rust tests.
 
 ## Building the docs
 

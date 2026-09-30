@@ -9,12 +9,12 @@ from pathlib import Path
 from sdag import Artifact, task
 
 
-@task("script.sh")
+@task("submit.sh")
 def task_with_input(a: int):
     return a + 1
 
 
-@task("script.sh")
+@task("submit.sh")
 def task_with_artifact(output_path: Artifact[Path]):
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.touch()

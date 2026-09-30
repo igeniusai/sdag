@@ -14,12 +14,12 @@ After [installing](../installation.md) sdag, create the following two files in t
         say_hello(name="sdag")
 
 
-    @hello_world.task("script.sh")
+    @hello_world.task("submit.sh")
     def say_hello(name: str):
         print(f"hello from {name}")
     ```
 
-=== "`script.sh`"
+=== "`submit.sh`"
 
     ```sh
     sdag-execute
@@ -64,9 +64,9 @@ sdag run hello_world --local
 
 (thus without pointing to a compiled JSON file), the `hello_world` pipeline would be compiled on the fly and then immediately executed. Several sdag commands accept either pipeline names, import strings, or compiled JSON paths. The latter allows one to skip the compilation step. You can check out the [CLI](../cli.md) section for additional information.
 
-The `--local` option is used to run tasks locally as explained in the [local task](external_tasks.md) section. To run the same pipeline on a Slurm cluster, create a standard [sbatch](https://slurm.schedmd.com/sbatch.html) script by modifying `script.sh` as follows:
+The `--local` option is used to run tasks locally as explained in the [local task](external_tasks.md) section. To run the same pipeline on a Slurm cluster, create a standard [sbatch](https://slurm.schedmd.com/sbatch.html) script by modifying `submit.sh` as follows:
 
-```sh title="script.sh"
+```sh title="submit.sh"
 #!/bin/bash
 #SBATCH --account=<account-name>
 #SBATCH --partition=<partition-name>

@@ -10,9 +10,9 @@ if __name__ == "__main__":
     sdag_execute(configure_logger=False)
 ```
 
-It is now possible to replace the `sdag-execute` command in `script.sh` with a call to this module:
+It is now possible to replace the `sdag-execute` command in `submit.sh` with a call to this module:
 
-```sh  title="script.sh"
+```sh  title="submit.sh"
 #!/bin/bash
 #SBATCH --account=<account-name>
 #SBATCH --partition=<partition-name>

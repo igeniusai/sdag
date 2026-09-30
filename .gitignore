@@ -178,4 +178,7 @@ python/sdag/pipelines
 .sdag.toml
 
 # debugging stuff
-debug/
+debug*
+
+# example artifact
+artifact.txt
