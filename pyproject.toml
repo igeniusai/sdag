@@ -2,9 +2,28 @@
 name = "sdag"
 version = "0.3.0"
 description = "DAGs for Slurm"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+keywords = ["pipeline", "dag", "workflows", "slurm", "hpc"]
 readme = "README.md"
 authors = [
     { name = "Alessandro Rognoni", email = "alessandro.rognoni@domyn.com" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: Unix",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Rust",
+    "Topic :: System :: Distributed Computing",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 requires-python = ">=3.10"
 dependencies = [
