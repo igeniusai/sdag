@@ -4,6 +4,7 @@
 use crate::engine::{context::Ctx, scheduler};
 use crate::model::{dag_setup, status};
 use crate::settings::{self, Cfg};
+use crate::store::checkpoint_validation::CheckpointValidator;
 use crate::store::state;
 use crate::store::workdirs::{self, DirPaths};
 use std::path::PathBuf;
@@ -86,6 +87,13 @@ pub fn restart_run(
     cfg.sleep_time = Duration::from_secs(time_between_polls);
     cfg.log_level = log_level.to_string();
     cfg.fail_fast = fail_fast;
+
+    log::info!("Start checkpoint validation");
+    let validator = CheckpointValidator { cfg: &cfg };
+    validator
+        .validate_checkpoint(&nodes, &ctx)
+        .expect("Failed checkpoint validation");
+    log::info!("Checkpoint successfully validated");
 
     scheduler::scheduling_loop(&nodes, &mut ctx, &cfg, &meta);
 }

@@ -82,11 +82,15 @@ pub enum Status {
 
 impl Status {
     pub fn is_final(&self) -> bool {
-        return matches!(self, Self::Completed(_) | Self::Failed(_) | Self::Skipped);
+        matches!(self, Self::Completed(_) | Self::Failed(_) | Self::Skipped)
     }
 
     pub fn is_running(&self) -> bool {
-        return matches!(self, Self::Pending(_) | Self::Running(_));
+        matches!(self, Self::Pending(_) | Self::Running(_))
+    }
+
+    pub fn is_completed(&self) -> bool {
+        matches!(self, Self::Completed(_))
     }
 
     pub fn log_priority(&self) -> u16 {
