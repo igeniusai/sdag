@@ -135,11 +135,11 @@ mod tests {
         pub dagdir: PathBuf,
     }
     impl DirCreator {
-        pub fn new(dag_name: &str) -> Self {
+        pub fn new(dag_name: &str, hash: &str) -> Self {
             let homedir = env::temp_dir().join(Uuid::new_v4().to_string());
             let cachedir = homedir.join(".cache").join("global");
             let local_cachedir = homedir.join(".cache").join("local");
-            let dagdir = homedir.join(&dag_name);
+            let dagdir = homedir.join(dag_name).join(hash);
             Self {
                 homedir,
                 cachedir,
@@ -224,8 +224,8 @@ mod tests {
         Ctx::new(nodes).unwrap()
     }
 
-    fn get_objects(dag_name: &str) -> (DirCreator, Vec<Node>, Ctx, Cfg) {
-        let creator = DirCreator::new(dag_name);
+    fn get_objects(dag_name: &str, hash: &str) -> (DirCreator, Vec<Node>, Ctx, Cfg) {
+        let creator = DirCreator::new(dag_name, hash);
         let nodes = get_nodes(dag_name);
         let ctx = get_ctx(&nodes);
         let cfg = get_cfg(&creator);
@@ -235,7 +235,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_missing_homedir() {
-        let (_, nodes, ctx, cfg) = get_objects("dag");
+        let (_, nodes, ctx, cfg) = get_objects("dag", "xyz");
         let validator = CheckpointValidator { cfg: &cfg };
         validator.validate_checkpoint(&nodes, &ctx).unwrap();
     }
@@ -243,7 +243,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_missing_cachedir() {
-        let (creator, nodes, ctx, cfg) = get_objects("dag");
+        let (creator, nodes, ctx, cfg) = get_objects("dag", "xyz");
         creator.create_local_cachedir();
         creator.create_meta_file(1);
 
@@ -254,7 +254,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_missing_local_cachedir() {
-        let (creator, nodes, ctx, cfg) = get_objects("dag");
+        let (creator, nodes, ctx, cfg) = get_objects("dag", "xyz");
         creator.create_cachedir();
         creator.create_meta_file(1);
 
@@ -265,7 +265,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_missing_dagdir() {
-        let (creator, nodes, ctx, cfg) = get_objects("dag");
+        let (creator, nodes, ctx, cfg) = get_objects("dag", "xyz");
         creator.create_cachedir();
         creator.create_local_cachedir();
 
@@ -276,7 +276,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_missing_task_input() {
-        let (creator, nodes, ctx, cfg) = get_objects("dag");
+        let (creator, nodes, ctx, cfg) = get_objects("dag", "xyz");
         creator.create_cachedir();
         creator.create_local_cachedir();
         creator.create_dagdir();
@@ -287,7 +287,7 @@ mod tests {
 
     #[test]
     fn validate_correct_not_submitted() {
-        let (creator, nodes, ctx, cfg) = get_objects("dag");
+        let (creator, nodes, ctx, cfg) = get_objects("dag", "xyz");
         creator.create_cachedir();
         creator.create_local_cachedir();
         creator.create_meta_file(1);
@@ -299,7 +299,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn validate_running_job_missing_input() {
-        let (creator, nodes, mut ctx, cfg) = get_objects("dag");
+        let (creator, nodes, mut ctx, cfg) = get_objects("dag", "xyz");
         creator.create_cachedir();
         creator.create_local_cachedir();
         creator.create_meta_file(1);
@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn validate_running_job() {
-        let (creator, nodes, mut ctx, cfg) = get_objects("dag");
+        let (creator, nodes, mut ctx, cfg) = get_objects("dag", "xyz");
         creator.create_cachedir();
         creator.create_local_cachedir();
         creator.create_meta_file(1);
@@ -325,7 +325,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn validate_completed_oneof_missing_meta() {
-        let (creator, nodes, mut ctx, cfg) = get_objects("dag");
+        let (creator, nodes, mut ctx, cfg) = get_objects("dag", "xyz");
         creator.create_cachedir();
         creator.create_local_cachedir();
         creator.create_meta_file(1);
@@ -340,7 +340,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn validate_completed_oneof_missing_input() {
-        let (creator, nodes, mut ctx, cfg) = get_objects("dag");
+        let (creator, nodes, mut ctx, cfg) = get_objects("dag", "xyz");
         creator.create_cachedir();
         creator.create_local_cachedir();
         creator.create_meta_file(1);
@@ -355,7 +355,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn validate_completed_oneof_missing_output() {
-        let (creator, nodes, mut ctx, cfg) = get_objects("dag");
+        let (creator, nodes, mut ctx, cfg) = get_objects("dag", "xyz");
         creator.create_cachedir();
         creator.create_local_cachedir();
         creator.create_meta_file(1);
@@ -369,7 +369,7 @@ mod tests {
 
     #[test]
     fn validate_completed_oneof() {
-        let (creator, nodes, mut ctx, cfg) = get_objects("dag");
+        let (creator, nodes, mut ctx, cfg) = get_objects("dag", "xyz");
         creator.create_cachedir();
         creator.create_local_cachedir();
         creator.create_meta_file(1);
