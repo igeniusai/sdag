@@ -3,5 +3,6 @@
 
 pub mod dag_setup;
 pub mod nodes;
+pub mod responses;
 pub mod schemas;
 pub mod status;
