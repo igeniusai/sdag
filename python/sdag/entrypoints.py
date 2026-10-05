@@ -30,6 +30,7 @@ def cli():
         .add_view_subparser()
         .add_list_subparser()
         .add_describe_subparser()
+        .add_status_subparser()
         .get_parser()
     )
 

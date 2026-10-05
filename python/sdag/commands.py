@@ -478,3 +478,21 @@ def describe_pipeline(args: Namespace, extras: dict[str, Any]) -> None:
         path = compile_pipeline(args, extras)
 
     core.describe_pipeline(str(path), log_level=pyproj.log_level)
+
+
+def print_status(args: Namespace, extras: dict[str, Any]) -> None:
+    """Describe a pipeline arguments, caching, and artifacts.
+
+    Args:
+        args (Namespace): Parsed args.
+        extras (dict[str, Any]): Extra arguments used for compiling.
+    """
+    if extras:
+        raise ExtraCLIArgsError(extras)
+
+    pyproj = get_pyproj()
+    pyproj.join_cli_args(args)
+    configure_logging(pyproj.log_level)
+    core.print_status(
+        args.pipeline, pipeline_hash=args.hash, log_level=pyproj.log_level
+    )
