@@ -5,12 +5,12 @@ use crate::engine::context::Ctx;
 use crate::engine::polling::Poller;
 use crate::engine::submission::{self, inline};
 use crate::model::nodes::{Node, Task};
+use crate::model::responses::{SacctResponse, SqueueResponse};
 use crate::model::schemas::ExecMode;
 use crate::model::status::JobType::Slurm;
 use crate::model::status::{Completed, Failed, JobType, Status};
 use crate::settings::Cfg;
 use log;
-use regex::Regex;
 use std::collections::HashMap;
 use std::error::Error;
 use std::process::Command;
@@ -26,14 +26,7 @@ impl<'a> Poller for SlurmPoller<'a> {
             return;
         }
 
-        let mut poll_result = match poll_slurm(&ctx.slurm_jobs) {
-            Ok(poll_result) => poll_result,
-            Err(e) => {
-                log::error!("Failed to contact Slurm - {e}");
-                HashMap::new()
-            }
-        };
-
+        let mut poll_result = poll_slurm(&ctx.slurm_jobs);
         self.handle_missing_jobs(&mut poll_result, ctx);
         for (uid, status) in poll_result {
             if let Node::Task(task) = &nodes[uid] {
@@ -137,7 +130,7 @@ impl<'a> SlurmPoller<'a> {
     }
 }
 
-pub fn poll_slurm(jobs: &[(usize, String)]) -> Result<HashMap<usize, Status>, Box<dyn Error>> {
+pub fn poll_slurm(jobs: &[(usize, String)]) -> HashMap<usize, Status> {
     let job_ids = jobs
         .iter()
         .map(|x| x.1.as_str())
@@ -146,30 +139,36 @@ pub fn poll_slurm(jobs: &[(usize, String)]) -> Result<HashMap<usize, Status>, Bo
 
     if job_ids.len() == 0 {
         log::debug!("No running Slurm jobs identified");
-        return Ok(HashMap::new());
+        return HashMap::new();
     }
 
-    let stdout = ask_status_to_slurm(&job_ids)?;
-    let mut output = HashMap::new();
-    for (uid, job_id) in jobs {
-        if let Some(status_string) = parse_slurm_status(job_id, &stdout) {
-            log::info!("Slurm job '{job_id}' status: '{status_string}'");
-            let status = get_status_from_string(&status_string, job_id);
-            output.insert(*uid, status);
-        } else {
-            log::warn!("Slurm is reachable but it did't return any status");
+    let mut output: HashMap<String, String> = HashMap::new();
+    let sacct_result = run_sacct(&job_ids);
+    if let Ok(sacct_response) = sacct_result {
+        read_sacct_status(sacct_response, &mut output);
+    }
+
+    let squeue_result = run_squeue(&job_ids);
+    if let Ok(squeue_response) = squeue_result {
+        read_squeue_status(squeue_response, &mut output);
+    };
+
+    let mut status_map = HashMap::new();
+    for (uid, job_id) in jobs.iter() {
+        if let Some(status_str) = output.get(job_id) {
+            let status = get_status_from_string(status_str, job_id);
+            status_map.insert(*uid, status);
         }
     }
-
-    Ok(output)
+    status_map
 }
 
-fn ask_status_to_slurm(job_ids: &str) -> Result<String, Box<dyn Error>> {
+fn run_sacct(job_ids: &str) -> Result<SacctResponse, Box<dyn Error>> {
+    log::debug!("Fetching status from sacct");
     let output = Command::new("sacct")
         .arg("-j")
         .arg(job_ids)
-        .arg("--format")
-        .arg("JobID,State")
+        .arg("--json")
         .output()?;
 
     let stderr = String::from_utf8(output.stderr);
@@ -180,19 +179,54 @@ fn ask_status_to_slurm(job_ids: &str) -> Result<String, Box<dyn Error>> {
     }
 
     let stdout = String::from_utf8(output.stdout)?;
-    log::debug!("Slurm stdout:\n{stdout}");
-    Ok(stdout)
+    let response: SacctResponse = serde_json::from_str(&stdout)?;
+    log::debug!("Slurm response:\n{response:?}");
+    Ok(response)
 }
 
-fn parse_slurm_status(job_id: &str, stdout: &str) -> Option<String> {
-    let matched = format!("{job_id}\\s+(?<status>\\w+)");
-    let re = Regex::new(&matched).expect("Failed to create Slurm regex");
-    for line in stdout.lines() {
-        if let Some(caps) = re.captures(line) {
-            return Some(caps["status"].into());
-        }
+fn run_squeue(job_ids: &str) -> Result<SqueueResponse, Box<dyn Error>> {
+    log::debug!("Fetching status from squeue");
+    let output = Command::new("squeue")
+        .arg("-j")
+        .arg(job_ids)
+        .arg("--json")
+        .output()?;
+
+    let stderr = String::from_utf8(output.stderr);
+    if let Ok(msg) = stderr
+        && msg.len() > 0
+    {
+        log::error!("Slurm stderr: {msg}")
     }
-    None
+
+    let stdout = String::from_utf8(output.stdout)?;
+    let response: SqueueResponse = serde_json::from_str(&stdout)?;
+    log::debug!("squeue response:\n{response:?}");
+    Ok(response)
+}
+
+fn read_sacct_status(sacct_response: SacctResponse, output: &mut HashMap<String, String>) {
+    for mut job in sacct_response.jobs {
+        let job_id = job.job_id;
+        if job.state.current.len() < 1 {
+            log::warn!("sacct returned no current status for job_id {job_id}");
+            continue;
+        }
+        let status = job.state.current.swap_remove(0);
+        output.insert(job_id, status);
+    }
+}
+
+fn read_squeue_status(squeue_response: SqueueResponse, output: &mut HashMap<String, String>) {
+    for mut job in squeue_response.jobs {
+        let job_id = job.job_id;
+        if job.job_state.len() < 1 {
+            log::debug!("squeue returned no current status for job_id {job_id}");
+            continue;
+        }
+        let status = job.job_state.swap_remove(0);
+        output.insert(job_id, status);
+    }
 }
 
 fn get_status_from_string(status_string: &str, job_id: &str) -> Status {
@@ -207,16 +241,16 @@ fn get_status_from_string(status_string: &str, job_id: &str) -> Status {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::engine::context::Job;
+    use crate::model::responses::{SacctJob, SacctState, SqueueJob};
+    use crate::model::schemas::Cmd;
     use crate::store::workdirs::{DirPaths, FileNames};
     use std::collections::HashMap;
     use std::env;
     use std::fs;
     use std::path::PathBuf;
     use uuid::Uuid;
-
-    use super::*;
-    use crate::model::schemas::Cmd;
 
     fn get_poller(cfg: &Cfg) -> SlurmPoller<'_> {
         SlurmPoller {
@@ -257,57 +291,6 @@ mod tests {
     }
 
     #[test]
-    fn slurm_status_parsed_correctly() {
-        let slurm_status = "
-        JobID             State
-        ------------ ----------
-        20836188      COMPLETED
-        20836188.ba+  COMPLETED
-        20836188.ex+  COMPLETED
-        ";
-        let output = parse_slurm_status("20836188", slurm_status).unwrap();
-        assert_eq!(output, "COMPLETED");
-    }
-
-    #[test]
-    fn slurm_status_not_found() {
-        let slurm_status = "
-        JobID             State
-        ------------ ----------
-        20836188.ba+  COMPLETED
-        20836188.ex+  COMPLETED
-        ";
-        let output = parse_slurm_status("20836188", slurm_status);
-        assert!(output.is_none());
-    }
-
-    #[test]
-    fn get_failed_slurm_status() {
-        let slurm_status = "
-            JobID             State
-            ------------ ----------
-            20836188      FAILED
-            20836188.ba+  COMPLETED
-            20836188.ex+  COMPLETED
-            ";
-        let output = parse_slurm_status("20836188", slurm_status).unwrap();
-        assert_eq!(output, "FAILED");
-    }
-
-    #[test]
-    fn running_slurm_status() {
-        let slurm_status = "
-            JobID             State
-            ------------ ----------
-            20836188      COMPLETING
-            20836188.ba+  COMPLETED
-            20836188.ex+  COMPLETED
-            ";
-        let output = parse_slurm_status("20836188", slurm_status).unwrap();
-        assert_eq!(output, "COMPLETING");
-    }
-
-    #[test]
     fn test_get_status_from_string() {
         assert!(matches!(
             get_status_from_string("COMPLETED", "1"),
@@ -325,7 +308,7 @@ mod tests {
 
     #[test]
     fn test_empty_job_pull() {
-        assert!(poll_slurm(&[]).unwrap().len() == 0)
+        assert!(poll_slurm(&[]).len() == 0)
     }
 
     #[test]
@@ -479,5 +462,69 @@ mod tests {
         let output = taskdir.join(FileNames::Output.as_str());
         assert!(output.exists());
         assert!(ctx.must_checkpoint);
+    }
+
+    #[test]
+    fn test_parse_sacct() {
+        let response = SacctResponse {
+            jobs: vec![
+                SacctJob {
+                    job_id: "123".into(),
+                    state: SacctState {
+                        current: vec!["COMPLETED".into(), "???".into()],
+                    },
+                },
+                SacctJob {
+                    job_id: "456".into(),
+                    state: SacctState {
+                        current: vec!["FAILED".into()],
+                    },
+                },
+                SacctJob {
+                    job_id: "789".into(),
+                    state: SacctState { current: vec![] },
+                },
+            ],
+        };
+
+        let mut output = HashMap::new();
+        read_sacct_status(response, &mut output);
+
+        let status_123 = output.get("123").unwrap();
+        let status_456 = output.get("456").unwrap();
+        let status_789 = output.get("789");
+        assert_eq!(status_123, "COMPLETED");
+        assert_eq!(status_456, "FAILED");
+        assert!(status_789.is_none());
+    }
+
+    #[test]
+    fn test_parse_squeue() {
+        let response = SqueueResponse {
+            jobs: vec![
+                SqueueJob {
+                    job_id: "123".into(),
+                    job_state: vec!["COMPLETED".into(), "???".into()],
+                },
+                SqueueJob {
+                    job_id: "456".into(),
+                    job_state: vec!["FAILED".into()],
+                },
+                SqueueJob {
+                    job_id: "789".into(),
+                    job_state: vec![],
+                },
+            ],
+        };
+
+        let mut output = HashMap::new();
+        read_squeue_status(response, &mut output);
+
+        let status_123 = output.get("123").unwrap();
+        let status_456 = output.get("456").unwrap();
+        let status_789 = output.get("789");
+        assert_eq!(status_123, "COMPLETED");
+        assert_eq!(status_456, "FAILED");
+        assert!(status_789.is_none());
     }
 }

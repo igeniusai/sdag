@@ -6,11 +6,10 @@
 //! The backend executes jobs and polls the status.
 
 use crate::model::nodes::Task;
-use crate::model::schemas::{DAGMeta, ExecMode, Script, SlurmOverride};
+use crate::model::schemas::{Cmd, DAGMeta, ExecMode, Script, SlurmOverride};
 use crate::settings::Cfg;
 use crate::store::{state, workdirs::FileNames};
 use log;
-use regex::Regex;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::error::Error;
@@ -104,6 +103,9 @@ fn build_command(
 ) -> io::Result<Command> {
     let input_kwargs = serde_json::to_string(&meta.kwargs)?;
     let mut cmd = Command::new(task.cmd.to_string());
+    if let Cmd::Sbatch = task.cmd {
+        cmd.arg("--parsable");
+    }
 
     for (env_name, env_val) in envs.iter() {
         cmd.env(env_name, convert_env_to_string(env_val));
@@ -238,10 +240,7 @@ fn convert_env_to_string(value: &Value) -> String {
 }
 
 fn find_submitted_job_id(output: &str) -> Option<String> {
-    let matched = "Submitted batch job (?<jobid>\\w+)";
-    let re = Regex::new(&matched).ok()?;
-    let caps = re.captures(&output)?;
-    Some(caps["jobid"].into())
+    output.split(";").map(|s| s.trim().to_string()).next()
 }
 
 #[cfg(test)]
@@ -319,7 +318,14 @@ mod tests {
 
     #[test]
     fn parse_job_output() {
-        let output = "Submitted batch job 1234".to_string();
+        let output = "1234";
+        let job_id = find_submitted_job_id(&output).unwrap();
+        assert_eq!(job_id, "1234");
+    }
+
+    #[test]
+    fn parse_job_output_with_cluster() {
+        let output = "   1234   ;cluster_name";
         let job_id = find_submitted_job_id(&output).unwrap();
         assert_eq!(job_id, "1234");
     }

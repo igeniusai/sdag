@@ -1,4 +1,4 @@
-#!bin/bash
+#!/bin/bash
 #SBATCH --account=<account>
 #SBATCH --partition=<partition>
 #SBATCH --qos=<qos>
