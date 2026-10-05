@@ -30,6 +30,7 @@ def test_weird_arguments_are_blocked():
         ["sdag", "view", "-h"],
         ["sdag", "list", "-h"],
         ["sdag", "describe", "-h"],
+        ["sdag", "status", "-h"],
     ],
 )
 def test_all_commands_are_reachable(argv: list[str]) -> None:
