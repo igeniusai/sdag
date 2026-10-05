@@ -77,3 +77,10 @@ Print the pipeline graph in the terminal.
 
 - Print the graph of a compiled pipeline: `sdag view path/to/compiled_pipeline.json`
 - Compile and print the the pipeline graph in the terminal: `sdag view pipeline_name`
+
+### `status`
+
+Print the status table of the last checkpoint.
+
+- Print the checkpoint of the last run: `sdag status pipeline_name`
+- Print the checkpoint of a specific run: `sdag status pipeline_name --hash xxx`
