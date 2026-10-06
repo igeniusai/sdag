@@ -7,6 +7,7 @@ import inspect
 import logging
 import sys
 from collections.abc import Callable
+from functools import cached_property
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
+
 
 from sdag.compiler import compiler, master
 from sdag.exceptions import (
@@ -23,6 +25,7 @@ from sdag.exceptions import (
     KwargNotFoundError,
     TaskNotUniqueError,
 )
+from sdag.mod_hashing import ModuleHasher
 from sdag.models import (
     DAG,
     ArtifactContainer,
@@ -301,6 +304,7 @@ class Task:
             cache=self.cache,
             cache_ignore=self.cache_ignore.copy(),
             cache_size=self.cache_size,
+            code_hash=self.code_hash,
             mode=self.mode,
             cmd=self.cmd,
             retries=self.retries,
@@ -429,6 +433,18 @@ class Task:
         else:
             input_kwarg = Kwarg(key=key, value=value)
             node.add_kwarg(input_kwarg)
+
+    @cached_property
+    def code_hash(self) -> str:
+        """Compute and cache the source code hash.
+
+        Returns:
+            str: Hash of the task function source code.
+        """
+        import hashlib
+
+        source = inspect.getsource(self.fn)
+        return hashlib.sha256(source.encode("utf-8")).hexdigest()
 
 
 class Script:
@@ -596,6 +612,16 @@ class Pipeline:
         dag, _, _ = compiler.get_dag()
 
         return dag
+
+    def compute_code_hash(self) -> str:
+        """Compute the hash of all internal imported modules.
+
+        Returns:
+            str: Computed hash, it's an empty string if no
+                modules are found.
+        """
+        hasher = ModuleHasher()
+        return hasher.hash_modules()
 
 
 def task(

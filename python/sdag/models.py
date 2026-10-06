@@ -364,6 +364,7 @@ class TaskNode(BaseNode):
         cache_size (int): Cache size. Ignore if caching is disabled.
             set to 0 to allow for infinite cache size. Defaults
             to 1.
+        code_hash (str): Task source code hash.
         mode (ExecMode): Wrap a Python function or
             an external script.
         cmd (Commands): Command used to launch the script.
@@ -387,6 +388,7 @@ class TaskNode(BaseNode):
     scope: Scope
     cache_ignore: list[str] = Field(default_factory=list)
     cache_size: int = 1
+    code_hash: str
     mode: ExecMode
     cmd: Commands
     retries: int
@@ -576,6 +578,8 @@ class DAGMeta(BaseModel):
         pipeline_name (str): Pipeline name.
         timestamp (str): Timestamp.
         import_path (str): Import path.
+        code_hash (str): Hash of all modules imported. It
+            is added after pipeline compilation.
         kwargs (dict[str, Any]): Pipeline input kwargs.
         extra (str): Extra metadata.
     """
@@ -583,6 +587,7 @@ class DAGMeta(BaseModel):
     pipeline_name: str
     timestamp: str = Field(default_factory=datetime.now().isoformat)
     import_path: str = ""
+    code_hash: str = ""
     kwargs: dict[str, Any] = Field(default_factory=dict)
     extra: dict[str, Any] = Field(default_factory=dict)
 
