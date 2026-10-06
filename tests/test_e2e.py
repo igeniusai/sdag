@@ -575,7 +575,7 @@ def test_print_pipeline_status(tmp_path: Path) -> None:
     with (pipeline_dir / "checkpoint.json").open("w") as f:
         json.dump(checkpoint, f)
 
-    output = subprocess.check_output(
+    output = subprocess.run(
         [
             "sdag",
             "status",
@@ -585,11 +585,11 @@ def test_print_pipeline_status(tmp_path: Path) -> None:
             "-l",
             "info",
         ],
-        stderr=subprocess.STDOUT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
     )
-    lines = [
-        line.strip() for line in output.decode("utf-8").split("\n") if line
-    ]
+    stderr = output.stderr.decode("utf-8")
+    lines = [line.strip() for line in stderr.split("\n") if line]
     table = "\n".join(lines[-5:])
 
     expected_table = r"""

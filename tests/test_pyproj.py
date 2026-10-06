@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 from sdag.models import DAG, DAGMeta, ScriptPath, TaskNode
-from sdag.pyproj import Pyproj, apply_pyproj_configs, get_pyproj
+from sdag.pyproj import DetachOptions, Pyproj, apply_pyproj_configs, get_pyproj
 
 
 def test_parse_pyproject(tmp_path: Path) -> None:
@@ -26,6 +26,9 @@ def test_parse_pyproject(tmp_path: Path) -> None:
 
     [tool.sdag.envs]
     ENV="value"
+
+    [tool.sdag.detach]
+    job-name = "detached"
 
     [[tool.sdag.tags]]
     tag = "online"
@@ -52,6 +55,7 @@ def test_parse_pyproject(tmp_path: Path) -> None:
     assert pyproj.tags[0].tag == "online"
     assert pyproj.tags[0].cmd == "sbatch"
     assert pyproj.tags[0].envs == {"ENV": "another_value"}
+    assert pyproj.detach.job_name == "detached"
 
 
 def test_parse_pyproject_invalid_tags(tmp_path: Path) -> None:
@@ -121,6 +125,9 @@ def test_parse_sdag_toml(tmp_path: Path) -> None:
     [envs]
     ENV="value"
 
+    [detach]
+    job-name = "detached"
+
     [[tags]]
     tag = "online"
     cmd = "sbatch"
@@ -145,6 +152,7 @@ def test_parse_sdag_toml(tmp_path: Path) -> None:
     assert pyproj.max_concurrent_runs == 2
     assert pyproj.tags[0].tag == "online"
     assert pyproj.tags[0].cmd == "sbatch"
+    assert pyproj.detach.job_name == "detached"
 
 
 def test_join_pyproj_and_sdag_toml(tmp_path: Path) -> None:
@@ -163,6 +171,10 @@ def test_join_pyproj_and_sdag_toml(tmp_path: Path) -> None:
     [tool.sdag.envs]
     ENV = "value"
     OVERWRITTEN = "pyporj_value"
+
+    [tool.sdag.detach]
+    job-name = "detached"
+    partition = "some-partition"
 
     [[tool.sdag.tags]]
     tag = "online"
@@ -183,6 +195,10 @@ def test_join_pyproj_and_sdag_toml(tmp_path: Path) -> None:
     [envs]
     ANOTHER_ENV = "another_value"
     OVERWRITTEN = "sdag_value"
+
+    [detach]
+    job-name = "overwritten"
+    qos = "some-qos"
 
     [[tags]]
     tag = "online"
@@ -229,6 +245,9 @@ def test_join_pyproj_and_sdag_toml(tmp_path: Path) -> None:
     assert pyproj.tags[2].tag == "small"
     assert pyproj.tags[2].cmd == "bash"
     assert pyproj.tags[2].envs == {"SMALL_ENV": "small_value"}
+    assert pyproj.detach.job_name == "overwritten"
+    assert pyproj.detach.partition == "some-partition"
+    assert pyproj.detach.qos == "some-qos"
 
 
 @pytest.mark.parametrize(
@@ -432,3 +451,51 @@ def test_override_slurm_from_tag() -> None:
     tag_slurm.pop("tag")
 
     assert task.slurm.model_dump() == tag_slurm
+
+
+def test_join_args_into_detach(tmp_path: Path) -> None:
+    pyproj_content = """[tool.sdag]
+        account = "account-name"
+        partition = "partition-name"
+        qos = "qos-name"
+        time = "1-00:00:00"
+
+        [tool.sdag.detach]
+        job-name = "detach"
+        qos = "special-qos"
+        """
+
+    pyproj_path = tmp_path / "pyproject.toml"
+    # so we don't read the main one by accident
+    sdag_toml_path = tmp_path / "missing.toml"
+    with pyproj_path.open("w") as f:
+        f.write(pyproj_content)
+
+    pyproj = get_pyproj(
+        pyproj_path=str(pyproj_path), sdag_toml_path=str(sdag_toml_path)
+    )
+
+    assert pyproj.detach.job_name == "detach"
+
+    assert pyproj.detach.account == "account-name"
+    assert pyproj.detach.partition == "partition-name"
+    assert pyproj.detach.qos == "special-qos"
+    assert pyproj.detach.time == "1-00:00:00"
+
+
+class TestDetachOptions:
+    """Test the job detaching options."""
+
+    def test_get_detached_args(self) -> None:
+        """Check detached args are correctly retrieved."""
+        detach = DetachOptions.model_validate(
+            {
+                "job-name": "detach",
+                "nodes": None,
+                "ntasks-per-node": None,
+                "cpus-per-task": None,
+                "output": None,
+                "error": None,
+            }
+        )
+        assert detach.get_detached_args() == ["--job-name", "detach"]
