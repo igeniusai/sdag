@@ -19,6 +19,7 @@ from sdag.commands import (
     describe_pipeline,
     kill_pipeline,
     list_pipelines,
+    print_status,
     prune_cache,
     restart_run,
     retry_run,
@@ -329,6 +330,25 @@ class ParserBuilder:
 
         return self
 
+    def add_status_subparser(self) -> Self:
+        """Add the status parser.
+
+        Returns:
+            Self: Parser.
+        """
+        status_parser = self._subparsers.add_parser(
+            "status",
+            help=(
+                "Read the last checkpoint of the scheduler for"
+                "a pipeline and print the status table."
+            ),
+        )
+        self._add_pipeline_name_and_hash_or_json(status_parser)
+        self._add_log_level(status_parser)
+        status_parser.set_defaults(fn=print_status)
+
+        return self
+
     def get_parser(self) -> ArgumentParser:
         """Get the parser.
 
@@ -367,10 +387,7 @@ class ParserBuilder:
         subparser.add_argument(
             "pipeline",
             type=str,
-            help=(
-                "Pipeline name. If equal to a compiled JSON path, hash"
-                " and pipeline name are read from the file."
-            ),
+            help="Pipeline name.",
         )
 
         subparser.add_argument(

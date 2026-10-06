@@ -25,3 +25,11 @@ For example, to compile and run a pipeline you can execute:
 ```sh
 sbatch submit_scheduler.sh run <pipeline-name>
 ```
+
+You can run:
+
+```sh
+sdag status <pipeline-name>
+```
+
+to print the status table of the last checkpoint.

@@ -4,6 +4,7 @@
 """End-to-end tests."""
 
 import json
+import subprocess
 from collections.abc import Generator
 from pathlib import Path
 
@@ -475,3 +476,128 @@ def test_run_pipeline_with_local_caching(
     assert (cache_local_dir / "output.json").exists()
     assert (cache_local_dir / "input.json").exists()
     assert (cache_local_dir / "meta.json").exists()
+
+
+@pytest.mark.usefixtures("set_home")
+def test_print_pipeline_status(tmp_path: Path) -> None:
+    """Test the status table is printed.
+
+    Args:
+        tmp_path (Path): Temporary path fixture.
+    """
+    base_path = tmp_path / ".sdag"
+    pipeline_hash = "4696fc62bc92"
+    pipeline_dir = base_path / "pipelines" / "hello_world" / pipeline_hash
+
+    checkpoint = {
+        "cfg": {
+            "homedir": f"{base_path}",
+            "dagdir": f"{pipeline_dir}",
+            "cachedir": f"{base_path}/.cache/global",
+            "local_cachedir": f"{base_path}/.cache/local",
+            "timestamp": "2026-09-29T08:11:09",
+            "grace_period": 60,
+            "max_dagdirs": 20,
+            "max_concurrency": 0,
+            "sleep_time": {"secs": 1, "nanos": 0},
+            "log_level": "info",
+            "fail_fast": False,
+        },
+        "meta": {
+            "pipeline_name": "hello_world",
+            "hash": "4696fc62bc92",
+            "timestamp": "2026-09-29T08:11:09.663064",
+            "extra": {},
+            "import_path": "hello_world",
+            "kwargs": {},
+        },
+        "nodes": [
+            {
+                "kind": "root",
+                "uid": 0,
+                "pipeline_name": "hello_world",
+                "parents": [],
+                "children": [2],
+            },
+            {
+                "kind": "end",
+                "uid": 1,
+                "pipeline_name": "hello_world",
+                "parents": [{"uid": 2, "kind": {"kind": "logical"}}],
+                "children": [],
+                "artifacts": [],
+            },
+            {
+                "kind": "task",
+                "uid": 2,
+                "parents": [{"uid": 0, "kind": {"kind": "logical"}}],
+                "fn_name": "say_hello",
+                "name": "say_hello",
+                "pipeline_name": "hello_world",
+                "cache": False,
+                "scope": "local",
+                "cache_size": 1,
+                "cache_ignore": [],
+                "mode": "wrap",
+                "cmd": "bash",
+                "retries": 0,
+                "script": {"kind": "script_path", "path": "scripts/submit.sh"},
+                "envs": {},
+                "slurm": {
+                    "job-name": None,
+                    "nodes": None,
+                    "partition": "partition",
+                    "qos": "qos1",
+                    "gpus-per-node": None,
+                    "ntasks-per-node": None,
+                    "output": None,
+                    "error": None,
+                    "account": None,
+                    "cpus-per-task": None,
+                    "mem": None,
+                    "time": None,
+                },
+                "kwargs": [{"key": "name", "value": "sdag"}],
+                "tags": [],
+                "artifacts": [],
+                "children": [1],
+            },
+        ],
+        "statuses": [
+            {"Completed": "Generic"},
+            {"Completed": "Generic"},
+            {"Completed": {"Job": {"Local": 6972}}},
+        ],
+        "try_nums": [0, 0, 1],
+    }
+
+    pipeline_dir.mkdir(parents=True, exist_ok=True)
+    with (pipeline_dir / "checkpoint.json").open("w") as f:
+        json.dump(checkpoint, f)
+
+    output = subprocess.check_output(
+        [
+            "sdag",
+            "status",
+            "hello_world",
+            "--hash",
+            pipeline_hash,
+            "-l",
+            "info",
+        ],
+        stderr=subprocess.STDOUT,
+    )
+    lines = [
+        line.strip() for line in output.decode("utf-8").split("\n") if line
+    ]
+    table = "\n".join(lines[-5:])
+
+    expected_table = r"""
+┌─────┬───────────┬─────────────┬──────────────────────┬─────────┐
+│ uid │ task      │ pipeline    │ status               │ try_num │
+├─────┼───────────┼─────────────┼──────────────────────┼─────────┤
+│   2 │ say_hello │ hello_world │ Completed (pid=6972) │ 1       │
+└─────┴───────────┴─────────────┴──────────────────────┴─────────┘
+"""
+
+    assert table == expected_table.strip()

@@ -168,4 +168,17 @@ mod core {
         settings::configure_logging(log_level);
         commands::describe_pipeline(pipeline_path)
     }
+
+    #[pyfunction]
+    #[pyo3(signature=(
+        pipeline_name: "str",
+        pipeline_hash: "str",
+        log_level: "str",
+    ) -> "None")]
+    pub fn print_status(pipeline_name: &str, pipeline_hash: &str, log_level: &str) {
+        settings::configure_logging(log_level);
+        if let Err(e) = commands::print_status(pipeline_name, pipeline_hash) {
+            log::error!("Failed to print status - {e}");
+        }
+    }
 }

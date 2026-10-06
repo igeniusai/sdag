@@ -9,6 +9,7 @@ from sdag.commands import (
     describe_pipeline,
     kill_pipeline,
     list_pipelines,
+    print_status,
     prune_cache,
     restart_run,
     run_pipeline,
@@ -256,3 +257,21 @@ class TestParaserBuilder:
         assert args.dst_dir == "a/path"
         assert args.name == "output.json"
         assert args.fn is describe_pipeline
+
+    def test_status(self, builder: ParserBuilder) -> None:
+        parser = builder.add_status_subparser().get_parser()
+        args = parser.parse_args(
+            [
+                "status",
+                "dag",
+                "--hash",
+                "xyz",
+                "-l",
+                "debug",
+            ]
+        )
+
+        assert args.log_level == "debug"
+        assert args.pipeline == "dag"
+        assert args.hash == "xyz"
+        assert args.fn is print_status
