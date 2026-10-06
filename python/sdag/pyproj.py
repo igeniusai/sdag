@@ -10,11 +10,14 @@ from pathlib import Path
 from typing import Any, Literal
 
 if sys.version_info >= (3, 11):
+    from typing import Self
+
     import tomllib
 else:
     import tomli as tomllib
+    from typing_extensions import Self
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, NonNegativeInt, model_validator
 
 from sdag.models import DAG, ScriptPath, SlurmOverride, TaskNode
 from sdag.types import Commands
@@ -40,6 +43,48 @@ class SDAGTag(SlurmOverride):
     envs: dict[str, str] = Field(default_factory=dict)
 
 
+class DetachOptions(SlurmOverride):
+    """Detached sdag command options.
+
+    Attributes:
+        job_name (str | None): Slurm job name. Defaults to 'sdag'.
+        nodes (str | None): Number of nodes. Defaults to 1.
+        ntasks_per_node (str | None): Number of tasks per node.
+            Defaults to 1.
+        cpus_per_task (str | None): Number of CPUs per task.
+            Defaults to 1.
+        output (str | None): Slurm stdout. Defaults to
+            'logs/sdag/sdag_%x.%j.out'.
+        error (str | None): Slurm stderr. Defaults to
+            'logs/sdag/sdag_%x.%j.err'.
+    """
+
+    job_name: str | None = Field(alias="job-name", default="sdag")
+    nodes: NonNegativeInt | None = 1
+    ntasks_per_node: NonNegativeInt | None = Field(
+        alias="ntasks-per-node", default=1
+    )
+    cpus_per_task: NonNegativeInt | None = Field(
+        alias="cpus-per-task", default=1
+    )
+    output: str | None = r"logs/sdag/sdag_%x.%j.out"
+    error: str | None = r"logs/sdag/sdag_%x.%j.err"
+
+    def get_detached_args(self) -> list[str]:
+        """Get the slurm detach args.
+
+        Returns:
+            list[str]: Args used by sbatch to submit the
+                detached job.
+        """
+        args: list[str] = []
+        dumped = self.model_dump(exclude_none=True)
+        for key, value in dumped.items():
+            args.append(f"--{key}")
+            args.append(f"{value}")
+        return args
+
+
 class Pyproj(SlurmOverride):
     """pyproject.toml configs.
 
@@ -60,6 +105,8 @@ class Pyproj(SlurmOverride):
         slurm_grace_period (int): Number of turns a task can be missing
             from the response without being considered as failed.
             Defaults to 60.
+        detach (DetachOptions): Detached command options. They are
+            ignored if the command is not detached.
         fail_fast (bool): Kill the scheduler and all running tasks if
             any of them fails.
         envs (dict[str, str]): Environment variables added to all tasks.
@@ -89,12 +136,37 @@ class Pyproj(SlurmOverride):
         alias="max-concurrent-runs", default=20, gt=0
     )
     fail_fast: bool = Field(alias="fail-fast", default=False)
+    detach: DetachOptions = Field(default_factory=DetachOptions)
     envs: dict[str, str] = Field(default_factory=dict)
     tags: list[SDAGTag] = Field(default_factory=list)
 
     model_config = ConfigDict(
         extra="forbid", validate_by_alias=True, serialize_by_alias=True
     )
+
+    @model_validator(mode="after")
+    def join_args_into_detach(self) -> Self:
+        """Override detach args with the pyproj ones.
+
+        account, partition, qos, and time are overwritten with the
+        default values in the pyproj.
+
+        Returns:
+            Self: pyproj.
+        """
+        if self.detach.account is None:
+            self.detach.account = self.account
+
+        if self.detach.partition is None:
+            self.detach.partition = self.partition
+
+        if self.detach.qos is None:
+            self.detach.qos = self.qos
+
+        if self.detach.time is None:
+            self.detach.time = self.time
+
+        return self
 
     def join_cli_args(self, args: Namespace) -> None:
         """Join the user preferences into the pyproject.
@@ -233,6 +305,8 @@ def _join_configs(
     sdag_envs = sdag_toml_dict.get("envs", {})
     pyproj_tags = pyproj_dict.get("tags", [])
     sdag_toml_tags = sdag_toml_dict.get("tags", [])
+    pyproj_detach = pyproj_dict.get("detach", {})
+    sdag_toml_detach = sdag_toml_dict.get("detach", {})
 
     if not isinstance(pyproj_tags, list) or not isinstance(
         sdag_toml_tags, list
@@ -246,6 +320,7 @@ def _join_configs(
     configs = pyproj_dict | sdag_toml_dict
     configs["envs"] = pyproj_envs | sdag_envs
     configs["tags"] = list(tag_dict.values())
+    configs["detach"] = pyproj_detach | sdag_toml_detach
 
     return configs
 
