@@ -18,7 +18,7 @@
     - [Handling Multiple Runs of the Same Pipeline](advanced/concurrent_runs.md)
     - [Structuring Larger Projects](advanced/larger_projects.md)
     - [Entrypoint Customization](advanced/entrypoint_customization.md)
-    - [Running the Scheduler on Compute Nodes](advanced/scheduler_compute_nodes.md)
+    - [Detaching Commands](advanced/detaching.md)
     - [Tags](advanced/tags.md)
     - [Unit Testing](advanced/unit_testing.md)
 - [API reference](api_reference.md)

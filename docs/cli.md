@@ -25,6 +25,7 @@ Run a compiled pipeline. If called with the import string or the pipeline name, 
 
 - Run a pipeline from the compiled JSON: `sdag run path/to/compiled_pipeline.json`
 - Compile and run a pipeline from its name: `sdag run pipeline_name`
+- Compile and run a pipeline from its name as a separate Slurm job: `sdag run pipeline_name --detach`
 
 ### `runtask`
 
@@ -39,6 +40,7 @@ Restart the scheduler from where it left off when it was killed.
 
 - Restart the last run: `sdag restart pipeline_name`
 - Restart a specific run: `sdag restart pipeline_name --hash xxx`
+- Restart the last run as a separate Slurm job: `sdag restart pipeline_name --detach`
 
 ### `retry`
 
@@ -46,6 +48,7 @@ Reset all failed and skipped task before restarting the run. it's virtually equi
 
 - Retry the last run: `sdag retry pipeline_name`
 - Retry a specific run: `sdag retry pipeline_name --hash xxx`
+- Retry the last run as a separate Slurm job: `sdag retry pipeline_name --detach`
 
 ### `kill`
 
