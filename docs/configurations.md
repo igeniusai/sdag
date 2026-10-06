@@ -19,6 +19,7 @@ Configurations must be set under `[tool.sdag]`. Here are the available options:
 | max-concurrent-runs          | 20                     | Maximum number of runs of the same pipeline kept by sdag. Set to 0 to keep all runs. |
 | fail-fast                    | false                  | If true, kill the scheduler and all running jobs if any task fails. |
 | envs                         | {}                     | Environment variables that will be available to every task |
+| detach                       | Check out the [Detaching Commands](advanced/detaching.md) section for details | Sbatch options for detached jobs. |
 
 In the `pyproject.toml` file you can also set a number of Sbatch options that will override those set in scripts or inside pipelines:
 
@@ -53,6 +54,9 @@ If available, this file located in the main project directory. It has the exact 
     [tool.sdag.envs]
     ENV_NAME = "env_value"
 
+    [tool.sdag.detach]
+    cpus-per-task = 5
+
     [[tool.sdag.tags]]
     tag = "online"
     cmd = "bash"
@@ -66,6 +70,9 @@ If available, this file located in the main project directory. It has the exact 
 
     [envs]
     ENV_NAME = "env_value"
+
+    [detach]
+    cpus-per-task = 5
 
     [[tags]]
     tag = "online"

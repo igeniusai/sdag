@@ -83,6 +83,7 @@ class ParserBuilder:
 
         self._add_compilation_args(compile_parser)
         self._add_log_level(compile_parser)
+        self._add_detach(compile_parser)
         compile_parser.set_defaults(fn=compile_pipeline)
 
         return self
@@ -114,6 +115,7 @@ class ParserBuilder:
         self._add_scheduler_args(run_parser)
         self._add_local_option(run_parser)
         self._add_fail_fast_option(run_parser)
+        self._add_detach(run_parser)
         run_parser.set_defaults(fn=run_pipeline)
 
         return self
@@ -131,6 +133,7 @@ class ParserBuilder:
         self._add_log_level(restart_parser)
         self._add_scheduler_args(restart_parser)
         self._add_fail_fast_option(restart_parser)
+        self._add_detach(restart_parser)
         restart_parser.set_defaults(fn=restart_run)
 
         return self
@@ -153,6 +156,7 @@ class ParserBuilder:
         self._add_log_level(restart_parser)
         self._add_scheduler_args(restart_parser)
         self._add_fail_fast_option(restart_parser)
+        self._add_detach(restart_parser)
         restart_parser.set_defaults(fn=retry_run)
 
         return self
@@ -169,6 +173,7 @@ class ParserBuilder:
 
         self._add_pipeline_name_and_hash_or_json(kill_parser)
         self._add_log_level(kill_parser)
+        self._add_detach(kill_parser)
         kill_parser.set_defaults(fn=kill_pipeline)
 
         return self
@@ -208,6 +213,8 @@ class ParserBuilder:
 
         self._add_extra_metadata(prune_parser)
         self._add_log_level(prune_parser)
+        self._add_detach(prune_parser)
+
         prune_parser.set_defaults(fn=prune_cache)
 
         return self
@@ -243,6 +250,7 @@ class ParserBuilder:
 
         self._add_extra_metadata(view_parser)
         self._add_log_level(view_parser)
+        self._add_detach(view_parser)
         view_parser.set_defaults(fn=view_pipeline)
 
         return self
@@ -274,6 +282,7 @@ class ParserBuilder:
         self._add_log_level(runtask_parser)
         self._add_local_option(runtask_parser)
         self._add_fail_fast_option(runtask_parser)
+        self._add_detach(runtask_parser)
         runtask_parser.set_defaults(fn=run_task)
 
         return self
@@ -298,6 +307,7 @@ class ParserBuilder:
             ),
         )
         self._add_log_level(list_parser)
+        self._add_detach(list_parser)
         list_parser.set_defaults(fn=list_pipelines)
 
         return self
@@ -326,6 +336,7 @@ class ParserBuilder:
 
         self._add_compilation_args(describe_parser)
         self._add_log_level(describe_parser)
+        self._add_detach(describe_parser)
         describe_parser.set_defaults(fn=describe_pipeline)
 
         return self
@@ -345,6 +356,7 @@ class ParserBuilder:
         )
         self._add_pipeline_name_and_hash_or_json(status_parser)
         self._add_log_level(status_parser)
+        self._add_detach(status_parser)
         status_parser.set_defaults(fn=print_status)
 
         return self
@@ -356,6 +368,21 @@ class ParserBuilder:
             ArgumentParser: Parser.
         """
         return self._parser
+
+    def _add_detach(self, parser: ArgumentParser) -> None:
+        """Add the detach option to the parser.
+
+        Detached commands run on Slurm.
+
+        Args:
+            parser (ArgumentParser): Parser.
+        """
+        parser.add_argument(
+            "--detach",
+            action=BooleanOptionalAction,
+            default=False,
+            help="Run the command as a sbatch job",
+        )
 
     def _add_log_level(self, subparser: ArgumentParser) -> Self:
         """Add the log level.
