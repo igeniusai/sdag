@@ -786,6 +786,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        status
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1016,14 +1027,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../advanced/scheduler_compute_nodes/" class="md-nav__link">
+      <a href="../advanced/detaching/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Running the Scheduler on Compute Nodes
+    Detaching Commands
   
 
     
@@ -1263,6 +1274,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        status
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1306,6 +1328,7 @@
 <ul>
 <li>Run a pipeline from the compiled JSON: <code>sdag run path/to/compiled_pipeline.json</code></li>
 <li>Compile and run a pipeline from its name: <code>sdag run pipeline_name</code></li>
+<li>Compile and run a pipeline from its name as a separate Slurm job: <code>sdag run pipeline_name --detach</code></li>
 </ul>
 <h3 id="runtask"><code>runtask</code></h3>
 <p>Run a specific task of a pipeline. All task input values must be passed as CLI extra arguments.</p>
@@ -1318,12 +1341,14 @@
 <ul>
 <li>Restart the last run: <code>sdag restart pipeline_name</code></li>
 <li>Restart a specific run: <code>sdag restart pipeline_name --hash xxx</code></li>
+<li>Restart the last run as a separate Slurm job: <code>sdag restart pipeline_name --detach</code></li>
 </ul>
 <h3 id="retry"><code>retry</code></h3>
 <p>Reset all failed and skipped task before restarting the run. it's virtually equivalent to <code>sdag restart</code> if no tasks failed or were skipped.</p>
 <ul>
 <li>Retry the last run: <code>sdag retry pipeline_name</code></li>
 <li>Retry a specific run: <code>sdag retry pipeline_name --hash xxx</code></li>
+<li>Retry the last run as a separate Slurm job: <code>sdag retry pipeline_name --detach</code></li>
 </ul>
 <h3 id="kill"><code>kill</code></h3>
 <p>Kill a running pipeline and the scheduler.</p>
@@ -1351,6 +1376,12 @@
 <ul>
 <li>Print the graph of a compiled pipeline: <code>sdag view path/to/compiled_pipeline.json</code></li>
 <li>Compile and print the the pipeline graph in the terminal: <code>sdag view pipeline_name</code></li>
+</ul>
+<h3 id="status"><code>status</code></h3>
+<p>Print the status table of the last checkpoint.</p>
+<ul>
+<li>Print the checkpoint of the last run: <code>sdag status pipeline_name</code></li>
+<li>Print the checkpoint of a specific run: <code>sdag status pipeline_name --hash xxx</code></li>
 </ul>
 
 

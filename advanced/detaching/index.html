@@ -23,7 +23,7 @@
     
     
       
-        <title>Running the Scheduler on Compute Nodes - sdag</title>
+        <title>Detaching Commands - sdag</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#running-the-scheduler-on-compute-nodes" class="md-skip">
+        <a href="#detaching-commands" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Running the Scheduler on Compute Nodes
+              Detaching Commands
             
           </span>
         </div>
@@ -877,7 +877,7 @@
   <span class="md-ellipsis">
     
   
-    Running the Scheduler on Compute Nodes
+    Detaching Commands
   
 
     
@@ -1020,26 +1020,16 @@
   
 
 
-<h1 id="running-the-scheduler-on-compute-nodes">Running the Scheduler on Compute Nodes</h1>
+<h1 id="detaching-commands">Detaching Commands</h1>
 <p>On public supercomputers, jobs running on login nodes usually have limited resources and wall time. The Rust scheduler of sdag is intentionally lightweight so it can typically survive many hours on login nodes without being killed. If the SSH connection goes down, <code>sdag restart</code> can be used to safely restart the scheduler and pick the execution from where it left off.</p>
-<p>Nevertheless, for long workflows across large graphs it may be better to just submit the scheduler as a Slurm job on a compute node. Copy the following script into a <code>submit_scheduler.sh</code> file:</p>
-<div class="language-sh highlight"><span class="filename">submit_scheduler.sh</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="ch">#!/bin/bash</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1">#SBATCH --job-name=scheduler</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1">#SBATCH --account=&lt;account-name&gt;</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1">#SBATCH --partition=&lt;partition-name&gt;</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1">#SBATCH --qos=&lt;qos-name&gt;</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1">#SBATCH --nodes=1</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1">#SBATCH --tasks-per-node=1</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1">#SBATCH --cpus-per-task=1</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1">#SBATCH --time=1-00:00:00</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1">#SBATCH --output ./logs/%x.%j.out</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1">#SBATCH --error ./logs/%x.%j.err</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>sdag<span class="w"> </span><span class="nv">$@</span>
+<p>Nevertheless, for long workflows across large graphs it may be better to just submit the scheduler as a Slurm job on a compute node. This can be achieved by adding the <code>--detach</code> option to the CLI command. For example:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>sdag<span class="w"> </span>run<span class="w"> </span>&lt;pipeline-name&gt;<span class="w"> </span>--detach
 </span></code></pre></div>
-<p>For example, to compile and run a pipeline you can execute:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>sbatch<span class="w"> </span>submit_scheduler.sh<span class="w"> </span>run<span class="w"> </span>&lt;pipeline-name&gt;
+<p>will compile and start the scheduler as a separate Slurm job. By default, these commands are executed on 1 CPU (<code>nodes = 1</code>, <code>tasks-per-node = 1</code>, and <code>cpus-per-task = 1</code>) and inherit <code>account</code>, <code>partition</code>, and <code>qos</code> from <code>pyproject.toml</code>/<code>.sdag.toml</code> config files. stdout and stderr are written in a <code>./logs/sdag</code> folder. The default behavior can be modified through the <code>[tool.sdag.detach]</code> options in the <code>pyproject.toml</code>. Check out the <a href="../../configurations/">Configuration</a> section for details.</p>
+<p>When the detached scheduler starts, you can use:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>sdag<span class="w"> </span>status<span class="w"> </span>&lt;pipeline-name&gt;
 </span></code></pre></div>
+<p>to print the status table of the last checkpoint without checking the scheduler logs manually.</p>
 
 
 

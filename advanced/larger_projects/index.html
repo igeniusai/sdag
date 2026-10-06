@@ -947,14 +947,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../scheduler_compute_nodes/" class="md-nav__link">
+      <a href="../detaching/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Running the Scheduler on Compute Nodes
+    Detaching Commands
   
 
     
@@ -1146,7 +1146,7 @@
 <h1 id="structuring-larger-projects">Structuring Larger Projects</h1>
 <p>When working with larger projects made of many pipelines, it is convenient to set the directory sdag searches pipelines into explicitly. Both <a href="https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/">flat and src layouts</a> are supported. The only important point is to add <code>__init__.py</code> files to all subfolders in the tree to let sdag treat them as regular, importable packages.</p>
 <p>This examples takes advantage of the <code>hello.py</code> module created in the <a href="../../user_guide/hello_world/">first example</a>:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1"><code>hello.py</code></label><label for="__tabbed_1_2"><code>script.sh</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1"><code>hello.py</code></label><label for="__tabbed_1_2"><code>submit.sh</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sdag</span><span class="w"> </span><span class="kn">import</span> <span class="n">pipeline</span>
@@ -1157,7 +1157,7 @@
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">say_hello</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;sdag&quot;</span><span class="p">)</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="nd">@hello_world</span><span class="o">.</span><span class="n">task</span><span class="p">(</span><span class="s2">&quot;script.sh&quot;</span><span class="p">)</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="nd">@hello_world</span><span class="o">.</span><span class="n">task</span><span class="p">(</span><span class="s2">&quot;submit.sh&quot;</span><span class="p">)</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="k">def</span><span class="w"> </span><span class="nf">say_hello</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hello from </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
@@ -1178,14 +1178,14 @@
 </div>
 </div>
 <h2 id="flat-layout">Flat layout</h2>
-<p>Create a <code>&lt;my-package&gt;/workflows</code> directory and an empty <code>__init__.py</code> module inside it. Now copy the <code>hello.py</code> module from the previous example in the <code>workflows/</code> folder and the <code>script.sh</code> script in the main project one. Finally, copy the following snippet inside the <code>pyproject.toml</code> file:</p>
+<p>Create a <code>&lt;my-package&gt;/workflows</code> directory and an empty <code>__init__.py</code> module inside it. Now copy the <code>hello.py</code> module from the previous example in the <code>workflows/</code> folder and the <code>submit.sh</code> script in the main project one. Finally, copy the following snippet inside the <code>pyproject.toml</code> file:</p>
 <div class="language-toml highlight"><span class="filename">pyproject.toml</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">[tool.sdag]</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">dag-dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&lt;my_package&gt;/workflows&quot;</span>
 </span></code></pre></div>
 <p>Your project tree should look like this:</p>
 <div class="language-text highlight"><span class="filename">flat layout</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>&lt;my-package&gt;
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── pyproject.toml
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── script.sh      &lt;- Execution script
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── submit.sh      &lt;- Execution script
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>└── &lt;my_package&gt;
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    ├── __init__.py
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    └── workflows
@@ -1193,14 +1193,14 @@
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        └── hello.py       &lt;- hello_world pipeline
 </span></code></pre></div>
 <h2 id="src-layout">src layout</h2>
-<p>Create a <code>src/&lt;my-package&gt;/workflows</code> directory and an empty <code>__init__.py</code> module inside it. Now copy the <code>hello.py</code> module from the previous example in the <code>workflows/</code> folder and the <code>script.sh</code> script in the main project one. Finally, copy the following snippet inside the <code>pyproject.toml</code> file:</p>
+<p>Create a <code>src/&lt;my-package&gt;/workflows</code> directory and an empty <code>__init__.py</code> module inside it. Now copy the <code>hello.py</code> module from the previous example in the <code>workflows/</code> folder and the <code>submit.sh</code> script in the main project one. Finally, copy the following snippet inside the <code>pyproject.toml</code> file:</p>
 <div class="language-toml highlight"><span class="filename">pyproject.toml</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">[tool.sdag]</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">dag-dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;src/&lt;my_package&gt;/workflows&quot;</span>
 </span></code></pre></div>
 <p>Your project tree should look like this:</p>
 <div class="language-text highlight"><span class="filename">src layout</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>&lt;my-package&gt;
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>├── pyproject.toml
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>├── script.sh      &lt;- Execution script
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>├── submit.sh      &lt;- Execution script
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>└── src
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    └── &lt;my_package&gt;
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        ├── __init__.py

@@ -871,14 +871,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../scheduler_compute_nodes/" class="md-nav__link">
+      <a href="../detaching/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Running the Scheduler on Compute Nodes
+    Detaching Commands
   
 
     
@@ -1037,7 +1037,7 @@
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        <span class="n">t</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;process-</span><span class="si">{</span><span class="n">split</span><span class="si">}</span><span class="s2">&quot;</span>
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="nd">@process_in_batches</span><span class="o">.</span><span class="n">task</span><span class="p">(</span><span class="s2">&quot;script.sh&quot;</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="nd">@process_in_batches</span><span class="o">.</span><span class="n">task</span><span class="p">(</span><span class="s2">&quot;submit.sh&quot;</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="k">def</span><span class="w"> </span><span class="nf">process_split</span><span class="p">(</span><span class="n">input_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">split</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="n">Artifact</span><span class="p">[</span><span class="n">Path</span><span class="p">]):</span>
 </span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;processing &#39;</span><span class="si">{</span><span class="n">split</span><span class="si">}</span><span class="s2">&#39; and saving it to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>

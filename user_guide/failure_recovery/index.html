@@ -930,14 +930,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../advanced/scheduler_compute_nodes/" class="md-nav__link">
+      <a href="../../advanced/detaching/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Running the Scheduler on Compute Nodes
+    Detaching Commands
   
 
     
@@ -1122,7 +1122,7 @@
 <p>Once restarted, it get from Slurm the status of the supposedly running jobs to update the graph state. However, all previously running local jobs (that get killed if the scheduler goes down) will be marked as failed.</p>
 <h2 id="task-failures">Task failures</h2>
 <p>Create the following two files in the main project directory:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1"><code>failure_recovery.py</code></label><label for="__tabbed_1_2"><code>script.sh</code></label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1"><code>failure_recovery.py</code></label><label for="__tabbed_1_2"><code>submit.sh</code></label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="language-py highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sdag</span><span class="w"> </span><span class="kn">import</span> <span class="n">pipeline</span>
@@ -1134,12 +1134,12 @@
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">will_never_run</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nd">@failure</span><span class="o">.</span><span class="n">task</span><span class="p">(</span><span class="s2">&quot;script.sh&quot;</span><span class="p">)</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nd">@failure</span><span class="o">.</span><span class="n">task</span><span class="p">(</span><span class="s2">&quot;submit.sh&quot;</span><span class="p">)</span>
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">failed_task</span><span class="p">():</span>
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Failing...&quot;</span><span class="p">)</span>
 </span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
 </span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="nd">@failure</span><span class="o">.</span><span class="n">task</span><span class="p">(</span><span class="s2">&quot;script.sh&quot;</span><span class="p">)</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="nd">@failure</span><span class="o">.</span><span class="n">task</span><span class="p">(</span><span class="s2">&quot;submit.sh&quot;</span><span class="p">)</span>
 </span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="k">def</span><span class="w"> </span><span class="nf">will_never_run</span><span class="p">():</span>
 </span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;You will never see this message&quot;</span><span class="p">)</span>
 </span></code></pre></div>
@@ -1157,7 +1157,7 @@
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>sdag<span class="w"> </span>retry<span class="w"> </span>failure
 </span></code></pre></div>
 <p><code>retry</code> will reset all failed and skipped task before continuing the run. If no task failed or get skipped, then <code>sdag retry</code> it's virtually identical to <code>sdag restart</code> of the previous section. You can also set the number of retries for a task. Modify <code>failed_task</code> as follows:</p>
-<div class="language-py highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nd">@failure</span><span class="o">.</span><span class="n">task</span><span class="p">(</span><span class="s2">&quot;script.sh&quot;</span><span class="p">,</span> <span class="n">retries</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<div class="language-py highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nd">@failure</span><span class="o">.</span><span class="n">task</span><span class="p">(</span><span class="s2">&quot;submit.sh&quot;</span><span class="p">,</span> <span class="n">retries</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">failed_task</span><span class="p">():</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Failing...&quot;</span><span class="p">)</span>
 </span></code></pre></div>
@@ -1167,7 +1167,7 @@
 <p>You will see that the execution of <code>failed_task</code> is retried two times before marking it as failed definitively.</p>
 <div class="admonition info">
 <p class="admonition-title">Info</p>
-<p>To run these examples with Slurm, turn <code>script.sh</code> into a <a href="https://slurm.schedmd.com/sbatch.html">sbatch</a> script as explained in the <a href="../hello_world/">Hello World</a> section and execute pipelines without the <code>--local</code> option.</p>
+<p>To run these examples with Slurm, turn <code>submit.sh</code> into a <a href="https://slurm.schedmd.com/sbatch.html">sbatch</a> script as explained in the <a href="../hello_world/">Hello World</a> section and execute pipelines without the <code>--local</code> option.</p>
 </div>
 
 
