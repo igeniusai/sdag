@@ -15,6 +15,7 @@ def task() -> TaskNode:
         name="task_name",
         fn_name="task_fn",
         cache=False,
+        code_hash="xyz",
         mode="ext",
         cmd="bash",
         scope="global",

@@ -455,6 +455,7 @@ class TestPipeline:
             pipeline_name="",
             fn_name="task",
             cache=False,
+            code_hash="xyz",
             mode="wrap",
             cmd="bash",
             scope="local",
@@ -547,6 +548,7 @@ class TestTask:
             fn_name="fn",
             name="fn",
             cache=True,
+            code_hash="xyz",
             mode="wrap",
             cmd="sbatch",
             scope="local",
@@ -699,6 +701,7 @@ class TestTask:
             fn_name="fn",
             name="fn",
             cache=True,
+            code_hash="xyz",
             mode="wrap",
             cmd="sbatch",
             scope="local",
@@ -724,3 +727,30 @@ class TestTask:
                 ),
             ),
         ]
+
+    def test_code_cache(self) -> None:
+        """Check source code hash is computed and cached."""
+
+        def fn(a: int) -> int:
+            """Description."""
+            return a * 2
+
+        test_task = Task(
+            fn=fn,
+            name="task",
+            mode="wrap",
+            cmd="sbatch",
+            scope="local",
+            retries=0,
+            script=ScriptPath(path=Path()),
+            cache=False,
+            cache_ignore=None,
+            cache_size=1,
+            tags=[],
+        )
+
+        code_hash = test_task.code_hash
+        cached_code_hash = test_task.code_hash
+
+        assert isinstance(code_hash, str)
+        assert code_hash is cached_code_hash
