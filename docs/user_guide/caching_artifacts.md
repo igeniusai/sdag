@@ -129,13 +129,13 @@ to delete the cache of the `create_file` task. Check out the [CLI](../cli.md) se
 
 Several caching options are available:
 
-| Cache option | Cache validation conditions                                                                          |
-|--------------|------------------------------------------------------------------------------------------------------|
-| `"none"`     | Disables caching (default value).                                                                    |
-| `"output"`   | Artifacts exist.                                                                                     |
-| `"io"`       | Artifacts exist and input values match. Values allowed to change can be listed under `cache_ignore`. |
-| `"task"`     | Same as `"io"` but the task function code must also match.                                           |
-| `"project"`  | Same as `"io"` but the code of all modules imported during the pipeline compilation must also match. |
+| Cache option | Cache validation conditions                                                                                   |
+|--------------|---------------------------------------------------------------------------------------------------------------|
+| `"none"`     | Disables caching (default value).                                                                             |
+| `"output"`   | Artifacts exist.                                                                                              |
+| `"io"`       | Artifacts exist and input values match. Values allowed to change can be listed under `cache_ignore`.          |
+| `"task"`     | Same as `"io"` but the task function code must also match.                                                    |
+| `"project"`  | Same as `"io"` but the code of all internal modules imported during the pipeline compilation must also match. |
 
 
 !!! info
