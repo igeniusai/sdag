@@ -10,7 +10,7 @@ def cached():
     non_cached_task(t)
 
 
-@cached.task("scripts/submit.sh", cache=True)
+@cached.task("scripts/submit.sh", cache="io")
 def cached_task(a: str):
     """Cacheable task.
 
@@ -34,7 +34,7 @@ def name_change():
     t.name = "another_task"
 
 
-@name_change.task("scripts/submit.sh", cache=True)
+@name_change.task("scripts/submit.sh", cache="io")
 def a_task(value: int):
     """Cacheable task."""
     print(f"value: {value}")
@@ -47,13 +47,13 @@ def dag_with_artifact():
     print_path(input_path=t.artifacts["path"])
 
 
-@dag_with_artifact.task("scripts/submit.sh", cache=True)
+@dag_with_artifact.task("scripts/submit.sh", cache="io")
 def create_file(path: Artifact[Path]):
     """Create an artifact."""
     path.touch()
 
 
-@dag_with_artifact.task("scripts/submit.sh", cache=True)
+@dag_with_artifact.task("scripts/submit.sh", cache="io")
 def print_path(input_path: str):
     """Print the input path."""
     print(f"The input path is {input_path}")
