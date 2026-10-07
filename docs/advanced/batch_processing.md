@@ -18,7 +18,7 @@ def process_in_batches(input_path: str, base_output: str):
         t.name = f"process-{split}"
 
 
-@process_in_batches.task("submit.sh", cache=True)
+@process_in_batches.task("submit.sh", cache="io")
 def process_split(input_path: Path, split: str, output_path: Artifact[Path]):
     print(f"processing '{split}' and saving it to {output_path}")
 ```
