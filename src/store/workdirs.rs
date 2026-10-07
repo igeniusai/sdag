@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::model::nodes::{Node, Task};
-use crate::model::schemas::{Scope, TaskMeta};
+use crate::model::schemas::Scope;
 use crate::settings::Cfg;
 use log;
 use std::fs;
@@ -166,25 +166,9 @@ fn create_node_dirs(base_path: &Path, tasks: &[&Task]) -> io::Result<()> {
         );
 
         fs::create_dir(&path)?;
-        write_meta(&path, task)?;
     }
 
     Ok(())
-}
-
-fn write_meta(path: &Path, task: &Task) -> Result<(), io::Error> {
-    log::debug!(
-        "Writing task '{}' metadata in {}",
-        task.uid,
-        path.to_string_lossy()
-    );
-    let meta = TaskMeta {
-        fn_name: task.fn_name.to_string(),
-        name: task.name.to_string(),
-    };
-    let content = serde_json::to_string(&meta)?;
-    let dst = path.join(FileNames::Meta.as_str());
-    fs::write(dst, &content)
 }
 
 fn filter_tasks(nodes: &[Node]) -> Vec<&Task> {
@@ -262,11 +246,8 @@ mod tests {
         let tasks = vec![&task];
         create_node_dirs(&path, &tasks).unwrap();
 
-        let meta_path = path.join("1").join("meta.json");
-        let meta_str = fs::read_to_string(&meta_path).unwrap();
-        let meta: TaskMeta = serde_json::from_str(&meta_str).unwrap();
-        assert_eq!(meta.fn_name, "fn_name");
-        assert_eq!(meta.name, "name");
+        let task_dir = path.join("1");
+        assert!(task_dir.is_dir());
     }
 
     #[test]

@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Domyn
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::engine::submission::inline;
+use crate::engine::submission::caching;
 use crate::model::nodes::{Node, Task};
 use crate::model::schemas::{Artifact, ParentKind};
 use crate::settings::{self, Cfg};
 use crate::store::state;
-use crate::store::workdirs::{self, DirPaths};
+use crate::store::workdirs::DirPaths;
 use serde_json::{self, Value};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -35,12 +35,13 @@ struct TaskDescription<'a> {
 pub fn describe_pipeline(pipeline_path: &str) {
     let pipeline_path = PathBuf::from(pipeline_path);
     let homedir = settings::find_homedir().expect("Failed to find the home directory");
-    let dag = state::read_dag(&pipeline_path).expect("Failed to read DAG - {e}");
+    let dag = state::read_dag(&pipeline_path).expect("Failed to read DAG");
     let paths = DirPaths::new(&homedir, &dag.meta.pipeline_name, &dag.meta.hash);
     let mut cfg = Cfg::default();
     cfg.dagdir = paths.dagdir;
     cfg.cachedir = paths.cachedir;
     cfg.local_cachedir = paths.local_cachedir;
+    cfg.dag_code_hash = dag.meta.code_hash.to_string();
 
     let mut descriptions = vec![];
     for node in &dag.nodes {
@@ -72,36 +73,27 @@ fn get_description<'a>(task: &'a Task, cfg: &Cfg) -> TaskDescription<'a> {
 }
 
 fn check_caching(task: &Task, cfg: &Cfg, input: &HashMap<String, Value>) -> bool {
-    if !task.cache {
+    if !task.cache.is_enabled() {
         return false;
     }
 
-    let is_dynamic = task
-        .parents
-        .iter()
-        .any(|p| matches!(p.kind, ParentKind::Output { .. }));
-
-    if is_dynamic {
+    if is_task_dynamic(task) {
         log::warn!("Cache of dynamic task '{}' cannot be checked", task.uid);
         return false;
     }
 
-    let cache_path = workdirs::get_task_cache_path(task, cfg);
-    let path_str = cache_path.to_string_lossy();
-    match inline::compare_input_with_cache(input, &cache_path, &task.cache_ignore) {
-        Ok(Some(_)) => true,
-        Ok(None) => {
-            log::info!("Task {}: cache at '{path_str}' doesn't match", task.uid);
-            false
-        }
-        Err(e) => {
-            log::warn!(
-                "Task {}: Failed to compare cache at '{path_str}' - {e}",
-                task.uid
-            );
-            false
-        }
+    if let Some(path) = caching::validate_cache(input, task, cfg) {
+        log::debug!("Task {} matches '{}'", task.uid, path.to_string_lossy());
+        return true;
     }
+
+    false
+}
+
+fn is_task_dynamic(task: &Task) -> bool {
+    task.parents
+        .iter()
+        .any(|p| matches!(p.kind, ParentKind::Output { .. }))
 }
 
 fn get_artifacts(artifacts: &[Artifact]) -> String {

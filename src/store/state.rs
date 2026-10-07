@@ -3,7 +3,9 @@
 
 use crate::engine::context::Ctx;
 use crate::model::nodes::{Node, Task};
-use crate::model::schemas::{Checkpoint, DAG, DAGMeta, Kwarg, Parent, ParentKind, TaskOutput};
+use crate::model::schemas::{
+    Checkpoint, DAG, DAGMeta, Kwarg, Parent, ParentKind, TaskMeta, TaskOutput,
+};
 use crate::settings::Cfg;
 use crate::store::workdirs::FileNames;
 use serde::Deserialize;
@@ -77,6 +79,17 @@ pub fn read_input(path: &Path) -> io::Result<HashMap<String, Value>> {
 pub fn save_input(input: &HashMap<String, Value>, path: &Path) -> io::Result<()> {
     let contents = serde_json::to_string(input)?;
     fs::write(path, contents)
+}
+
+pub fn read_meta(path: &Path) -> io::Result<TaskMeta> {
+    let meta_path = path.join(FileNames::Meta.as_str());
+    let meta = fs::read_to_string(&meta_path)?;
+    serde_json::from_str(&meta).map_err(|e| e.into())
+}
+
+pub fn save_meta(meta: &TaskMeta, path: &Path) -> io::Result<()> {
+    let content = serde_json::to_string(&meta)?;
+    fs::write(path, &content)
 }
 
 pub fn read_output(path: &Path) -> io::Result<TaskOutput> {
@@ -257,6 +270,7 @@ mod tests {
     "meta": {
         "pipeline_name": "hello_world",
         "hash": "e",
+        "code_hash": "xyz",
         "import_path": "path.to.module:pipeline",
         "timestamp": "1900-01-01T09:20:20",
         "extra": {"extra_field": "hello"},
@@ -314,6 +328,7 @@ mod tests {
             dagdir: path.clone(),
             cachedir: path.clone(),
             local_cachedir: path.clone(),
+            dag_code_hash: "".into(),
             timestamp: "1900-01-01T09:20:20".into(),
             grace_period: 3,
             max_dagdirs: 1,
@@ -326,6 +341,7 @@ mod tests {
         let meta = DAGMeta {
             pipeline_name: "name".into(),
             hash: "xxxx".into(),
+            code_hash: "abc".into(),
             timestamp: "1900-01-01T09:20:20".into(),
             extra: Value::Null,
             import_path: String::new(),
@@ -483,5 +499,20 @@ mod tests {
     fn check_folders_can_be_touched() {
         let dir = get_tmp_dir();
         touch_cached_task_dir(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_save_and_read_meta() {
+        let dir = get_tmp_dir();
+        let meta = TaskMeta {
+            fn_name: "fn".into(),
+            name: "name".into(),
+            code_hash: "xyz".into(),
+            dag_code_hash: "abc".into(),
+        };
+        let path = dir.join(FileNames::Meta.as_str());
+        save_meta(&meta, &path).unwrap();
+        let meta_read = read_meta(&dir).unwrap();
+        assert_eq!(meta, meta_read);
     }
 }
