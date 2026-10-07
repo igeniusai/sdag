@@ -27,7 +27,7 @@ from pydantic import (
 
 from sdag.constants import POSIX_ENV_VARIABLES
 from sdag.exceptions import POSIXOverrideError
-from sdag.types import Commands, ExecMode, Scope
+from sdag.types import CacheOptions, Commands, ExecMode, Scope
 
 
 class ScriptPath(BaseModel):
@@ -358,7 +358,7 @@ class TaskNode(BaseNode):
         fn_name (str): Function name.
         scope (Scope): Task scope.
         name (str): Task name, linked to caching.
-        cache (bool): Cache the task locally.
+        cache (CacheOptions): Caching options.
         cache_ignore (list[str]): list of fields ignored
             during cache validation.
         cache_size (int): Cache size. Ignore if caching is disabled.
@@ -384,7 +384,7 @@ class TaskNode(BaseNode):
     parents: list[Parent] = Field(default_factory=list)
     fn_name: str
     name: str
-    cache: bool
+    cache: CacheOptions
     scope: Scope
     cache_ignore: list[str] = Field(default_factory=list)
     cache_size: int = 1

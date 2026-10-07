@@ -45,7 +45,7 @@ from sdag.models import (
     TaskNode,
 )
 from sdag.settings import get_compile_settings
-from sdag.types import Commands, ExecMode, Scope
+from sdag.types import CacheOptions, Commands, ExecMode, Scope
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +246,7 @@ class Task:
         cmd: Commands,
         mode: ExecMode,
         scope: Scope,
-        cache: bool,
+        cache: CacheOptions,
         cache_ignore: list[str] | None,
         cache_size: int,
         retries: int,
@@ -264,7 +264,7 @@ class Task:
                 Use 'global' for tasks decorated with the
                 @task decorator, 'local' for tasks decorated
                 with @pipeline.task.
-            cache (bool): Enable caching.
+            cache (CacheOptions): Caching options.
             cache_ignore (list[str] | None): list of fields
                 ignored during cache validation.
             cache_size (int): Cache size. Ignore if caching is
@@ -279,7 +279,7 @@ class Task:
         self.cmd: Commands = cmd
         self.mode: ExecMode = mode
         self.scope: Scope = scope
-        self.cache = cache
+        self.cache: CacheOptions = cache
         self.cache_ignore = cache_ignore if cache_ignore is not None else []
         self.cache_size = cache_size
         self.retries = retries
@@ -503,7 +503,7 @@ class Pipeline:
         name: str | None = None,
         cmd: Commands = "sbatch",
         mode: ExecMode = "wrap",
-        cache: bool = False,  # noqa: FBT002
+        cache: CacheOptions = "none",
         cache_ignore: list[str] | None = None,
         cache_size: int = 1,
         retries: int = 0,
@@ -521,10 +521,17 @@ class Pipeline:
             mode (ExecMode, optional): Use wrap to call the
                 Python function or ext to call an external script.
                 Defaults to "wrap".
-            cache (bool, optional): Enable local caching.
-                Defaults to False.
-            cache_ignore (list[str] | None): List of fields ignored
-                during cache validation.
+            cache (CacheOptions, optional): Local caching options.
+                'none': No caching. 'output': All output artifacts
+                must exist. 'io': Input values must match and all
+                output artifacts exist. 'task': Same as 'io'
+                but the task function code is also checked. 'project':
+                Same as 'io' but the code of all internal modules
+                imported when the pipeline is compiled must also match.
+                Defaults to 'none'.
+            cache_ignore (list[str] | None): List of input arguments
+                ignored during cache validation. Ignored if cache is
+                set to 'none' or 'output'. Defaults to None.
             cache_size (int): Cache size. Ignore if caching is
                 disabled. set to 0 to allow for infinite cache
                 size.
@@ -629,7 +636,7 @@ def task(
     name: str | None = None,
     cmd: Commands = "sbatch",
     mode: ExecMode = "wrap",
-    cache: bool = False,  # noqa: FBT002
+    cache: CacheOptions = "none",
     cache_ignore: list[str] | None = None,
     cache_size: int = 1,
     retries: int = 0,
@@ -647,10 +654,17 @@ def task(
         mode (ExecMode, optional): Use wrap to call the
             Python function or ext to call an external script.
             Defaults to "wrap".
-        cache (bool, optional): Enable caching. Defaults
-            to False.
-        cache_ignore (list[str] | None): List of fields ignored
-            during cache validation. Defaults to None.
+        cache (CacheOptions, optional): Global caching options.
+            'none': No caching. 'output': All output artifacts
+            must exist. 'io': Input values must match and all
+            output artifacts exist. 'task': Same as 'io'
+            but the task function code is also checked.
+            'project': Same as 'io' but the code of all internal
+            modules imported when the pipeline is compiled must also
+            match. Defaults to 'none'.
+        cache_ignore (list[str] | None): List of input arguments
+            ignored during cache validation. Ignored if cache is
+            set to 'none' or 'output'. Defaults to None.
         cache_size (int): Cache size. Ignore if caching is
             disabled. set to 0 to allow for infinite cache
             size.
