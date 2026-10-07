@@ -13,3 +13,6 @@ Commands = Literal["bash", "sbatch"]
 
 Scope = Literal["local", "global"]
 """Task scopes."""
+
+CacheOptions = Literal["none", "output", "io", "task", "project"]
+"""Cache options."""

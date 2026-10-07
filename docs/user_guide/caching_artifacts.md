@@ -14,7 +14,7 @@ Caching is used to persist the output of a task across multiple runs, so you don
         non_cached_task(t)
 
 
-    @cached.task("submit.sh", cache=True)
+    @cached.task("submit.sh", cache="io")
     def cached_task(a: str):
         print(f"I only run once. The value of a is {a}")
 
@@ -36,7 +36,7 @@ When this pipeline is executed the first time via
 sdag run cached --local
 ```
 
-both tasks will be scheduled. When executed again, `cached_task` will be cached, so it will be marked as completed without execution. For caching to be validated, all input values must match with the cached ones. You can try to modify the value of `a` to check the cache gets invalidated. You can increase the `cache_size` in the decorator (which is equal to `1` by default) to account for multiple values of `a`. You can use the `cache_ignore` field of the task decorator to list the arguments you don't bother checking during cache validation. `cache_ignore` is useful for things like endpoints or parameters that are allowed to change without compromising cached values.
+both tasks will be scheduled. When executed again, `cached_task` will be cached, so it will be marked as completed without execution. For caching to be validated, all input values must match with the cached ones. You can try to modify the value of `a` to check the cache gets invalidated. You can increase the `cache_size` in the decorator (which is equal to `1` by default) to account for multiple values of `a`.
 
 The cache is bound to a task name. Many times, instead of increasing the cache size you can change the task name to provide it a whole new cache. Copy the following snippet into the same module:
 
@@ -48,12 +48,12 @@ def name_change():
     t.name = "another_task"
 
 
-@name_change.task("submit.sh", cache=True)
+@name_change.task("submit.sh", cache="io")
 def a_task(value: int):
     print(f"value: {value}")
 ```
 
-Because the two tasks have a different name, they both get cached during the first execution, which can be triggered with:
+Because the two tasks have different names, they both get cached during the first execution, which can be triggered with:
 
 ```sh
 sdag run name_change --local
@@ -77,12 +77,12 @@ def dag_with_artifact():
     print_path(input_path=t.artifacts["path"])
 
 
-@dag_with_artifact.task("submit.sh", cache=True)
+@dag_with_artifact.task("submit.sh", cache="io")
 def create_file(path: Artifact[Path]):
     path.touch()
 
 
-@dag_with_artifact.task("submit.sh", cache=True)
+@dag_with_artifact.task("submit.sh", cache="io")
 def print_path(input_path: str):
     print(f"The input path is {input_path}")
 ```
@@ -124,6 +124,18 @@ sdag prune create_file -p dag_with_artifact
 ```
 
 to delete the cache of the `create_file` task. Check out the [CLI](../cli.md) section for details.
+
+## Caching options
+
+Several caching options are available:
+
+| Cache option | Cache validation conditions                                                                                   |
+|--------------|---------------------------------------------------------------------------------------------------------------|
+| `"none"`     | Disables caching (default value).                                                                             |
+| `"output"`   | Artifacts exist.                                                                                              |
+| `"io"`       | Artifacts exist and input values match. Values allowed to change can be listed under `cache_ignore`.          |
+| `"task"`     | Same as `"io"` but the task function code must also match.                                                    |
+| `"project"`  | Same as `"io"` but the code of all internal modules imported during the pipeline compilation must also match. |
 
 
 !!! info

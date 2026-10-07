@@ -6,7 +6,7 @@
 //! The backend executes jobs and polls the status.
 
 use crate::model::nodes::Task;
-use crate::model::schemas::{Cmd, DAGMeta, ExecMode, Script, SlurmOverride};
+use crate::model::schemas::{Cmd, DAGMeta, ExecMode, Script, SlurmOverride, TaskMeta};
 use crate::settings::Cfg;
 use crate::store::{state, workdirs::FileNames};
 use log;
@@ -27,6 +27,7 @@ pub fn submit_slurm(
     let input = state::read_input_from_parents(task, &cfg.dagdir)?;
     let mut cmd = build_command(task, try_num, cfg, meta, &input, &task.envs)?;
     save_input(&input, task, cfg)?;
+    save_meta(task, cfg)?;
     let (output, error) = find_output_and_error_paths(
         &task.slurm,
         &meta.pipeline_name,
@@ -67,6 +68,7 @@ pub fn submit_local(
     let mut cmd = build_command(task, try_num, cfg, meta, &input, &task.envs)?;
     set_script_path(&mut cmd, task, cfg)?;
     save_input(&input, task, cfg)?;
+    save_meta(task, cfg)?;
 
     cmd.process_group(0)
         .stdout(Stdio::inherit())
@@ -86,6 +88,7 @@ pub fn submit_local_blocking(
     let mut cmd = build_command(task, try_num, cfg, meta, &input, &task.envs)?;
     set_script_path(&mut cmd, task, cfg)?;
     save_input(&input, task, cfg)?;
+    save_meta(task, cfg)?;
 
     cmd.stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -134,6 +137,26 @@ fn save_input(input: &HashMap<String, Value>, task: &Task, cfg: &Cfg) -> io::Res
     let dir = task.uid.to_string();
     let path = cfg.dagdir.join(dir).join(filename);
     state::save_input(input, &path)
+}
+
+fn save_meta(task: &Task, cfg: &Cfg) -> io::Result<()> {
+    let meta = TaskMeta {
+        fn_name: task.fn_name.to_string(),
+        name: task.name.to_string(),
+        code_hash: task.code_hash.to_string(),
+        dag_code_hash: cfg.dag_code_hash.to_string(),
+    };
+
+    let filename = FileNames::Meta.as_str();
+    let dir = task.uid.to_string();
+    let path = cfg.dagdir.join(dir).join(filename);
+    log::debug!(
+        "Writing task '{}' metadata in {}",
+        task.uid,
+        path.to_string_lossy()
+    );
+
+    state::save_meta(&meta, &path)
 }
 
 fn override_sbatch(
@@ -263,6 +286,7 @@ mod tests {
         DAGMeta {
             pipeline_name: "pipe".into(),
             hash: "xxx".into(),
+            code_hash: "".into(),
             timestamp: "1920-01-01T09:20:20".into(),
             extra: Value::Null,
             import_path: String::new(),
@@ -357,6 +381,21 @@ mod tests {
         let mut child = submit_local(&task, 1, &cfg, &meta).unwrap();
         let status = child.wait().unwrap();
         assert!(status.success());
+    }
+
+    #[test]
+    fn test_submit_local_blocking() {
+        let meta = get_meta();
+        let mut task = get_task();
+        task.script = Script::Script(ScriptContent {
+            content: "true".into(),
+        });
+        let cfg = get_cfg();
+        let task_dir = cfg.dagdir.join(task.uid.to_string());
+        fs::create_dir_all(&task_dir).unwrap();
+
+        let output = submit_local_blocking(&task, 1, &cfg, &meta).unwrap();
+        assert!(output.status.success());
     }
 
     #[test]

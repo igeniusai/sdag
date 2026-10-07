@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::engine::context::{Ctx, Job};
-use crate::engine::submission::inline;
+use crate::engine::submission::{caching, inline};
 use crate::model::nodes::{Branch, Children, End, Node, OneOf, ProvideStatus, Root, Task};
 use crate::model::schemas::Parent;
 use crate::model::status::{
@@ -137,8 +137,8 @@ impl<'a, 'b> NodeVisitor<'a, 'b> {
         let parent_statuses = self.get_parent_statuses(&task.parents, &ctx.statuses);
         if all_parents_completed(&parent_statuses) {
             ctx.set_status(task.uid, Status::ReadyForSubmission);
-            if task.cache {
-                if inline::submit_validate_cache(task, &self.cfg) {
+            if task.cache.is_enabled() {
+                if caching::submit_validate_cache(task, &self.cfg) {
                     ctx.set_status(task.uid, Status::Completed(Completed::Cached));
                     return;
                 }
@@ -156,7 +156,7 @@ impl<'a, 'b> NodeVisitor<'a, 'b> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::schemas::{ParentKind, TaskOutput};
+    use crate::model::schemas::{Cache, ParentKind, TaskOutput};
     use crate::model::status::{Failed, JobType};
     use crate::store::workdirs::{DirPaths, FileNames};
     use serde_json::Value;
@@ -633,7 +633,7 @@ mod tests {
 
         task.parents.push(get_parent(0));
         task.parents.push(get_parent(1));
-        task.cache = true;
+        task.cache = Cache::Io;
 
         let nodes = [Node::Root(root1), Node::Root(root2), Node::Task(task)];
         let mut ctx = get_ctx(&nodes);

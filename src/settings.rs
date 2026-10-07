@@ -19,6 +19,7 @@ pub struct Cfg {
     pub homedir: PathBuf,
     pub dagdir: PathBuf,
     pub cachedir: PathBuf,
+    pub dag_code_hash: String,
     pub local_cachedir: PathBuf,
     pub timestamp: String,
     pub grace_period: usize,

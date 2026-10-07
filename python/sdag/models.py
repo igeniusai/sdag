@@ -27,7 +27,7 @@ from pydantic import (
 
 from sdag.constants import POSIX_ENV_VARIABLES
 from sdag.exceptions import POSIXOverrideError
-from sdag.types import Commands, ExecMode, Scope
+from sdag.types import CacheOptions, Commands, ExecMode, Scope
 
 
 class ScriptPath(BaseModel):
@@ -358,12 +358,13 @@ class TaskNode(BaseNode):
         fn_name (str): Function name.
         scope (Scope): Task scope.
         name (str): Task name, linked to caching.
-        cache (bool): Cache the task locally.
+        cache (CacheOptions): Caching options.
         cache_ignore (list[str]): list of fields ignored
             during cache validation.
         cache_size (int): Cache size. Ignore if caching is disabled.
             set to 0 to allow for infinite cache size. Defaults
             to 1.
+        code_hash (str): Task source code hash.
         mode (ExecMode): Wrap a Python function or
             an external script.
         cmd (Commands): Command used to launch the script.
@@ -383,10 +384,11 @@ class TaskNode(BaseNode):
     parents: list[Parent] = Field(default_factory=list)
     fn_name: str
     name: str
-    cache: bool
+    cache: CacheOptions
     scope: Scope
     cache_ignore: list[str] = Field(default_factory=list)
     cache_size: int = 1
+    code_hash: str
     mode: ExecMode
     cmd: Commands
     retries: int
@@ -576,6 +578,8 @@ class DAGMeta(BaseModel):
         pipeline_name (str): Pipeline name.
         timestamp (str): Timestamp.
         import_path (str): Import path.
+        code_hash (str): Hash of all modules imported. It
+            is added after pipeline compilation.
         kwargs (dict[str, Any]): Pipeline input kwargs.
         extra (str): Extra metadata.
     """
@@ -583,6 +587,7 @@ class DAGMeta(BaseModel):
     pipeline_name: str
     timestamp: str = Field(default_factory=datetime.now().isoformat)
     import_path: str = ""
+    code_hash: str = ""
     kwargs: dict[str, Any] = Field(default_factory=dict)
     extra: dict[str, Any] = Field(default_factory=dict)
 

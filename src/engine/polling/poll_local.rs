@@ -3,7 +3,7 @@
 
 use crate::engine::context::Ctx;
 use crate::engine::polling::Poller;
-use crate::engine::submission::{self, inline};
+use crate::engine::submission::{self, caching, inline};
 use crate::model::nodes::{Node, Task};
 use crate::model::schemas::ExecMode;
 use crate::model::status::{Completed, Failed, JobType, Status};
@@ -64,8 +64,8 @@ impl<'a> LocalPoller<'a> {
             ctx.set_status(task.uid, Status::Failed(Failed::Job(JobType::Local(pid))));
             return;
         }
-        if task.cache
-            && let Err(e) = inline::submit_save_cache(task, &self.cfg)
+        if task.cache.is_enabled()
+            && let Err(e) = caching::submit_save_cache(task, &self.cfg)
         {
             log::error!("Task {}: Failed to save cache - {e}", task.uid);
         }

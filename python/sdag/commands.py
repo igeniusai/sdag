@@ -64,6 +64,7 @@ def compile_and_return_dag(
     logger.info("Compiling pipeline '%s'", path)
     pipeline = find_pipeline_by_name(path)
     dag = pipeline.compile(path, **input_kwargs)
+    dag.meta.code_hash = pipeline.compute_code_hash()
     dag.meta.kwargs |= input_kwargs
     if extra_metadata is not None:
         dag.meta.extra = json.loads(extra_metadata)
@@ -407,6 +408,7 @@ def run_task(args: Namespace, extras: dict[str, Any]) -> None:
         pipeline_name=args.pipeline,
         fn_name=task.fn.__name__,
         cache=task.cache,
+        code_hash=task.code_hash,
         mode=task.mode,
         cmd=task.cmd,
         scope=task.scope,

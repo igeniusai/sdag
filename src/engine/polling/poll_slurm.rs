@@ -3,7 +3,7 @@
 
 use crate::engine::context::Ctx;
 use crate::engine::polling::Poller;
-use crate::engine::submission::{self, inline};
+use crate::engine::submission::{self, caching, inline};
 use crate::model::nodes::{Node, Task};
 use crate::model::responses::{SacctResponse, SqueueResponse};
 use crate::model::schemas::ExecMode;
@@ -74,8 +74,8 @@ impl<'a> SlurmPoller<'a> {
                     ctx.set_status(task.uid, Status::Failed(Failed::Job(job)));
                     return;
                 }
-                if task.cache
-                    && let Err(e) = inline::submit_save_cache(task, &self.cfg)
+                if task.cache.is_enabled()
+                    && let Err(e) = caching::submit_save_cache(task, &self.cfg)
                 {
                     log::error!("Task {}: Failed to save cache - {e}", task.uid);
                 }
@@ -244,7 +244,7 @@ mod tests {
     use super::*;
     use crate::engine::context::Job;
     use crate::model::responses::{SacctJob, SacctState, SqueueJob};
-    use crate::model::schemas::Cmd;
+    use crate::model::schemas::{Cache, Cmd};
     use crate::store::workdirs::{DirPaths, FileNames};
     use std::collections::HashMap;
     use std::env;
@@ -414,7 +414,7 @@ mod tests {
         let cfg = get_cfg();
         let mut poller = get_poller(&cfg);
         let mut task = get_task(0);
-        task.cache = true;
+        task.cache = Cache::Io;
 
         let nodes = [Node::Task(task.clone())];
         let mut ctx = get_ctx(&nodes);
@@ -446,7 +446,7 @@ mod tests {
         let mut poller = get_poller(&cfg);
         let mut task = get_task(0);
         task.mode = ExecMode::Ext;
-        task.cache = false;
+        task.cache = Cache::None;
 
         let nodes = [Node::Task(task.clone())];
         let mut ctx = get_ctx(&nodes);

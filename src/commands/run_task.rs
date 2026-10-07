@@ -23,6 +23,7 @@ pub fn run_task(
     let meta = DAGMeta {
         pipeline_name: task.pipeline_name.clone(),
         hash: get_runtask_hash(&task.name),
+        code_hash: String::new(),
         timestamp: settings::get_timestamp(),
         extra: Value::Null,
         import_path: task.pipeline_name.clone(),
@@ -35,6 +36,7 @@ pub fn run_task(
         homedir,
         dagdir: paths.dagdir,
         cachedir: paths.cachedir,
+        dag_code_hash: meta.code_hash.clone(),
         local_cachedir: paths.local_cachedir,
         timestamp: settings::get_timestamp(),
         grace_period: slurm_grace_period,

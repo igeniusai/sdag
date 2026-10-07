@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Domyn
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod caching;
 pub mod inline;
 pub mod jobs;
 use crate::engine::context::{Ctx, Job};
@@ -96,7 +97,7 @@ impl<'a> Submitter<'a> {
             handle_retries(task, ctx, failure);
         }
 
-        if task.cache && ctx.statuses[task.uid].is_running() {
+        if task.cache.is_enabled() && ctx.statuses[task.uid].is_running() {
             log::debug!("Task {} marked as running cacheable", task.uid);
             ctx.running_cacheable.insert(task.name.to_string());
         }
@@ -127,7 +128,7 @@ impl<'a> Submitter<'a> {
 
     fn handle_cache_validation(&mut self, task: &Task, ctx: &mut Ctx, already_checked: &bool) {
         log::info!("checking task {} cache", task.uid);
-        if task.cache && ctx.running_cacheable.contains(&task.name) {
+        if task.cache.is_enabled() && ctx.running_cacheable.contains(&task.name) {
             log::warn!(
                 "Holding back task '{}' with name '{}': Another \
                 cacheable task with the same name is already running",
@@ -138,7 +139,7 @@ impl<'a> Submitter<'a> {
                 .push_back(Job::ValidateCache(task.uid, false));
             return;
         }
-        if !already_checked && inline::submit_validate_cache(&task, &self.cfg) {
+        if !already_checked && caching::submit_validate_cache(&task, &self.cfg) {
             ctx.set_status(task.uid, Status::Completed(Completed::Cached));
             return;
         }

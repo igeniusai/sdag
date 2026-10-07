@@ -20,6 +20,7 @@ pub struct DAGMeta {
     pub pipeline_name: String,
     #[serde(default = "get_new_dag_hash")]
     pub hash: String,
+    pub code_hash: String,
     pub timestamp: String,
     pub extra: Value,
     pub import_path: String,
@@ -32,6 +33,10 @@ pub struct TaskMeta {
     pub fn_name: String,
     /// Task name. By default it's equal to the function name
     pub name: String,
+    /// Task function code hash
+    pub code_hash: String,
+    /// Imported module hash
+    pub dag_code_hash: String,
 }
 
 /// Task output.
@@ -206,6 +211,42 @@ pub struct SlurmOverride {
     pub cpus_per_task: Option<usize>,
     pub mem: Option<String>,
     pub time: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum Cache {
+    None,
+    Output,
+    Io,
+    Task,
+    Project,
+}
+impl Cache {
+    pub fn is_enabled(&self) -> bool {
+        match self {
+            Self::None => false,
+            Self::Output | Self::Io | Self::Task | Self::Project => true,
+        }
+    }
+}
+
+impl Default for Cache {
+    fn default() -> Self {
+        Self::None
+    }
+}
+impl fmt::Display for Cache {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let cmd = match self {
+            Self::None => "none",
+            Self::Output => "output",
+            Self::Io => "io",
+            Self::Task => "task",
+            Self::Project => "project",
+        };
+        write!(f, "{cmd}")
+    }
 }
 
 #[cfg(test)]

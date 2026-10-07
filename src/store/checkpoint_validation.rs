@@ -27,8 +27,8 @@ impl<'a> CheckpointValidator<'a> {
             Node::Task(task) => {
                 let status = &ctx.statuses[task.uid];
                 let path = self.get_node_dir(task.uid);
-                self.check_meta(&path)?;
                 if status.is_running() | status.is_completed() {
+                    self.check_meta(&path)?;
                     self.check_input(&path)?;
                 }
                 if status.is_completed() {
@@ -274,23 +274,11 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn test_missing_task_input() {
-        let (creator, nodes, ctx, cfg) = get_objects("dag", "xyz");
-        creator.create_cachedir();
-        creator.create_local_cachedir();
-        creator.create_dagdir();
-
-        let validator = CheckpointValidator { cfg: &cfg };
-        validator.validate_checkpoint(&nodes, &ctx).unwrap();
-    }
-
-    #[test]
     fn validate_correct_not_submitted() {
         let (creator, nodes, ctx, cfg) = get_objects("dag", "xyz");
         creator.create_cachedir();
         creator.create_local_cachedir();
-        creator.create_meta_file(1);
+        creator.create_dagdir();
 
         let validator = CheckpointValidator { cfg: &cfg };
         validator.validate_checkpoint(&nodes, &ctx).unwrap();
@@ -303,6 +291,19 @@ mod tests {
         creator.create_cachedir();
         creator.create_local_cachedir();
         creator.create_meta_file(1);
+
+        ctx.statuses[1] = Status::Running(JobType::Slurm("123".into()));
+        let validator = CheckpointValidator { cfg: &cfg };
+        validator.validate_checkpoint(&nodes, &ctx).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn validate_running_job_missing_meta() {
+        let (creator, nodes, mut ctx, cfg) = get_objects("dag", "xyz");
+        creator.create_cachedir();
+        creator.create_local_cachedir();
+        creator.create_input_file(1);
 
         ctx.statuses[1] = Status::Running(JobType::Slurm("123".into()));
         let validator = CheckpointValidator { cfg: &cfg };

@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 use crate::model::schemas::{
-    Artifact, Cmd, ExecMode, Kwarg, Parent, ParentKind, Scope, Script, SlurmOverride,
+    Artifact, Cache, Cmd, ExecMode, Kwarg, Parent, ParentKind, Scope, Script, SlurmOverride,
 };
 use crate::model::status::{Completed, Status};
 use serde::{Deserialize, Serialize};
@@ -104,7 +104,9 @@ pub struct Task {
     // pipeline name
     pub pipeline_name: String,
     /// Caching.
-    pub cache: bool,
+    pub cache: Cache,
+    /// Task code hash
+    pub code_hash: String,
     /// Local or global task
     pub scope: Scope,
     /// Local caching.

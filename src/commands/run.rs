@@ -37,6 +37,7 @@ pub fn run(
         dagdir: paths.dagdir,
         cachedir: paths.cachedir,
         local_cachedir: paths.local_cachedir,
+        dag_code_hash: meta.code_hash.to_string(),
         timestamp: settings::get_timestamp(),
         grace_period: slurm_grace_period,
         max_dagdirs: max_concurrent_runs,

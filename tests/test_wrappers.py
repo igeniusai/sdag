@@ -454,7 +454,8 @@ class TestPipeline:
             name="task",
             pipeline_name="",
             fn_name="task",
-            cache=False,
+            cache="none",
+            code_hash="xyz",
             mode="wrap",
             cmd="bash",
             scope="local",
@@ -509,7 +510,7 @@ class TestTask:
             scope="local",
             retries=0,
             script=ScriptPath(path=Path()),
-            cache=False,
+            cache="none",
             cache_ignore=None,
             cache_size=1,
             tags=[],
@@ -535,7 +536,7 @@ class TestTask:
             scope="local",
             retries=0,
             script=ScriptPath(path=Path()),
-            cache=False,
+            cache="none",
             cache_ignore=None,
             cache_size=1,
             tags=[],
@@ -546,7 +547,8 @@ class TestTask:
             uid=0,
             fn_name="fn",
             name="fn",
-            cache=True,
+            cache="io",
+            code_hash="xyz",
             mode="wrap",
             cmd="sbatch",
             scope="local",
@@ -598,7 +600,7 @@ class TestTask:
             scope="local",
             retries=0,
             script=ScriptPath(path=Path()),
-            cache=False,
+            cache="none",
             cache_ignore=None,
             cache_size=1,
             tags=[],
@@ -623,7 +625,7 @@ class TestTask:
             scope="local",
             retries=0,
             script=ScriptPath(path=Path()),
-            cache=False,
+            cache="none",
             cache_ignore=None,
             cache_size=1,
             tags=[],
@@ -650,7 +652,7 @@ class TestTask:
             scope="local",
             retries=0,
             script=ScriptPath(path=Path()),
-            cache=False,
+            cache="none",
             cache_ignore=None,
             cache_size=1,
             tags=[],
@@ -687,7 +689,7 @@ class TestTask:
             scope="local",
             retries=0,
             script=ScriptPath(path=Path()),
-            cache=False,
+            cache="none",
             cache_ignore=None,
             cache_size=1,
             tags=[],
@@ -698,7 +700,8 @@ class TestTask:
             uid=1,
             fn_name="fn",
             name="fn",
-            cache=True,
+            cache="io",
+            code_hash="xyz",
             mode="wrap",
             cmd="sbatch",
             scope="local",
@@ -724,3 +727,30 @@ class TestTask:
                 ),
             ),
         ]
+
+    def test_code_cache(self) -> None:
+        """Check source code hash is computed and cached."""
+
+        def fn(a: int) -> int:
+            """Description."""
+            return a * 2
+
+        test_task = Task(
+            fn=fn,
+            name="task",
+            mode="wrap",
+            cmd="sbatch",
+            scope="local",
+            retries=0,
+            script=ScriptPath(path=Path()),
+            cache="none",
+            cache_ignore=None,
+            cache_size=1,
+            tags=[],
+        )
+
+        code_hash = test_task.code_hash
+        cached_code_hash = test_task.code_hash
+
+        assert isinstance(code_hash, str)
+        assert code_hash is cached_code_hash
