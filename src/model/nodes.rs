@@ -118,6 +118,10 @@ pub struct Task {
     pub mode: ExecMode,
     /// Command used
     pub cmd: Cmd,
+    /// Argument to be split across jobs
+    pub each: Option<String>,
+    /// Number of jobs in the array
+    pub njobs: usize,
     /// Number of retries.
     pub retries: usize,
     /// script path.
@@ -156,6 +160,12 @@ impl Parents for Task {
 impl ProvideStatus for Task {
     fn provide_status<'b>(&self, status: &'b Status, _kind: &ParentKind) -> &'b Status {
         status
+    }
+}
+
+impl Task {
+    fn is_array(&self) -> bool {
+        self.each.is_some()
     }
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
