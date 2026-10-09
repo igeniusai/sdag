@@ -436,13 +436,13 @@ class Task:
                 path=value.path,
             )
 
-        if isinstance(value, Each):
+        elif isinstance(value, Each):
             if node.each is not None:
                 raise MultipleEachError(key, node.each)
             node.each = key
             value = value.collection
 
-        if isinstance(value, BaseNode):
+        elif isinstance(value, BaseNode):
             node.add_output_edge(value.uid, key)
 
         else:

@@ -47,9 +47,8 @@ pub fn save_checkpoint(cfg: &Cfg, meta: &DAGMeta, nodes: &[Node], ctx: &Ctx) -> 
     let checkpoint = Checkpoint {
         cfg: Cow::Borrowed(cfg),
         meta: Cow::Borrowed(meta),
-        statuses: Cow::Borrowed(&ctx.statuses),
+        node_ctxs: Cow::Borrowed(&ctx.nodes),
         nodes: Cow::Borrowed(nodes),
-        try_nums: Cow::Borrowed(&ctx.try_nums),
     };
 
     let path = checkpoint.cfg.dagdir.join(FileNames::Checkpoint.as_str());
@@ -361,8 +360,7 @@ mod tests {
         assert_eq!(ckpt.cfg.into_owned(), cfg);
         assert_eq!(ckpt.meta.into_owned(), meta);
         assert_eq!(ckpt.nodes.into_owned(), nodes);
-        assert_eq!(ckpt.statuses.into_owned(), ctx.statuses);
-        assert_eq!(ckpt.try_nums.into_owned(), ctx.try_nums);
+        assert_eq!(ckpt.node_ctxs.into_owned(), ctx.nodes);
     }
 
     #[test]

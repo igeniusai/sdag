@@ -5,23 +5,32 @@ use crate::engine::submission;
 use crate::model::nodes::Node;
 use crate::model::status::{Failed, JobType, Status};
 use log;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashSet, VecDeque};
 use std::process::Child;
 
+#[derive(Debug, Clone)]
 pub enum Job {
     Task(usize),
     ValidateCache(usize, bool),
 }
 
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
+pub struct NodeCtx {
+    pub try_num: usize,
+    pub status: Status,
+    pub job_array_statuses: Vec<Status>,
+}
+
+#[derive(Debug, Default)]
 pub struct Ctx {
     pub updated: VecDeque<usize>,
-    pub statuses: Vec<Status>,
     pub jobs: VecDeque<Job>,
-    pub try_nums: Vec<usize>,
     pub local_jobs: Vec<(usize, Child)>,
     pub slurm_jobs: Vec<(usize, String)>,
     pub running_cacheable: HashSet<String>,
     pub must_checkpoint: bool,
+    pub nodes: Vec<NodeCtx>,
 }
 impl Ctx {
     pub fn new(nodes: &[Node]) -> Result<Self, String> {
@@ -42,27 +51,20 @@ impl Ctx {
             return Err(err);
         };
 
-        let mut statuses = Vec::with_capacity(nnodes);
-        for _ in 0..nnodes {
-            statuses.push(Status::NotSubmitted);
-        }
-
         Ok(Self {
-            statuses,
             updated: VecDeque::new(),
             jobs: VecDeque::new(),
-            try_nums: vec![0; nnodes],
             running_cacheable: HashSet::new(),
             local_jobs: Vec::new(),
             slurm_jobs: Vec::new(),
             must_checkpoint: true,
+            nodes: vec![NodeCtx::default(); nnodes],
         })
     }
 
-    pub fn from_checkpoint(nodes: &[Node], statuses: Vec<Status>, try_nums: Vec<usize>) -> Self {
+    pub fn from_checkpoint(nodes: &[Node], node_ctxs: Vec<NodeCtx>) -> Self {
         let mut ctx = Self {
-            statuses,
-            try_nums,
+            nodes: node_ctxs,
             updated: VecDeque::new(),
             jobs: VecDeque::new(),
             running_cacheable: HashSet::new(),
@@ -80,14 +82,14 @@ impl Ctx {
     }
 
     pub fn set_status(&mut self, uid: usize, status: Status) {
-        self.statuses[uid] = status;
+        self.nodes[uid].status = status;
         self.must_checkpoint = true;
     }
 
     fn mark_all_local_running_jobs_as_failed(&mut self, nodes: &[Node]) {
         for node in nodes {
             if let Node::Task(task) = node
-                && let Status::Running(JobType::Local(pid)) = self.statuses[task.uid]
+                && let Status::Running(JobType::Local(pid)) = self.nodes[task.uid].status
             {
                 log::warn!("Marking running local task {} as failed.", task.uid);
                 let failure = Failed::Job(JobType::Local(pid));
@@ -97,10 +99,10 @@ impl Ctx {
     }
 
     fn collect_running_slurm_jobs(&mut self) {
-        for (uid, status) in self.statuses.iter().enumerate() {
+        for (uid, node) in self.nodes.iter().enumerate() {
             {
                 if let Status::Pending(JobType::Slurm(job_id))
-                | Status::Running(JobType::Slurm(job_id)) = status
+                | Status::Running(JobType::Slurm(job_id)) = &node.status
                 {
                     log::debug!("Task {}: Collecting Slurm Job id '{job_id}'", uid);
                     self.slurm_jobs.push((uid, job_id.to_string()));
@@ -155,15 +157,16 @@ mod tests {
         let tasks = get_tasks();
         let nodes = get_nodes(tasks);
 
-        let try_nums = vec![1, 1, 1];
-        let statuses = vec![
-            Status::Running(JobType::Local(123)),
-            Status::Running(JobType::Slurm("123".into())),
-            Status::Pending(JobType::Slurm("456".into())),
-        ];
+        let mut node_ctxs = vec![NodeCtx::default(); 3];
+        node_ctxs[0].try_num = 1;
+        node_ctxs[1].try_num = 1;
+        node_ctxs[2].try_num = 1;
+        node_ctxs[0].status = Status::Running(JobType::Local(123));
+        node_ctxs[1].status = Status::Running(JobType::Slurm("123".into()));
+        node_ctxs[2].status = Status::Pending(JobType::Slurm("456".into()));
 
-        let ctx = Ctx::from_checkpoint(&nodes, statuses, try_nums);
-        assert!(matches!(ctx.statuses[0], Status::Failed(_)));
+        let ctx = Ctx::from_checkpoint(&nodes, node_ctxs);
+        assert!(matches!(ctx.nodes[0].status, Status::Failed(_)));
         assert_eq!(ctx.slurm_jobs.len(), 2);
     }
 }

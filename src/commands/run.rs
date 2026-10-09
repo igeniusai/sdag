@@ -75,14 +75,13 @@ pub fn restart_run(
     let ckpt = state::read_chekpoint(&path).expect("Failed to read checkpoint");
     let meta = ckpt.meta.into_owned();
     let nodes = ckpt.nodes.into_owned();
-    let mut try_nums = ckpt.try_nums.into_owned();
-    let mut statuses = ckpt.statuses.into_owned();
+    let mut node_ctxs = ckpt.node_ctxs.into_owned();
     if retry {
         log::info!("Retry enabled by user");
-        status::reset_failed_or_skipped_status(&mut statuses, &mut try_nums);
+        status::reset_failed_or_skipped_status(&mut node_ctxs);
     }
 
-    let mut ctx = Ctx::from_checkpoint(&nodes, statuses, try_nums);
+    let mut ctx = Ctx::from_checkpoint(&nodes, node_ctxs);
     let mut cfg = ckpt.cfg.into_owned();
     cfg.max_concurrency = max_concurrency;
     cfg.sleep_time = Duration::from_secs(time_between_polls);

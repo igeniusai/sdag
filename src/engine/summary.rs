@@ -61,15 +61,13 @@ fn get_summary_table<'a>(nodes: &[Node], ctx: &Ctx) -> Table {
     let mut records = Vec::new();
     for node in nodes {
         if let Node::Task(task) = &node {
-            let try_num = ctx.try_nums[task.uid];
-            let status = &ctx.statuses[task.uid];
-
+            let node_ctx = &ctx.nodes[task.uid];
             records.push(Summary {
                 uid: task.uid,
                 task: &task.name,
                 pipeline: &task.pipeline_name,
-                status,
-                try_num,
+                status: &node_ctx.status,
+                try_num: node_ctx.try_num,
             });
         }
     }
@@ -98,7 +96,7 @@ fn get_final_recap_table(nodes: &[Node], ctx: &Ctx) -> Table {
 
     for node in nodes {
         if let Node::Task(task) = &node {
-            let status = &ctx.statuses[task.uid];
+            let status = &ctx.nodes[task.uid].status;
             match &status {
                 Status::Completed(_) => ncompleted += 1,
                 Status::Skipped => nskipped += 1,
@@ -184,14 +182,16 @@ mod tests {
 
     fn get_ctx(nodes: &[Node]) -> Ctx {
         let mut ctx = Ctx::new(nodes).unwrap();
-        ctx.try_nums = vec![0, 1, 2, 3, 4, 5];
-        ctx.statuses = vec![
-            Status::Completed(Completed::Job(JobType::Slurm("123".into()))),
-            Status::Failed(Failed::Generic),
-            Status::Pending(JobType::Slurm("234".into())),
-            Status::NotSubmitted,
-            Status::Running(JobType::Slurm("456".into())),
-        ];
+        ctx.nodes[0].try_num = 0;
+        ctx.nodes[1].try_num = 1;
+        ctx.nodes[2].try_num = 2;
+        ctx.nodes[3].try_num = 3;
+        ctx.nodes[4].try_num = 4;
+        ctx.nodes[0].status = Status::Completed(Completed::Job(JobType::Slurm("123".into())));
+        ctx.nodes[1].status = Status::Failed(Failed::Generic);
+        ctx.nodes[2].status = Status::Pending(JobType::Slurm("234".into()));
+        ctx.nodes[3].status = Status::NotSubmitted;
+        ctx.nodes[4].status = Status::Running(JobType::Slurm("456".into()));
         ctx
     }
 

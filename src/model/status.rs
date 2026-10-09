@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Domyn
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::engine::context::NodeCtx;
 use crate::model::schemas::Parent;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use std::iter::zip;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum JobType {
@@ -80,6 +80,12 @@ pub enum Status {
     Failed(Failed),
 }
 
+impl Default for Status {
+    fn default() -> Self {
+        Self::NotSubmitted
+    }
+}
+
 impl Status {
     pub fn is_final(&self) -> bool {
         matches!(self, Self::Completed(_) | Self::Failed(_) | Self::Skipped)
@@ -121,17 +127,17 @@ impl fmt::Display for Status {
     }
 }
 
-pub fn reset_failed_or_skipped_status(statuses: &mut [Status], try_nums: &mut [usize]) {
-    for (status, try_num) in zip(statuses, try_nums) {
-        if matches!(status, Status::Failed(_) | Status::Skipped) {
-            *status = Status::NotSubmitted;
-            *try_num = 0;
+pub fn reset_failed_or_skipped_status(node_ctxs: &mut [NodeCtx]) {
+    for node in node_ctxs {
+        if matches!(node.status, Status::Failed(_) | Status::Skipped) {
+            node.status = Status::NotSubmitted;
+            node.try_num = 0;
         }
     }
 }
 
-pub fn is_simulation_completed(statuses: &[Status]) -> bool {
-    statuses.iter().all(|s| s.is_final())
+pub fn is_simulation_completed(nodes: &[NodeCtx]) -> bool {
+    nodes.iter().all(|s| s.status.is_final())
 }
 
 /// Verify that all parent have completed successfully.
@@ -147,8 +153,8 @@ pub fn some_parents_failed_or_skipped(parent_statuses: &[&Status]) -> bool {
         .any(|x| matches!(**x, Status::Skipped | Status::Failed(_)))
 }
 
-pub fn any_node_failed(statuses: &[Status]) -> bool {
-    statuses.iter().any(|x| matches!(x, Status::Failed(_)))
+pub fn any_node_failed(nodes: &[NodeCtx]) -> bool {
+    nodes.iter().any(|x| matches!(x.status, Status::Failed(_)))
 }
 
 /// Check if every parent has failed or has been skipped.
@@ -158,9 +164,9 @@ pub fn all_parents_failed_or_skipped(parent_statuses: &[&Status]) -> bool {
         .all(|x| matches!(**x, Status::Failed(_)) | matches!(**x, Status::Skipped))
 }
 
-pub fn find_completed_parent(parents: &[Parent], statuses: &[Status]) -> Option<usize> {
+pub fn find_completed_parent(parents: &[Parent], nodes: &[NodeCtx]) -> Option<usize> {
     for parent in parents {
-        if matches!(statuses[parent.uid], Status::Completed(_)) {
+        if matches!(nodes[parent.uid].status, Status::Completed(_)) {
             return Some(parent.uid);
         }
     }
@@ -228,11 +234,11 @@ mod tests {
             },
         ];
 
-        let s0 = Status::Completed(Completed::Cached);
-        let s1 = Status::Skipped;
-        let s2 = Status::Failed(Failed::Generic);
-        let statuses = vec![s0, s1, s2];
-        assert_eq!(find_completed_parent(&parents, &statuses).unwrap(), 0);
+        let mut node_ctxs = vec![NodeCtx::default(); 3];
+        node_ctxs[0].status = Status::Completed(Completed::Cached);
+        node_ctxs[1].status = Status::Skipped;
+        node_ctxs[2].status = Status::Failed(Failed::Generic);
+        assert_eq!(find_completed_parent(&parents, &node_ctxs).unwrap(), 0);
     }
 
     #[test]
@@ -248,49 +254,49 @@ mod tests {
             },
         ];
 
-        let s0 = Status::Completed(Completed::Cached);
-        let s1 = Status::Skipped;
-        let s2 = Status::Failed(Failed::Generic);
-        let statuses = vec![s0, s1, s2];
-        assert!(find_completed_parent(&parents, &statuses).is_none());
+        let mut node_ctxs = vec![NodeCtx::default(); 3];
+        node_ctxs[0].status = Status::Completed(Completed::Cached);
+        node_ctxs[1].status = Status::Skipped;
+        node_ctxs[2].status = Status::Failed(Failed::Generic);
+
+        assert!(find_completed_parent(&parents, &node_ctxs).is_none());
     }
 
     #[test]
     fn test_retry_run() {
-        let mut statuses = vec![
-            Status::Failed(Failed::Generic),
-            Status::Pending(JobType::Slurm("123".into())),
-            Status::Skipped,
-            Status::NotSubmitted,
-        ];
-        let mut try_nums = vec![1, 2, 3, 0];
+        let mut node_ctxs = vec![NodeCtx::default(); 4];
+        node_ctxs[0].status = Status::Failed(Failed::Generic);
+        node_ctxs[1].status = Status::Pending(JobType::Slurm("123".into()));
+        node_ctxs[2].status = Status::Skipped;
+        node_ctxs[3].status = Status::NotSubmitted;
+        node_ctxs[0].try_num = 1;
+        node_ctxs[1].try_num = 2;
+        node_ctxs[2].try_num = 3;
+        node_ctxs[3].try_num = 0;
 
-        reset_failed_or_skipped_status(&mut statuses, &mut try_nums);
-        assert!(matches!(statuses[0], Status::NotSubmitted));
-        assert!(matches!(statuses[2], Status::NotSubmitted));
-        assert_eq!(try_nums[0], 0);
-        assert_eq!(try_nums[2], 0);
+        reset_failed_or_skipped_status(&mut node_ctxs);
+        assert!(matches!(node_ctxs[0].status, Status::NotSubmitted));
+        assert!(matches!(node_ctxs[2].status, Status::NotSubmitted));
+        assert_eq!(node_ctxs[0].try_num, 0);
+        assert_eq!(node_ctxs[2].try_num, 0);
     }
 
     #[test]
     fn check_simulation_is_completed() {
-        let statuses = vec![
-            Status::Completed(Completed::Generic),
-            Status::Failed(Failed::Generic),
-            Status::Skipped,
-        ];
+        let mut node_ctxs = vec![NodeCtx::default(); 3];
+        node_ctxs[0].status = Status::Completed(Completed::Generic);
+        node_ctxs[1].status = Status::Failed(Failed::Generic);
+        node_ctxs[2].status = Status::Skipped;
 
-        assert!(is_simulation_completed(&statuses))
+        assert!(is_simulation_completed(&node_ctxs))
     }
 
     #[test]
     fn check_simulation_is_not_completed() {
-        let statuses = vec![
-            Status::Running(JobType::Slurm("123".into())),
-            Status::Failed(Failed::Generic),
-            Status::Skipped,
-        ];
-
-        assert!(!is_simulation_completed(&statuses))
+        let mut node_ctxs = vec![NodeCtx::default(); 3];
+        node_ctxs[0].status = Status::Running(JobType::Slurm("123".into()));
+        node_ctxs[1].status = Status::Failed(Failed::Generic);
+        node_ctxs[2].status = Status::Skipped;
+        assert!(!is_simulation_completed(&node_ctxs))
     }
 }

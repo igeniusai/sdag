@@ -21,9 +21,8 @@ pub fn print_status(pipeline_name: &str, pipeline_hash: &str) -> Result<(), Stri
         state::read_chekpoint(&path).map_err(|e| format!("Failed to read checkpoint - {e}"))?;
     let meta = ckpt.meta.into_owned();
     let nodes = ckpt.nodes.into_owned();
-    let try_nums = ckpt.try_nums.into_owned();
-    let statuses = ckpt.statuses.into_owned();
-    let ctx = Ctx::from_checkpoint(&nodes, statuses, try_nums);
+    let node_ctxs = ckpt.node_ctxs.into_owned();
+    let ctx = Ctx::from_checkpoint(&nodes, node_ctxs);
 
     summary::print_summary(&nodes, &ctx, pipeline_name, &meta.hash);
     Ok(())

@@ -48,13 +48,13 @@ impl<'a> SlurmPoller<'a> {
         match &status {
             Status::Pending(JobType::Slurm(job_id)) => {
                 ctx.slurm_jobs.push((task.uid, job_id.to_string()));
-                if !matches!(&ctx.statuses[task.uid], Status::Pending(_)) {
+                if !matches!(&ctx.nodes[task.uid].status, Status::Pending(_)) {
                     ctx.set_status(task.uid, status);
                 }
             }
             Status::Running(JobType::Slurm(job_id)) => {
                 ctx.slurm_jobs.push((task.uid, job_id.to_string()));
-                if !matches!(&ctx.statuses[task.uid], Status::Running(_)) {
+                if !matches!(&ctx.nodes[task.uid].status, Status::Running(_)) {
                     ctx.set_status(task.uid, status);
                 }
             }
@@ -243,7 +243,7 @@ fn get_status_from_string(status_string: &str, job_id: &str) -> Status {
 mod tests {
     use super::*;
     use crate::engine::context::Job;
-    use crate::model::responses::{SacctJob, SacctState, SqueueJob};
+    use crate::model::responses::{ArrayTaskId, SacctJob, SacctState, SqueueJob};
     use crate::model::schemas::{Cache, Cmd};
     use crate::store::workdirs::{DirPaths, FileNames};
     use std::collections::HashMap;
@@ -285,7 +285,7 @@ mod tests {
 
     fn get_ctx(nodes: &[Node]) -> Ctx {
         let mut ctx = Ctx::new(nodes).unwrap();
-        ctx.try_nums[0] = 1;
+        ctx.nodes[0].try_num = 1;
         ctx.must_checkpoint = false;
         ctx
     }
@@ -326,7 +326,7 @@ mod tests {
         );
 
         assert!(matches!(
-            ctx.statuses[0],
+            ctx.nodes[0].status,
             Status::Pending(JobType::Slurm(_))
         ));
         assert!(ctx.must_checkpoint);
@@ -341,11 +341,11 @@ mod tests {
         let nodes = [Node::Task(task.clone())];
         let constant_status = Status::Pending(JobType::Slurm("123".into()));
         let mut ctx = get_ctx(&nodes);
-        ctx.statuses[0] = constant_status.clone();
+        ctx.nodes[0].status = constant_status.clone();
         poller.handle_new_slurm_status(&task, constant_status, &mut ctx);
 
         assert!(matches!(
-            ctx.statuses[0],
+            ctx.nodes[0].status,
             Status::Pending(JobType::Slurm(_))
         ));
         assert!(!ctx.must_checkpoint);
@@ -360,11 +360,11 @@ mod tests {
         let nodes = [Node::Task(task.clone())];
         let constant_status = Status::Running(JobType::Slurm("123".into()));
         let mut ctx = get_ctx(&nodes);
-        ctx.statuses[0] = constant_status.clone();
+        ctx.nodes[0].status = constant_status.clone();
         poller.handle_new_slurm_status(&task, constant_status, &mut ctx);
 
         assert!(matches!(
-            ctx.statuses[0],
+            ctx.nodes[0].status,
             Status::Running(JobType::Slurm(_))
         ));
         assert!(!ctx.must_checkpoint);
@@ -383,8 +383,8 @@ mod tests {
             Status::Failed(Failed::Job(JobType::Slurm("123".into()))),
             &mut ctx,
         );
-        println!("{}", ctx.statuses[0]);
-        assert!(matches!(ctx.statuses[0], Status::Failed(_)));
+        println!("{}", ctx.nodes[0].status);
+        assert!(matches!(ctx.nodes[0].status, Status::Failed(_)));
         assert!(ctx.must_checkpoint);
     }
 
@@ -505,14 +505,29 @@ mod tests {
                 SqueueJob {
                     job_id: "123".into(),
                     job_state: vec!["COMPLETED".into(), "???".into()],
+                    array_task_string: "".into(),
+                    array_task_id: ArrayTaskId {
+                        number: "0".into(),
+                        set: false,
+                    },
                 },
                 SqueueJob {
                     job_id: "456".into(),
                     job_state: vec!["FAILED".into()],
+                    array_task_string: "".into(),
+                    array_task_id: ArrayTaskId {
+                        number: "0".into(),
+                        set: false,
+                    },
                 },
                 SqueueJob {
                     job_id: "789".into(),
                     job_state: vec![],
+                    array_task_string: "".into(),
+                    array_task_id: ArrayTaskId {
+                        number: "0".into(),
+                        set: false,
+                    },
                 },
             ],
         };

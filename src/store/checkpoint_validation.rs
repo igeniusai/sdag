@@ -25,7 +25,7 @@ impl<'a> CheckpointValidator<'a> {
     fn check_node_input_meta_output(&self, node: &Node, ctx: &Ctx) -> Result<(), String> {
         match node {
             Node::Task(task) => {
-                let status = &ctx.statuses[task.uid];
+                let status = &ctx.nodes[task.uid].status;
                 let path = self.get_node_dir(task.uid);
                 if status.is_running() | status.is_completed() {
                     self.check_meta(&path)?;
@@ -37,7 +37,7 @@ impl<'a> CheckpointValidator<'a> {
                 Ok(())
             }
             Node::OneOf(oneof) => {
-                let status = &ctx.statuses[oneof.uid];
+                let status = &ctx.nodes[oneof.uid].status;
                 if status.is_completed() {
                     let path = self.get_node_dir(oneof.uid);
                     self.check_meta(&path)?;
@@ -292,7 +292,7 @@ mod tests {
         creator.create_local_cachedir();
         creator.create_meta_file(1);
 
-        ctx.statuses[1] = Status::Running(JobType::Slurm("123".into()));
+        ctx.nodes[1].status = Status::Running(JobType::Slurm("123".into()));
         let validator = CheckpointValidator { cfg: &cfg };
         validator.validate_checkpoint(&nodes, &ctx).unwrap();
     }
@@ -305,7 +305,7 @@ mod tests {
         creator.create_local_cachedir();
         creator.create_input_file(1);
 
-        ctx.statuses[1] = Status::Running(JobType::Slurm("123".into()));
+        ctx.nodes[1].status = Status::Running(JobType::Slurm("123".into()));
         let validator = CheckpointValidator { cfg: &cfg };
         validator.validate_checkpoint(&nodes, &ctx).unwrap();
     }
@@ -318,7 +318,7 @@ mod tests {
         creator.create_meta_file(1);
         creator.create_input_file(1);
 
-        ctx.statuses[1] = Status::Running(JobType::Slurm("123".into()));
+        ctx.nodes[1].status = Status::Running(JobType::Slurm("123".into()));
         let validator = CheckpointValidator { cfg: &cfg };
         validator.validate_checkpoint(&nodes, &ctx).unwrap();
     }
@@ -333,7 +333,7 @@ mod tests {
         creator.create_input_file(2);
         creator.create_output_file(2);
 
-        ctx.statuses[2] = Status::Completed(Completed::Generic);
+        ctx.nodes[2].status = Status::Completed(Completed::Generic);
         let validator = CheckpointValidator { cfg: &cfg };
         validator.validate_checkpoint(&nodes, &ctx).unwrap();
     }
@@ -348,7 +348,7 @@ mod tests {
         creator.create_meta_file(2);
         creator.create_output_file(2);
 
-        ctx.statuses[2] = Status::Completed(Completed::Generic);
+        ctx.nodes[2].status = Status::Completed(Completed::Generic);
         let validator = CheckpointValidator { cfg: &cfg };
         validator.validate_checkpoint(&nodes, &ctx).unwrap();
     }
@@ -363,7 +363,7 @@ mod tests {
         creator.create_meta_file(2);
         creator.create_input_file(2);
 
-        ctx.statuses[2] = Status::Completed(Completed::Generic);
+        ctx.nodes[2].status = Status::Completed(Completed::Generic);
         let validator = CheckpointValidator { cfg: &cfg };
         validator.validate_checkpoint(&nodes, &ctx).unwrap();
     }
@@ -378,7 +378,7 @@ mod tests {
         creator.create_input_file(2);
         creator.create_output_file(2);
 
-        ctx.statuses[2] = Status::Completed(Completed::Generic);
+        ctx.nodes[2].status = Status::Completed(Completed::Generic);
         let validator = CheckpointValidator { cfg: &cfg };
         validator.validate_checkpoint(&nodes, &ctx).unwrap();
     }

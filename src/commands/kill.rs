@@ -101,6 +101,7 @@ fn kill_slurm_jobs(ctx: &mut Ctx) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    use crate::engine::context::NodeCtx;
     use std::collections::{HashSet, VecDeque};
     use std::os::unix::process::CommandExt;
 
@@ -112,11 +113,15 @@ mod tests {
             .process_group(0)
             .spawn()
             .unwrap();
+        let node_ctx = NodeCtx {
+            status: Status::Running(JobType::Local(child.id())),
+            try_num: 1,
+            job_array_statuses: vec![],
+        };
         let mut ctx = Ctx {
             updated: VecDeque::new(),
-            statuses: vec![Status::Running(JobType::Local(child.id()))],
+            nodes: vec![node_ctx],
             jobs: VecDeque::new(),
-            try_nums: vec![1],
             local_jobs: vec![(0, child)],
             slurm_jobs: Vec::new(),
             running_cacheable: HashSet::new(),

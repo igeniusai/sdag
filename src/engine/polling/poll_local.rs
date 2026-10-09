@@ -120,7 +120,8 @@ mod test {
         let cfg = Cfg::default();
         let nodes = vec![Node::Task(get_task(0))];
         let mut ctx = Ctx::new(&nodes).unwrap();
-        ctx.try_nums[0] = 1;
+
+        ctx.nodes[0].try_num = 1;
         ctx.must_checkpoint = false;
 
         let mut child = Command::new("true").spawn().unwrap();
@@ -131,7 +132,7 @@ mod test {
         poller.poll(&nodes, &mut ctx);
 
         assert!(matches!(
-            ctx.statuses[0],
+            ctx.nodes[0].status,
             Status::Completed(Completed::Job(_))
         ));
         assert!(ctx.must_checkpoint)
@@ -142,7 +143,7 @@ mod test {
         let cfg = Cfg::default();
         let nodes = vec![Node::Task(get_task(0))];
         let mut ctx = Ctx::new(&nodes).unwrap();
-        ctx.try_nums[0] = 1;
+        ctx.nodes[0].try_num = 1;
         ctx.must_checkpoint = false;
 
         let mut child = Command::new("bash").arg("exit").arg("1").spawn().unwrap();
@@ -152,7 +153,10 @@ mod test {
         let mut poller = LocalPoller { cfg: &cfg };
         poller.poll(&nodes, &mut ctx);
 
-        assert!(matches!(ctx.statuses[0], Status::Failed(Failed::Job(_))));
+        assert!(matches!(
+            ctx.nodes[0].status,
+            Status::Failed(Failed::Job(_))
+        ));
         assert!(ctx.must_checkpoint)
     }
 }

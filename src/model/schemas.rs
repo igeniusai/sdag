@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Domyn
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::model::nodes::Node;
-use crate::model::status::Status;
 use crate::settings::Cfg;
+use crate::{engine::context::NodeCtx, model::nodes::Node};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{borrow::Cow, collections::HashMap, fmt, path::PathBuf};
@@ -191,11 +190,8 @@ pub struct Checkpoint<'a> {
     #[serde(borrow)]
     pub nodes: Cow<'a, [Node]>,
     #[serde(borrow)]
-    pub statuses: Cow<'a, [Status]>,
-    #[serde(borrow)]
-    pub try_nums: Cow<'a, [usize]>,
+    pub node_ctxs: Cow<'a, [NodeCtx]>,
 }
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct SlurmOverride {

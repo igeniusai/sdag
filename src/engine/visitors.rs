@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Domyn
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::engine::context::{Ctx, Job};
+use crate::engine::context::{Ctx, Job, NodeCtx};
 use crate::engine::submission::{caching, inline};
 use crate::model::nodes::{Branch, Children, End, Node, OneOf, ProvideStatus, Root, Task};
 use crate::model::schemas::Parent;
@@ -35,7 +35,7 @@ pub struct NodeVisitor<'a, 'b> {
 
 impl<'a, 'b> Visitor<()> for NodeVisitor<'a, 'b> {
     fn visit_root(&mut self, node: &Root, ctx: &mut Ctx) {
-        let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.statuses);
+        let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.nodes);
         if all_parents_completed(&parent_statuses) {
             ctx.set_status(node.uid, Status::Completed(Completed::Generic));
         } else if some_parents_failed_or_skipped(&parent_statuses) {
@@ -44,7 +44,7 @@ impl<'a, 'b> Visitor<()> for NodeVisitor<'a, 'b> {
     }
 
     fn visit_end(&mut self, node: &End, ctx: &mut Ctx) {
-        let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.statuses);
+        let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.nodes);
         if all_parents_completed(&parent_statuses) {
             ctx.set_status(node.uid, Status::Completed(Completed::Generic));
         } else if parent_statuses.iter().all(|s| s.is_final()) {
@@ -53,7 +53,7 @@ impl<'a, 'b> Visitor<()> for NodeVisitor<'a, 'b> {
     }
 
     fn visit_branch(&mut self, node: &Branch, ctx: &mut Ctx) {
-        let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.statuses);
+        let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.nodes);
         if all_parents_completed(&parent_statuses) {
             let status = match inline::submit_branch(node, &self.cfg) {
                 Ok(choice) => Status::Completed(Completed::Branch(choice)),
@@ -66,7 +66,7 @@ impl<'a, 'b> Visitor<()> for NodeVisitor<'a, 'b> {
     }
 
     fn visit_task(&mut self, node: &Task, ctx: &mut Ctx) {
-        let status = &ctx.statuses[node.uid];
+        let status = &ctx.nodes[node.uid].status;
         match status {
             Status::Pending(_)
             | Status::Running(_)
@@ -83,8 +83,8 @@ impl<'a, 'b> Visitor<()> for NodeVisitor<'a, 'b> {
     }
 
     fn visit_oneof(&mut self, node: &OneOf, ctx: &mut Ctx) {
-        let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.statuses);
-        if let Some(uid) = find_completed_parent(&node.parents, &ctx.statuses) {
+        let parent_statuses = self.get_parent_statuses(&node.parents, &ctx.nodes);
+        if let Some(uid) = find_completed_parent(&node.parents, &ctx.nodes) {
             let status = match inline::submit_oneof(node, uid, &self.cfg) {
                 Ok(_) => Status::Completed(Completed::OneOf(uid)),
                 Err(e) => {
@@ -107,7 +107,7 @@ impl<'a, 'b> NodeVisitor<'a, 'b> {
                 continue;
             }
             let node = &self.nodes[uid];
-            let status = &ctx.statuses[uid];
+            let status = &ctx.nodes[uid].status;
             if !status.is_final() {
                 match node {
                     Node::Root(node) => self.visit_root(&node, ctx),
@@ -121,20 +121,22 @@ impl<'a, 'b> NodeVisitor<'a, 'b> {
         }
     }
 
-    fn get_parent_statuses<'c>(
-        &self,
-        parents: &[Parent],
-        statuses: &'c [Status],
-    ) -> Vec<&'c Status> {
+    fn get_parent_statuses<'c>(&self, parents: &[Parent], nodes: &'c [NodeCtx]) -> Vec<&'c Status> {
         parents
             .iter()
-            .map(|parent| (&self.nodes[parent.uid], &statuses[parent.uid], &parent.kind))
+            .map(|parent| {
+                (
+                    &self.nodes[parent.uid],
+                    &nodes[parent.uid].status,
+                    &parent.kind,
+                )
+            })
             .map(|(node, status, kind)| node.provide_status(status, kind))
             .collect()
     }
 
     fn visit_not_submitted_task(&self, task: &Task, ctx: &mut Ctx) {
-        let parent_statuses = self.get_parent_statuses(&task.parents, &ctx.statuses);
+        let parent_statuses = self.get_parent_statuses(&task.parents, &ctx.nodes);
         if all_parents_completed(&parent_statuses) {
             ctx.set_status(task.uid, Status::ReadyForSubmission);
             if task.cache.is_enabled() {
@@ -271,7 +273,7 @@ mod tests {
         visitor.visit(&mut ctx);
 
         assert!(matches!(
-            ctx.statuses[0],
+            ctx.nodes[0].status,
             Status::Completed(Completed::Generic)
         ))
     }
@@ -286,7 +288,7 @@ mod tests {
 
         let mut ctx = get_ctx(&nodes);
         ctx.updated.push_back(1);
-        ctx.statuses[0] = Status::Failed(Failed::Generic);
+        ctx.nodes[0].status = Status::Failed(Failed::Generic);
 
         let mut visitor = NodeVisitor {
             nodes: &nodes,
@@ -294,7 +296,7 @@ mod tests {
         };
         visitor.visit(&mut ctx);
 
-        assert!(matches!(ctx.statuses[1], Status::Skipped))
+        assert!(matches!(ctx.nodes[1].status, Status::Skipped))
     }
 
     #[test]
@@ -313,7 +315,7 @@ mod tests {
         visitor.visit(&mut ctx);
 
         assert!(matches!(
-            ctx.statuses[0],
+            ctx.nodes[0].status,
             Status::Completed(Completed::Generic)
         ))
     }
@@ -328,7 +330,7 @@ mod tests {
 
         let mut ctx = get_ctx(&nodes);
         ctx.updated.push_back(1);
-        ctx.statuses[0] = Status::Failed(Failed::Generic);
+        ctx.nodes[0].status = Status::Failed(Failed::Generic);
 
         let mut visitor = NodeVisitor {
             nodes: &nodes,
@@ -336,7 +338,7 @@ mod tests {
         };
         visitor.visit(&mut ctx);
 
-        assert!(matches!(ctx.statuses[1], Status::Skipped))
+        assert!(matches!(ctx.nodes[1].status, Status::Skipped))
     }
 
     #[test]
@@ -351,8 +353,8 @@ mod tests {
 
         let mut ctx = get_ctx(&nodes);
         ctx.updated.push_back(2);
-        ctx.statuses[0] = Status::Failed(Failed::Generic);
-        ctx.statuses[1] = Status::Running(JobType::Slurm("123".into()));
+        ctx.nodes[0].status = Status::Failed(Failed::Generic);
+        ctx.nodes[1].status = Status::Running(JobType::Slurm("123".into()));
 
         let mut visitor = NodeVisitor {
             nodes: &nodes,
@@ -360,7 +362,7 @@ mod tests {
         };
         visitor.visit(&mut ctx);
 
-        assert!(matches!(ctx.statuses[2], Status::NotSubmitted))
+        assert!(matches!(ctx.nodes[2].status, Status::NotSubmitted))
     }
 
     #[test]
@@ -375,8 +377,8 @@ mod tests {
 
         let mut ctx = get_ctx(&nodes);
         ctx.updated.push_back(2);
-        ctx.statuses[0] = Status::Failed(Failed::Generic);
-        ctx.statuses[1] = Status::Completed(Completed::Generic);
+        ctx.nodes[0].status = Status::Failed(Failed::Generic);
+        ctx.nodes[1].status = Status::Completed(Completed::Generic);
 
         let mut visitor = NodeVisitor {
             nodes: &nodes,
@@ -384,7 +386,7 @@ mod tests {
         };
         visitor.visit(&mut ctx);
 
-        assert!(matches!(ctx.statuses[2], Status::Skipped))
+        assert!(matches!(ctx.nodes[2].status, Status::Skipped))
     }
 
     #[test]
@@ -414,7 +416,7 @@ mod tests {
 
         let mut ctx = get_ctx(&nodes);
         ctx.updated.push_back(1);
-        ctx.statuses[0] = Status::Completed(Completed::Generic);
+        ctx.nodes[0].status = Status::Completed(Completed::Generic);
 
         let output = TaskOutput {
             output: Value::Bool(true),
@@ -432,11 +434,11 @@ mod tests {
         visitor.visit(&mut ctx);
 
         assert!(matches!(
-            ctx.statuses[1],
+            ctx.nodes[1].status,
             Status::Completed(Completed::Branch(true))
         ));
-        assert!(matches!(ctx.statuses[2], Status::Completed(_)));
-        assert!(matches!(ctx.statuses[3], Status::Skipped));
+        assert!(matches!(ctx.nodes[2].status, Status::Completed(_)));
+        assert!(matches!(ctx.nodes[3].status, Status::Skipped));
     }
 
     #[test]
@@ -459,16 +461,16 @@ mod tests {
 
         let mut ctx = get_ctx(&nodes);
         ctx.updated.push_back(1);
-        ctx.statuses[0] = Status::Failed(Failed::Generic);
+        ctx.nodes[0].status = Status::Failed(Failed::Generic);
         let mut visitor = NodeVisitor {
             nodes: &nodes,
             cfg: &cfg,
         };
         visitor.visit(&mut ctx);
 
-        assert!(matches!(ctx.statuses[1], Status::Skipped));
-        assert!(matches!(ctx.statuses[2], Status::Skipped));
-        assert!(matches!(ctx.statuses[3], Status::Skipped));
+        assert!(matches!(ctx.nodes[1].status, Status::Skipped));
+        assert!(matches!(ctx.nodes[2].status, Status::Skipped));
+        assert!(matches!(ctx.nodes[3].status, Status::Skipped));
     }
 
     #[test]
@@ -491,8 +493,8 @@ mod tests {
 
         let mut ctx = get_ctx(&nodes);
         ctx.updated.push_back(1);
-        ctx.statuses[0] = Status::Completed(Completed::Generic);
-        ctx.statuses[1] = Status::Completed(Completed::Branch(true));
+        ctx.nodes[0].status = Status::Completed(Completed::Generic);
+        ctx.nodes[1].status = Status::Completed(Completed::Branch(true));
 
         let mut visitor = NodeVisitor {
             nodes: &nodes,
@@ -501,10 +503,10 @@ mod tests {
         visitor.visit(&mut ctx);
 
         assert!(matches!(
-            ctx.statuses[2],
+            ctx.nodes[2].status,
             Status::Completed(Completed::Generic)
         ));
-        assert!(matches!(ctx.statuses[3], Status::Skipped));
+        assert!(matches!(ctx.nodes[3].status, Status::Skipped));
     }
 
     #[test]
@@ -521,8 +523,8 @@ mod tests {
 
         let mut ctx = get_ctx(&nodes);
         ctx.updated.push_back(2);
-        ctx.statuses[0] = Status::Completed(Completed::Generic);
-        ctx.statuses[1] = Status::Failed(Failed::Generic);
+        ctx.nodes[0].status = Status::Completed(Completed::Generic);
+        ctx.nodes[1].status = Status::Failed(Failed::Generic);
 
         let src_dir = cfg.dagdir.join("0");
         let dst_dir = cfg.dagdir.join("2");
@@ -538,7 +540,7 @@ mod tests {
         };
         visitor.visit(&mut ctx);
         assert!(matches!(
-            ctx.statuses[2],
+            ctx.nodes[2].status,
             Status::Completed(Completed::OneOf(0))
         ));
     }
@@ -557,15 +559,15 @@ mod tests {
 
         let mut ctx = get_ctx(&nodes);
         ctx.updated.push_back(2);
-        ctx.statuses[0] = Status::Skipped;
-        ctx.statuses[1] = Status::Failed(Failed::Generic);
+        ctx.nodes[0].status = Status::Skipped;
+        ctx.nodes[1].status = Status::Failed(Failed::Generic);
 
         let mut visitor = NodeVisitor {
             nodes: &nodes,
             cfg: &cfg,
         };
         visitor.visit(&mut ctx);
-        assert!(matches!(ctx.statuses[2], Status::Skipped));
+        assert!(matches!(ctx.nodes[2].status, Status::Skipped));
     }
 
     #[test]
@@ -582,8 +584,8 @@ mod tests {
 
         let mut ctx = get_ctx(&nodes);
         ctx.updated.push_back(2);
-        ctx.statuses[0] = Status::Completed(Completed::Generic);
-        ctx.statuses[1] = Status::Failed(Failed::Generic);
+        ctx.nodes[0].status = Status::Completed(Completed::Generic);
+        ctx.nodes[1].status = Status::Failed(Failed::Generic);
 
         let mut visitor = NodeVisitor {
             nodes: &nodes,
@@ -591,7 +593,7 @@ mod tests {
         };
         visitor.visit(&mut ctx);
 
-        assert!(matches!(ctx.statuses[2], Status::Skipped));
+        assert!(matches!(ctx.nodes[2].status, Status::Skipped));
         assert_eq!(ctx.jobs.len(), 0);
     }
 
@@ -609,8 +611,8 @@ mod tests {
 
         let mut ctx = get_ctx(&nodes);
         ctx.updated.push_back(2);
-        ctx.statuses[0] = Status::Completed(Completed::Generic);
-        ctx.statuses[1] = Status::Completed(Completed::Cached);
+        ctx.nodes[0].status = Status::Completed(Completed::Generic);
+        ctx.nodes[1].status = Status::Completed(Completed::Cached);
 
         let mut visitor = NodeVisitor {
             nodes: &nodes,
@@ -618,7 +620,7 @@ mod tests {
         };
         visitor.visit(&mut ctx);
 
-        assert!(matches!(ctx.statuses[2], Status::ReadyForSubmission));
+        assert!(matches!(ctx.nodes[2].status, Status::ReadyForSubmission));
 
         let job = ctx.jobs.pop_front().unwrap();
         assert!(matches!(job, Job::Task(2)));
@@ -638,8 +640,8 @@ mod tests {
         let nodes = [Node::Root(root1), Node::Root(root2), Node::Task(task)];
         let mut ctx = get_ctx(&nodes);
         ctx.updated.push_back(2);
-        ctx.statuses[0] = Status::Completed(Completed::Generic);
-        ctx.statuses[1] = Status::Completed(Completed::Cached);
+        ctx.nodes[0].status = Status::Completed(Completed::Generic);
+        ctx.nodes[1].status = Status::Completed(Completed::Cached);
 
         let mut visitor = NodeVisitor {
             nodes: &nodes,

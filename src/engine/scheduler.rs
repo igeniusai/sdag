@@ -69,12 +69,12 @@ pub fn scheduling_loop(nodes: &[Node], ctx: &mut Ctx, cfg: &Cfg, meta: &DAGMeta)
         }
 
         summary::print_summary(&nodes, &ctx, &meta.pipeline_name, &meta.hash);
-        if status::is_simulation_completed(&ctx.statuses) {
+        if status::is_simulation_completed(&ctx.nodes) {
             log::info!("Simulation completed");
             break;
         }
 
-        if cfg.fail_fast && status::any_node_failed(&ctx.statuses) {
+        if cfg.fail_fast && status::any_node_failed(&ctx.nodes) {
             let _ = state::create_kill_file(&cfg.dagdir)
                 .map_err(|e| log::error!("Failed to create kill file - {e}"));
             break;

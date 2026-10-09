@@ -14,7 +14,7 @@ use std::error::Error;
 use std::collections::VecDeque;
 
 pub fn handle_retries(task: &Task, ctx: &mut Ctx, failure: Failed) {
-    let try_num = &ctx.try_nums[task.uid];
+    let try_num = &ctx.nodes[task.uid].try_num;
     if *try_num > task.retries {
         log::error!(
             "Task '{}': Maximum number of retries '{}' reached, marking as failed.",
@@ -85,7 +85,7 @@ impl<'a> Submitter<'a> {
             return;
         }
 
-        ctx.try_nums[task.uid] += 1;
+        ctx.nodes[task.uid].try_num += 1;
         let res = match &task.cmd {
             Cmd::Sbatch => self.submit_slurm(task, ctx),
             Cmd::Bash => self.submit_local(task, ctx),
@@ -97,14 +97,14 @@ impl<'a> Submitter<'a> {
             handle_retries(task, ctx, failure);
         }
 
-        if task.cache.is_enabled() && ctx.statuses[task.uid].is_running() {
+        if task.cache.is_enabled() && ctx.nodes[task.uid].status.is_running() {
             log::debug!("Task {} marked as running cacheable", task.uid);
             ctx.running_cacheable.insert(task.name.to_string());
         }
     }
 
     fn submit_local(&mut self, task: &Task, ctx: &mut Ctx) -> Result<(), Box<dyn Error>> {
-        let try_num = ctx.try_nums[task.uid];
+        let try_num = ctx.nodes[task.uid].try_num;
         let child = jobs::submit_local(task, try_num, &self.cfg, &self.meta)?;
         let pid = child.id();
 
@@ -116,7 +116,7 @@ impl<'a> Submitter<'a> {
     }
 
     fn submit_slurm(&mut self, task: &Task, ctx: &mut Ctx) -> Result<(), Box<dyn Error>> {
-        let try_num = ctx.try_nums[task.uid];
+        let try_num = ctx.nodes[task.uid].try_num;
         let job_id = jobs::submit_slurm(task, try_num, &self.cfg, &self.meta)?;
 
         log::info!("Task '{}': Submitted job_id '{}'", task.uid, job_id);
