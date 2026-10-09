@@ -3,6 +3,18 @@
 
 use serde::{Deserialize, Deserializer, Serialize};
 
+fn default_task_id() -> String {
+    String::from("0")
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ArrayTaskId {
+    #[serde(default = "default_task_id")]
+    #[serde(deserialize_with = "job_id_as_string")]
+    pub number: String,
+    pub set: bool,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SacctState {
     pub current: Vec<String>,
@@ -25,6 +37,9 @@ pub struct SqueueJob {
     #[serde(deserialize_with = "job_id_as_string")]
     pub job_id: String,
     pub job_state: Vec<String>,
+    pub array_task_id: ArrayTaskId,
+    #[serde(default)]
+    pub array_task_string: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
