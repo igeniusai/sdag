@@ -233,6 +233,14 @@ pub fn touch_cached_task_dir(path: &Path) -> std::io::Result<()> {
     dir.set_modified(SystemTime::now())
 }
 
+pub fn save_shard(shard: &[Value], base_path: &Path, job_id: usize) -> std::io::Result<()> {
+    fs::create_dir_all(base_path)?;
+    let filename = format!("{job_id}.json");
+    let path = base_path.join(filename);
+    let contents = serde_json::to_string(shard)?;
+    fs::write(path, &contents)
+}
+
 /// Add the dynamic input to the input data
 fn get_dynamic_input(uid: usize, dagdir: &Path) -> io::Result<Value> {
     let path = dagdir.join(uid.to_string());

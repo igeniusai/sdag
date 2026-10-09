@@ -163,11 +163,6 @@ impl ProvideStatus for Task {
     }
 }
 
-impl Task {
-    fn is_array(&self) -> bool {
-        self.each.is_some()
-    }
-}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Root {
     // Node unique id.

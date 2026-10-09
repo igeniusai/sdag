@@ -1,10 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Domyn
 // SPDX-License-Identifier: Apache-2.0
 
-//! Backend.
-//!
-//! The backend executes jobs and polls the status.
-
 use crate::model::nodes::Task;
 use crate::model::schemas::{Cmd, DAGMeta, ExecMode, Script, SlurmOverride, TaskMeta};
 use crate::settings::Cfg;
@@ -15,10 +11,70 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::io;
 use std::os::unix::process::CommandExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
 
 pub fn submit_slurm(
+    task: &Task,
+    try_num: usize,
+    cfg: &Cfg,
+    meta: &DAGMeta,
+) -> Result<String, Box<dyn Error>> {
+    if let Some(each) = &task.each {
+        submit_slurm_job_array(each, task, try_num, cfg, meta)
+    } else {
+        submit_single_slurm_job(task, try_num, cfg, meta)
+    }
+}
+
+pub fn submit_slurm_job_array(
+    each: &str,
+    task: &Task,
+    try_num: usize,
+    cfg: &Cfg,
+    meta: &DAGMeta,
+) -> Result<String, Box<dyn Error>> {
+    let mut input = state::read_input_from_parents(task, &cfg.dagdir)?;
+    save_input(&input, task, cfg)?;
+    save_meta(task, cfg)?;
+
+    let base_path = cfg.dagdir.join(task.uid.to_string()).join(".shards");
+    let njobs = shard_input(each, &input, task, &base_path)?;
+    input.remove_entry(each);
+
+    let mut cmd = build_command(task, try_num, cfg, meta, &input, &task.envs)?;
+    let (output, error) = find_array_output_and_error_paths(
+        &task.slurm,
+        &meta.pipeline_name,
+        &task.pipeline_name,
+        &cfg.timestamp,
+    );
+    state::create_output_and_error_log_dirs(&output, &error);
+    override_sbatch(&mut cmd, &task.slurm, &task.name, &output, &error);
+    // TODO
+    cmd.arg(&format!("--array=0-{njobs}%{}", cfg.max_concurrency));
+    cmd.env("SDAG_SHARDS_PATH", base_path);
+    let output = cmd.output()?;
+    if let Ok(stderr) = String::from_utf8(output.stderr)
+        && stderr.len() > 0
+    {
+        log::error!("Task '{}' submission:\n{stderr}", task.uid);
+    }
+
+    let stdout = String::from_utf8(output.stdout)?;
+    log::info!("Task '{}':\n{stdout}", task.uid);
+    if !output.status.success() {
+        log::error!("Task '{}' returned non-zero exit status", task.uid);
+        return Err("non-zero exit status".into());
+    }
+
+    let job_id = find_submitted_job_id(&stdout).ok_or("Job id not found")?;
+    println!("SUBMITTED {job_id}!!!");
+    panic!();
+    Ok(job_id)
+}
+
+pub fn submit_single_slurm_job(
     task: &Task,
     try_num: usize,
     cfg: &Cfg,
@@ -55,6 +111,33 @@ pub fn submit_slurm(
 
     let job_id = find_submitted_job_id(&stdout).ok_or("Job id not found")?;
     Ok(job_id)
+}
+
+fn shard_input(
+    each: &str,
+    input: &HashMap<String, Value>,
+    task: &Task,
+    base_path: &Path,
+) -> Result<usize, String> {
+    match input.get(each) {
+        Some(Value::Array(each)) => {
+            let nitems = each.len();
+            let njobs = task.njobs.min(each.len());
+            if njobs == 0 {
+                return Err("Len of each is 0".to_string());
+            }
+            let (div, rem) = (nitems / njobs, nitems % njobs);
+            for job_id in 0..njobs {
+                let start = job_id * div + job_id.min(rem);
+                let end = start + div + usize::from(job_id < rem);
+                let shard = &each[start..end];
+                state::save_shard(shard, &base_path, job_id)
+                    .map_err(|e| format!("failed to save shard - {e}"))?;
+            }
+            Ok(njobs)
+        }
+        _ => Err("Failed to extract each value".to_string()),
+    }
 }
 
 pub fn submit_local(
@@ -217,6 +300,26 @@ fn find_output_and_error_paths(
     };
 
     let mut error = format!("{base}/%x.%j.err");
+    if let Some(user_error) = &slurm.error {
+        error = user_error.to_string();
+    }
+
+    (output, error)
+}
+
+fn find_array_output_and_error_paths(
+    slurm: &SlurmOverride,
+    pipeline: &str,
+    subpipeline: &str,
+    timestamp: &str,
+) -> (String, String) {
+    let base = format!("./logs/{pipeline}/{timestamp}/{subpipeline}");
+    let mut output = format!("{base}/%x.%A_%a.out");
+    if let Some(user_output) = &slurm.output {
+        output = user_output.to_string()
+    };
+
+    let mut error = format!("{base}/%x.%A_%a.err");
     if let Some(user_error) = &slurm.error {
         error = user_error.to_string();
     }

@@ -118,7 +118,6 @@ impl<'a> Submitter<'a> {
     fn submit_slurm(&mut self, task: &Task, ctx: &mut Ctx) -> Result<(), Box<dyn Error>> {
         let try_num = ctx.nodes[task.uid].try_num;
         let job_id = jobs::submit_slurm(task, try_num, &self.cfg, &self.meta)?;
-
         log::info!("Task '{}': Submitted job_id '{}'", task.uid, job_id);
         ctx.slurm_jobs.push((task.uid, job_id.to_string()));
         ctx.set_status(task.uid, Status::Pending(JobType::Slurm(job_id)));
