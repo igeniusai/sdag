@@ -436,18 +436,19 @@ class Task:
                 path=value.path,
             )
 
-        elif isinstance(value, Each):
-            if node.each is not None:
-                raise MultipleEachError(key, node.each)
-            node.each = key
-            value = value.collection
-
-        elif isinstance(value, BaseNode):
-            node.add_output_edge(value.uid, key)
-
         else:
-            input_kwarg = Kwarg(key=key, value=value)
-            node.add_kwarg(input_kwarg)
+            if isinstance(value, Each):
+                if node.each is not None:
+                    raise MultipleEachError(key, node.each)
+                node.each = key
+                value = value.collection
+
+            if isinstance(value, BaseNode):
+                node.add_output_edge(value.uid, key)
+
+            else:
+                input_kwarg = Kwarg(key=key, value=value)
+                node.add_kwarg(input_kwarg)
 
     @cached_property
     def code_hash(self) -> str:
