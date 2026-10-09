@@ -23,6 +23,7 @@ from sdag.exceptions import (
     IncorrectElifError,
     IncorrectElseError,
     KwargNotFoundError,
+    MultipleEachError,
     TaskNotUniqueError,
 )
 from sdag.mod_hashing import ModuleHasher
@@ -32,6 +33,7 @@ from sdag.models import (
     ArtifactSig,
     BaseNode,
     BranchNode,
+    Each,
     EndNode,
     Kwarg,
     NodeUnion,
@@ -235,6 +237,7 @@ class Task:
             during cache validation.
         cache_size (int): Cache size. Ignore if caching is disabled.
             set to 0 to allow for infinite cache size.
+        njobs (int): Number of jobs in the array.
         retries (int): Number of retries.
         script (ScriptUnion): Submission script.
     """
@@ -249,6 +252,7 @@ class Task:
         cache: CacheOptions,
         cache_ignore: list[str] | None,
         cache_size: int,
+        njobs: int,
         retries: int,
         script: ScriptUnion,
         tags: list[str],
@@ -270,6 +274,9 @@ class Task:
             cache_size (int): Cache size. Ignore if caching is
                 disabled. set to 0 to allow for infinite cache
                 size.
+            njobs (int): When spreading a collection over multiple
+                jobs with each(), njobs represents the number of
+                jobs in the array. Defaults to 1.
             retries (int): Number of retries.
             script (ScriptUnion): Submission script.
             tags (list[str]): Tags.
@@ -282,6 +289,7 @@ class Task:
         self.cache: CacheOptions = cache
         self.cache_ignore = cache_ignore if cache_ignore is not None else []
         self.cache_size = cache_size
+        self.njobs = njobs
         self.retries = retries
         self.script = script
         self.tags = tags
@@ -307,6 +315,7 @@ class Task:
             code_hash=self.code_hash,
             mode=self.mode,
             cmd=self.cmd,
+            njobs=self.njobs,
             retries=self.retries,
             script=self.script,
             tags=self.tags.copy(),
@@ -419,16 +428,22 @@ class Task:
             key (str): Input key.
             value (Any): Input value.
         """
-        if isinstance(value, BaseNode):
-            node.add_output_edge(value.uid, key)
-
-        elif isinstance(value, ArtifactContainer):
+        if isinstance(value, ArtifactContainer):
             node.add_artifact_edge(
                 parent_uid=value.node.uid,
                 key=key,
                 name=value.key,
                 path=value.path,
             )
+
+        if isinstance(value, Each):
+            if node.each is not None:
+                raise MultipleEachError(key, node.each)
+            node.each = key
+            value = value.collection
+
+        if isinstance(value, BaseNode):
+            node.add_output_edge(value.uid, key)
 
         else:
             input_kwarg = Kwarg(key=key, value=value)
@@ -506,6 +521,7 @@ class Pipeline:
         cache: CacheOptions = "none",
         cache_ignore: list[str] | None = None,
         cache_size: int = 1,
+        njobs: int = 1,
         retries: int = 0,
         tags: list[str] | None = None,
     ) -> Callable[[Callable], Task]:
@@ -535,6 +551,10 @@ class Pipeline:
             cache_size (int): Cache size. Ignore if caching is
                 disabled. set to 0 to allow for infinite cache
                 size.
+            njobs (int): When spreading a collection over multiple
+                jobs with each(), njobs represents the number of
+                jobs in the array. It is ignored if the task is not
+                an array. Defaults to 1.
             retries: (int): Number of retries. Defaults to 0.
             tags (list[str] | None): Task tags, they can be used to
                 configure sets of tasks globally.
@@ -567,6 +587,7 @@ class Pipeline:
                 cache=cache,
                 cache_ignore=cache_ignore,
                 cache_size=cache_size,
+                njobs=njobs,
                 retries=retries,
                 script=script_obj,
                 tags=tags if tags is not None else [],
@@ -639,6 +660,7 @@ def task(
     cache: CacheOptions = "none",
     cache_ignore: list[str] | None = None,
     cache_size: int = 1,
+    njobs: int = 1,
     retries: int = 0,
     tags: list[str] | None = None,
 ) -> Callable[[Callable], Task]:
@@ -668,6 +690,10 @@ def task(
         cache_size (int): Cache size. Ignore if caching is
             disabled. set to 0 to allow for infinite cache
             size.
+        njobs (int): When spreading a collection over multiple
+            jobs with each(), njobs represents the number of
+            jobs in the array. It is ignored if the task is not
+            an array. Defaults to 1.
         retries: (int): Number of retries. Defaults to 0.
         tags (list[str] | None): Task tags, they can be used to
             configure sets of tasks globally.
@@ -692,6 +718,7 @@ def task(
             cache=cache,
             cache_ignore=cache_ignore,
             cache_size=cache_size,
+            njobs=njobs,
             retries=retries,
             script=script_obj,
             tags=tags if tags is not None else [],
@@ -723,3 +750,20 @@ def pipeline(fn: Callable[..., Any]) -> Pipeline:
     master.add_pipeline(pipeline_obj)
 
     return Pipeline(fn=fn)
+
+
+def each(collection: list[Any] | TaskNode) -> Each:
+    """Job array collection.
+
+    Used to spread a collection over an array of jobs. The
+    input can be either a compile-time, static list or
+    a list coming as the output of a task.
+
+    Args:
+        collection (list[Any] | TaskNode): Collection that
+            will be spread across jobs.
+
+    Returns:
+        Each: Collection wrapper.
+    """
+    return Each(collection)

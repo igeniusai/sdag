@@ -84,9 +84,8 @@ Artifact = Annotated[T, ArtifactSig]
 """Artifact.
 
 Artifacts are used to signal that some assets are being
-written. Cache is invalidated if artifacts are missing.
-It is possible to use either Artifact[str] or Artifact[Path],
-they are casted automatically.
+written. It is possible to use either Artifact[str] or
+Artifact[Path], they are automatically cast.
 """
 
 
@@ -369,6 +368,10 @@ class TaskNode(BaseNode):
             an external script.
         cmd (Commands): Command used to launch the script.
         retries (int): Retries.
+        each (str | None): If not null, it's the key of
+            the array field. Defaults to None.
+        njobs (int): Number of jobs if it defines an
+            array. Defaults to 1.
         script (ScriptUnion): Script path or content.
         tags (list[str]): Task tags.
         kwargs (list[Kwarg]): Input kwargs.
@@ -392,6 +395,8 @@ class TaskNode(BaseNode):
     mode: ExecMode
     cmd: Commands
     retries: int
+    each: str | None = None
+    njobs: int = 1
     script: ScriptUnion
     tags: list[str] = Field(default_factory=list)
     kwargs: list[Kwarg] = Field(default_factory=list)
@@ -683,3 +688,21 @@ class CacheableTask(BaseModel):
     name: str
     pipeline: str
     scope: Scope
+
+
+class Each:
+    """Signal job arrays.
+
+    Attributes:
+        collection (list[Any] | TaskNode): Inner keyword
+            argument.
+    """
+
+    def __init__(self, collection: list[Any] | TaskNode):
+        """Initialize the array collection.
+
+        Args:
+            collection (list[Any] | TaskNode): Inner collection.
+                It can be either a static or dynamic list.
+        """
+        self.collection = collection

@@ -126,3 +126,21 @@ class ExtraCLIArgsError(SDAGError):
             f" Extra arguments used: {extra_kwargs}"
         )
         super().__init__(msg)
+
+
+class MultipleEachError(SDAGError):
+    """Job arrays across multiple axes is not supported."""
+
+    def __init__(self, key: str, old_key: str) -> None:
+        """Raise the exception.
+
+        Args:
+            key (str): New key of the job array.
+            old_key (str): Old key of the job array.
+        """
+        msg = (
+            f"Trying to set a job array across key '{key}' but"
+            f" '{old_key}' is already registered. Use a for loop"
+            " over the first key to set up grids."
+        )
+        super().__init__(msg)
