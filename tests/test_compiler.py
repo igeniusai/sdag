@@ -40,6 +40,7 @@ class TestSDAG:
             retries=0,
             script=ScriptPath(path=Path("a/path")),
             tags=[],
+            njobs=1,
         )
 
         sdag.add_task(task)

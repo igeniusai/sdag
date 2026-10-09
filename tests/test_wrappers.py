@@ -514,6 +514,7 @@ class TestTask:
             cache_ignore=None,
             cache_size=1,
             tags=[],
+            njobs=1,
         )
 
         sig = inspect.signature(fn)
@@ -540,6 +541,7 @@ class TestTask:
             cache_ignore=None,
             cache_size=1,
             tags=[],
+            njobs=1,
         )
 
         kwargs = {"a": "a", "b": "/path", "custom_kw": 10}
@@ -604,6 +606,7 @@ class TestTask:
             cache_ignore=None,
             cache_size=1,
             tags=[],
+            njobs=1,
         )
 
         kwargs = {"a": original}
@@ -629,6 +632,7 @@ class TestTask:
             cache_ignore=None,
             cache_size=1,
             tags=[],
+            njobs=1,
         )
 
         original = "hello.txt"
@@ -656,6 +660,7 @@ class TestTask:
             cache_ignore=None,
             cache_size=1,
             tags=[],
+            njobs=1,
         )
 
         argnode = RootNode(uid=1)
@@ -693,6 +698,7 @@ class TestTask:
             cache_ignore=None,
             cache_size=1,
             tags=[],
+            njobs=1,
         )
 
         artifact_path = "/path/to/artifact"
@@ -747,6 +753,7 @@ class TestTask:
             cache_ignore=None,
             cache_size=1,
             tags=[],
+            njobs=1,
         )
 
         code_hash = test_task.code_hash

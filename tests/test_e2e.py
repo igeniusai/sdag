@@ -277,6 +277,7 @@ def test_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
                     }
                 ],
                 "artifacts": [],
+                "njobs": 1,
             },
             {
                 "uid": 2,
@@ -370,6 +371,7 @@ def test_run_pipeline_with_global_caching(
                     }
                 ],
                 "artifacts": [],
+                "njobs": 1,
             },
             {
                 "uid": 2,
@@ -454,6 +456,7 @@ def test_run_pipeline_with_local_caching(
                     }
                 ],
                 "artifacts": [],
+                "njobs": 1,
             },
             {
                 "uid": 2,
@@ -573,14 +576,26 @@ def test_print_pipeline_status(tmp_path: Path) -> None:
                 "tags": [],
                 "artifacts": [],
                 "children": [1],
+                "njobs": 1,
             },
         ],
-        "statuses": [
-            {"Completed": "Generic"},
-            {"Completed": "Generic"},
-            {"Completed": {"Job": {"Local": 6972}}},
+        "node_ctxs": [
+            {
+                "status": {"Completed": "Generic"},
+                "try_num": 0,
+                "job_array_statuses": [],
+            },
+            {
+                "status": {"Completed": "Generic"},
+                "try_num": 0,
+                "job_array_statuses": [],
+            },
+            {
+                "status": {"Completed": {"Job": {"Local": 6972}}},
+                "try_num": 1,
+                "job_array_statuses": [],
+            },
         ],
-        "try_nums": [0, 0, 1],
     }
 
     pipeline_dir.mkdir(parents=True, exist_ok=True)
